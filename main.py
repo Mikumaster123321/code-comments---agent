@@ -108,11 +108,23 @@ def build_markdown_docs(doc_entries: list) -> str:
         md += "---\n\n"
     return md
 
+def handle_file_upload(uploaded_file):
+    """读取上传的 .py 文件内容，填充到代码输入框"""
+    if uploaded_file is None:
+        return ""
+    # 兼容字符串路径或文件对象
+    file_path = uploaded_file.name if hasattr(uploaded_file, "name") else uploaded_file
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
 def process_code(source_code: str):
-    """主处理函数，返回注释后的代码、文档、日志、下载文件路径"""
+    """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、.py 下载路径"""
+    if not source_code or not source_code.strip():
+        return "", "未输入代码", "日志：无处理对象。", None, None
+
     items = get_defined_functions(source_code)
     if not items:
-        return source_code, "未检测到函数或类", "日志：无处理对象。", None
+        return source_code, "未检测到函数或类", "日志：无处理对象。", None, None
 
     log = []
     annotated_code = source_code
@@ -134,27 +146,39 @@ def process_code(source_code: str):
     # 保存为临时 .md 文件，供下载
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
         f.write(markdown_doc)
-        temp_path = f.name
+        md_temp_path = f.name
 
-    return annotated_code, markdown_doc, "\n".join(log), temp_path
+    # 保存注释后的 .py 文件，供下载
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        f.write(annotated_code)
+        py_temp_path = f.name
+
+    return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 # ==================== Gradio 界面 ====================
 with gr.Blocks(title="代码注释与文档生成Agent") as demo:
     gr.Markdown("## 📝 代码注释与 API 文档自动生成 Agent")
-    gr.Markdown("粘贴 Python 代码，自动生成中文注释和 Markdown API 文档。")
+    gr.Markdown("粘贴 Python 代码或上传 .py 文件，自动生成中文注释和 Markdown API 文档。")
 
     with gr.Row():
-        input_box = gr.Code(label="输入代码", language="python", lines=20)
+        with gr.Column():
+            file_upload = gr.File(label="上传 Python 文件 (.py)", file_types=[".py"])
+            input_box = gr.Code(label="输入代码（可直接粘贴或上传文件后自动填充）", language="python", lines=20)
         with gr.Column():
             output_code = gr.Code(label="带注释的代码", language="python", lines=20)
             output_docs = gr.Markdown(label="生成的 API 文档")
             output_log = gr.Textbox(label="处理日志", lines=5)
-            download_file = gr.File(label="下载 API 文档 (.md)")
+            with gr.Row():
+                download_py = gr.File(label="下载注释后的代码 (.py)")
+                download_md = gr.File(label="下载 API 文档 (.md)")
+
+    # 上传文件后自动填充到代码输入框
+    file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
 
     btn = gr.Button("生成注释与文档", variant="primary")
     btn.click(fn=process_code,
               inputs=input_box,
-              outputs=[output_code, output_docs, output_log, download_file])
+              outputs=[output_code, output_docs, output_log, download_md, download_py])
 
 if __name__ == "__main__":
     demo.launch()
