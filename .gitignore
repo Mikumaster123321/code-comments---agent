@@ -24,3 +24,10 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.log
+_test_result.txt
+_check_*.txt
+_check_*.py
+_check_out*.txt
+
+# pytest 缓存
+.pytest_cache/

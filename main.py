@@ -192,6 +192,166 @@ def build_markdown_docs(doc_entries: list) -> str:
         md += "---\n\n"
     return md
 
+# ==================== 代码分析功能 ====================
+
+def _calc_complexity(node) -> int:
+    """计算圈复杂度（McCabe）：分支点数量 +1"""
+    complexity = 1
+    for child in ast.walk(node):
+        if isinstance(child, (ast.If, ast.For, ast.AsyncFor, ast.While,
+                              ast.Try, ast.ExceptHandler, ast.With, ast.AsyncWith,
+                              ast.Match)):
+            complexity += 1
+        elif isinstance(child, ast.BoolOp):
+            # and/or 每增加一个操作数 +1
+            complexity += len(child.values) - 1
+    return complexity
+
+def _calc_max_depth(node, current: int = 0) -> int:
+    """计算最大嵌套深度"""
+    max_d = current
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.If, ast.For, ast.AsyncFor, ast.While,
+                              ast.Try, ast.With, ast.AsyncWith)):
+            d = _calc_max_depth(child, current + 1)
+        else:
+            d = _calc_max_depth(child, current)
+        if d > max_d:
+            max_d = d
+    return max_d
+
+def analyze_code_quality(source: str) -> str:
+    """代码质量分析：圈复杂度、嵌套深度、函数长度、参数数量，标记坏味道"""
+    tree = ast.parse(source)
+    rows = []
+    issues = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            name = node.name
+            node_type = "类" if isinstance(node, ast.ClassDef) else "函数"
+            length = node.end_lineno - node.lineno + 1
+            complexity = _calc_complexity(node)
+            depth = _calc_max_depth(node)
+            params = len(node.args.args) if hasattr(node, 'args') else 0
+
+            marks = []
+            if complexity > 10:
+                marks.append("⚠️复杂度过高")
+            elif complexity > 5:
+                marks.append("⚡复杂度较高")
+            if depth > 4:
+                marks.append("⚠️嵌套过深")
+            if length > 50:
+                marks.append("⚠️函数过长")
+            if params > 5:
+                marks.append("⚠️参数过多")
+            if not marks:
+                marks.append("✅良好")
+
+            eval_str = " ".join(marks)
+            rows.append(f"| {name} | {node_type} | {length} | {complexity} | {depth} | {params} | {eval_str} |")
+
+            for m in marks:
+                if "⚠️" in m:
+                    issues.append(f"- **{name}** (行 {node.lineno}): {m[1:]}，建议重构")
+
+    report = "### 📊 代码质量分析报告\n\n"
+    report += "| 函数/类 | 类型 | 行数 | 圈复杂度 | 嵌套深度 | 参数数 | 评估 |\n"
+    report += "|---------|------|------|----------|----------|--------|------|\n"
+    report += "\n".join(rows) if rows else "| (无函数/类) | - | - | - | - | - | - |"
+    report += "\n\n"
+    if issues:
+        report += "### 🚨 需要关注的问题\n\n"
+        report += "\n".join(issues)
+    else:
+        report += "### ✅ 代码质量良好，未发现明显问题"
+    return report
+
+def check_type_annotations(source: str) -> str:
+    """类型注解检查：识别缺失类型注解的参数和返回值"""
+    tree = ast.parse(source)
+    sections = []
+    missing_count = 0
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            name = node.name
+            issues = []
+            for arg in node.args.args:
+                # self/cls 是约定参数，不需要类型注解
+                if arg.annotation is None and arg.arg not in ('self', 'cls'):
+                    issues.append(f"参数 `{arg.arg}` 缺少类型注解")
+                    missing_count += 1
+            # __init__ 约定返回 None，不需要显式返回值注解
+            if node.returns is None and node.name != "__init__":
+                issues.append("返回值缺少类型注解")
+                missing_count += 1
+            if issues:
+                sections.append(f"**{name}** (行 {node.lineno}):\n" + "\n".join(f"  - {i}" for i in issues))
+
+    report = "### 🏷️ 类型注解检查报告\n\n"
+    if missing_count == 0:
+        report += "✅ 所有函数的类型注解完整"
+    else:
+        report += f"共发现 **{missing_count}** 处缺失的类型注解：\n\n"
+        report += "\n\n".join(sections)
+    return report
+
+def generate_code_summary(source: str) -> str:
+    """调用 LLM 生成代码摘要：模块功能、核心类、依赖关系"""
+    prompt = (
+        "请分析以下 Python 代码，生成一段简洁的中文摘要（200字以内）。\n"
+        "摘要应包含：\n"
+        "1. 模块整体功能\n"
+        "2. 核心类和函数\n"
+        "3. 主要依赖关系\n"
+        "\n"
+        "只输出摘要文本，不要使用 Markdown 标题或代码块。\n"
+        "\n"
+        "源代码：\n"
+        f"{source}"
+    )
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=512
+    )
+    return response.choices[0].message.content.strip()
+
+def analyze_code(source_code: str):
+    """主分析函数，返回质量报告、类型注解报告、摘要、日志"""
+    if not source_code or not source_code.strip():
+        return "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
+
+    log = []
+    log.append("=== 代码质量分析 ===")
+    try:
+        quality_report = analyze_code_quality(source_code)
+        log.append("✓ 质量分析完成")
+    except Exception as e:
+        quality_report = f"分析失败: {e}"
+        log.append(f"✗ 质量分析失败: {e}")
+
+    log.append("=== 类型注解检查 ===")
+    try:
+        annotation_report = check_type_annotations(source_code)
+        log.append("✓ 类型注解检查完成")
+    except Exception as e:
+        annotation_report = f"检查失败: {e}"
+        log.append(f"✗ 类型注解检查失败: {e}")
+
+    log.append("=== 代码摘要生成（调用 LLM）===")
+    try:
+        summary = generate_code_summary(source_code)
+        log.append("✓ 摘要生成完成")
+    except Exception as e:
+        summary = f"摘要生成失败: {e}"
+        log.append(f"✗ 摘要生成失败: {e}")
+
+    return quality_report, annotation_report, summary, "\n".join(log)
+
 def handle_file_upload(uploaded_file):
     """读取上传的 .py 文件内容，填充到代码输入框"""
     if uploaded_file is None:
@@ -326,7 +486,7 @@ custom_css = """
     flex: 1 !important;
 }
 """
-with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo:
+with gr.Blocks(title="代码注释与文档生成Agent") as demo:
     gr.Markdown("## 📝 代码注释与 API 文档自动生成 Agent")
     gr.Markdown("粘贴 Python 代码或上传 .py 文件，自动生成中文注释和 Markdown API 文档。")
 
@@ -344,6 +504,7 @@ with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo
     # 中间：操作按钮
     with gr.Row():
         btn = gr.Button("🚀 生成注释与文档", variant="primary", size="lg")
+        analyze_btn = gr.Button("🔍 分析代码", variant="secondary", size="lg")
     with gr.Row():
         incremental_chk = gr.Checkbox(
             label="增量更新模式（跳过已有注释的函数，节省 API 调用）",
@@ -362,6 +523,12 @@ with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo
         with gr.Tab("📚 API 文档"):
             output_docs = gr.Markdown(label="生成的 API 文档", elem_classes="scrollable-md")
             download_md = gr.File(label="⬇️ 下载 API 文档 (.md)")
+        with gr.Tab("🔍 代码分析"):
+            gr.Markdown("### 代码质量分析、类型注解检查与摘要生成")
+            quality_output = gr.Markdown(label="代码质量分析", elem_classes="scrollable-md")
+            annotation_output = gr.Markdown(label="类型注解检查", elem_classes="scrollable-md")
+            summary_output = gr.Markdown(label="代码摘要", elem_classes="scrollable-md")
+            analyze_log = gr.Textbox(label="分析日志", lines=5, max_lines=5)
         with gr.Tab("📋 处理日志"):
             output_log = gr.Textbox(label="处理日志", lines=10, max_lines=10)
 
@@ -372,6 +539,11 @@ with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo
         inputs=[input_box, incremental_chk],
         outputs=[output_code, output_docs, output_log, download_md, download_py]
     )
+    analyze_btn.click(
+        fn=analyze_code,
+        inputs=input_box,
+        outputs=[quality_output, annotation_output, summary_output, analyze_log]
+    )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(css=custom_css)
