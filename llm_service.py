@@ -70,16 +70,19 @@ def _clean_docstring(docstring: str) -> str:
     """
     triple_double = chr(34) * 3   # """
     triple_single = chr(39) * 3   # '''
-    docstring = re.sub(r'^' + triple_double, '', docstring)
-    docstring = re.sub(triple_double + r'$', '', docstring)
-    docstring = re.sub(r'^' + triple_single, '', docstring)
-    docstring = re.sub(triple_single + r'$', '', docstring)
-    docstring = re.sub(r'^```.*?\n', '', docstring)
-    docstring = re.sub(r'\n```$', '', docstring)
-    docstring = re.sub(r'^```', '', docstring)
-    docstring = re.sub(r'```$', '', docstring)
+    M = re.MULTILINE
+    # 按行清理开头/结尾的三引号（MULTILINE 让 ^/$ 匹配行边界）
+    docstring = re.sub(r'^' + triple_double, '', docstring, flags=M)
+    docstring = re.sub(triple_double + r'$', '', docstring, flags=M)
+    docstring = re.sub(r'^' + triple_single, '', docstring, flags=M)
+    docstring = re.sub(triple_single + r'$', '', docstring, flags=M)
+    # 按行清理 Markdown 代码块标记
+    docstring = re.sub(r'^```.*?\n', '', docstring, flags=M)
+    docstring = re.sub(r'\n```$', '', docstring, flags=M)
+    docstring = re.sub(r'^```', '', docstring, flags=M)
+    docstring = re.sub(r'```$', '', docstring, flags=M)
 
-    # 清理内容中残留的独立三引号行
+    # 清理内容中残留的独立三引号行（整行就是三引号）
     cleaned_lines = []
     bad_markers = (triple_double, triple_single)
     for line in docstring.split('\n'):
