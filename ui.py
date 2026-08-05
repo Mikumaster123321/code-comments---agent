@@ -45,43 +45,47 @@ CUSTOM_CSS = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
 }
 
-/* ===== 代码编辑器容器 ===== */
-.code-container .cm-editor {
+/* ===== 代码编辑器高度 ===== */
+.code-container {
+    height: 480px !important;
+}
+.code-container > div,
+.code-container .cm-editor,
+.code-container .cm-scroller {
+    height: 100% !important;
     max-height: 480px !important;
     overflow-y: auto !important;
+}
+.code-container .cm-editor {
     border-radius: 10px !important;
     font-size: 13.5px !important;
 }
-.code-container .cm-scroller {
-    max-height: 480px !important;
-    overflow-y: auto !important;
-}
 
 /* ===== Markdown 滚动容器 ===== */
-.scrollable-md .prose,
-.scrollable-md .markdown-body {
+.scrollable-md {
     max-height: 480px !important;
     overflow-y: auto !important;
-    padding: 4px 8px !important;
+    padding: 8px 4px !important;
+    display: block !important;
 }
 
 /* ===== 自定义滚动条 ===== */
 .code-container .cm-scroller::-webkit-scrollbar,
-.scrollable-md .prose::-webkit-scrollbar {
+.scrollable-md::-webkit-scrollbar {
     width: 8px !important;
 }
 .code-container .cm-scroller::-webkit-scrollbar-track,
-.scrollable-md .prose::-webkit-scrollbar-track {
+.scrollable-md::-webkit-scrollbar-track {
     background: #f1f1f1 !important;
     border-radius: 4px !important;
 }
 .code-container .cm-scroller::-webkit-scrollbar-thumb,
-.scrollable-md .prose::-webkit-scrollbar-thumb {
+.scrollable-md::-webkit-scrollbar-thumb {
     background: #c1c1c1 !important;
     border-radius: 4px !important;
 }
 .code-container .cm-scroller::-webkit-scrollbar-thumb:hover,
-.scrollable-md .prose::-webkit-scrollbar-thumb:hover {
+.scrollable-md::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8 !important;
 }
 
@@ -176,18 +180,6 @@ def _update_file_types(language: str):
     return gr.update(file_types=[".py"])
 
 
-def _update_code_language(language: str):
-    """根据语言切换代码编辑器的语法高亮
-
-    Args:
-        language: 编程语言名称
-
-    Returns:
-        gr.update: Gradio 更新对象
-    """
-    return gr.update(language="java" if language == "Java" else "python")
-
-
 def create_ui():
     """创建并返回 Gradio 界面对象
 
@@ -224,7 +216,6 @@ def create_ui():
                 with gr.Column(elem_classes="equal-width", scale=2):
                     input_box = gr.Code(
                         label="✏️ 代码编辑器（粘贴或上传文件后自动填充）",
-                        language="python", lines=22, max_lines=22,
                         elem_classes="code-container",
                     )
 
@@ -241,30 +232,20 @@ def create_ui():
                 with gr.Tab("📄 带注释的代码"):
                     output_code = gr.Code(
                         label="带注释的代码",
-                        language="python", lines=22, max_lines=22,
                         elem_classes="code-container",
                     )
                     with gr.Row():
                         download_src = gr.File(label="⬇️ 下载注释后的代码", scale=1)
                         download_md = gr.File(label="⬇️ 下载 API 文档 (.md)", scale=1)
                 with gr.Tab("📚 API 文档"):
-                    output_docs = gr.Markdown(
-                        label="生成的 API 文档",
-                        elem_classes="scrollable-md",
-                    )
+                    output_docs = gr.Markdown(elem_classes="scrollable-md")
                 with gr.Tab("🔍 代码分析"):
-                    quality_output = gr.Markdown(
-                        label="代码质量分析",
-                        elem_classes="scrollable-md",
-                    )
-                    annotation_output = gr.Markdown(
-                        label="类型注解检查",
-                        elem_classes="scrollable-md",
-                    )
-                    summary_output = gr.Markdown(
-                        label="代码摘要",
-                        elem_classes="scrollable-md",
-                    )
+                    gr.Markdown("### 📊 代码质量分析")
+                    quality_output = gr.Markdown(elem_classes="scrollable-md")
+                    gr.Markdown("### 🎯 类型注解检查")
+                    annotation_output = gr.Markdown(elem_classes="scrollable-md")
+                    gr.Markdown("### 📝 代码摘要")
+                    summary_output = gr.Markdown(elem_classes="scrollable-md")
                     analyze_log = gr.Textbox(label="分析日志", lines=4, max_lines=4)
                 with gr.Tab("📋 处理日志"):
                     output_log = gr.Textbox(label="处理日志", lines=12, max_lines=12)
@@ -276,8 +257,6 @@ def create_ui():
         # ===== 事件绑定 =====
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
-        language.change(fn=_update_code_language, inputs=language, outputs=input_box)
-        language.change(fn=_update_code_language, inputs=language, outputs=output_code)
         btn.click(
             fn=process_code,
             inputs=[input_box, incremental_chk, language],
