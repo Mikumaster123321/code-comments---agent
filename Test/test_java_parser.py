@@ -3,10 +3,11 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)
 
-from java_parser import get_defined_functions
-from java_annotator import (
+from Java.java_parser import get_defined_functions
+from Java.java_annotator import (
     insert_javadoc_into_code, _format_javadoc, _validate_braces,
     extract_existing_javadoc, build_java_markdown_docs,
 )

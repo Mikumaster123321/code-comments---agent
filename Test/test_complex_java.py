@@ -4,14 +4,15 @@ import os
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)
 
 # 重定向输出到文件（避免终端 GBK 编码问题）
-_RESULT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_result.txt')
+_RESULT_FILE = os.path.join(_ROOT, '_result.txt')
 sys.stdout = open(_RESULT_FILE, 'w', encoding='utf-8')
 
-from java_parser import get_defined_functions
-from java_annotator import _validate_braces
+from Java.java_parser import get_defined_functions
+from Java.java_annotator import _validate_braces
 from processor import process_code, handle_file_upload
 
 

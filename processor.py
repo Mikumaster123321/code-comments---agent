@@ -5,18 +5,18 @@ import time
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from parser import get_defined_functions
+from Py.parser import get_defined_functions
 from llm_service import (
     generate_docstring, generate_code_summary,
     generate_javadoc, generate_java_summary,
 )
-from annotator import insert_docstring_into_code, build_markdown_docs
-from java_parser import get_defined_functions as get_java_functions
-from java_annotator import (
+from Py.annotator import insert_docstring_into_code, build_markdown_docs
+from Java.java_parser import get_defined_functions as get_java_functions
+from Java.java_annotator import (
     insert_javadoc_into_code, build_java_markdown_docs,
     extract_existing_javadoc, _validate_braces,
 )
-from analyzer import analyze_code_quality, check_type_annotations
+from Py.analyzer import analyze_code_quality, check_type_annotations
 from config import MAX_WORKERS
 
 

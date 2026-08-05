@@ -3,10 +3,11 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)
 
 from processor import process_code, analyze_code
-from java_annotator import _validate_braces
+from Java.java_annotator import _validate_braces
 
 
 JAVA_CODE = """package com.example;

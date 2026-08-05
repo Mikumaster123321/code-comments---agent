@@ -4,15 +4,22 @@
 启动 Gradio Web 界面。
 架构拆分：
   config.py         — 配置（API Key、模型参数）
-  parser.py         — Python AST 解析（提取函数/类定义）
-  java_parser.py    — Java 正则解析（提取类/方法定义）
   llm_service.py    — LLM 调用（docstring/Javadoc 生成、代码摘要，含重试）
-  annotator.py      — Python 注释插入与 Markdown 文档生成
-  java_annotator.py — Java Javadoc 插入与 Markdown 文档生成
-  analyzer.py       — 代码质量分析与类型注解检查（Python 专用）
   processor.py      — 主处理逻辑（多语言调度、并发生成 + 串行插入）
   ui.py             — Gradio 界面构建
   main.py           — 入口文件（本文件）
+  Py/               — Python 专用模块
+    parser.py         — AST 解析（提取函数/类定义）
+    annotator.py      — 注释插入与 Markdown 文档生成
+    analyzer.py       — 代码质量分析与类型注解检查
+  Java/             — Java 专用模块
+    java_parser.py    — 正则解析（提取类/方法定义）
+    java_annotator.py — Javadoc 插入与 Markdown 文档生成
+  Test/             — 测试用例
+    test_java_parser.py       — Java 解析器单元测试
+    test_java_integration.py  — Java 集成测试（调用 LLM）
+    test_complex_java.py      — 复杂嵌套端到端测试
+    ComplexExample.java       — Java 测试样例文件
 """
 from ui import create_ui, CUSTOM_CSS
 

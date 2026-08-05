@@ -2,7 +2,7 @@
 """Java 注释插入模块：将 Javadoc 注释插入 Java 代码并生成 Markdown 文档"""
 import re
 
-from java_parser import _mask_strings_and_comments
+from Java.java_parser import _mask_strings_and_comments
 
 
 def _format_javadoc(docstring: str, indent: str) -> str:
