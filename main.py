@@ -39,13 +39,21 @@ def get_defined_functions(source: str):
                 end_line = node.end_lineno
                 code_lines = source.splitlines()[start_line-1:end_line]
                 func_code = "\n".join(code_lines)
+                # 判断是否已有 docstring（body 首条语句为字符串字面量）
+                has_doc = (
+                    len(node.body) > 0
+                    and isinstance(node.body[0], ast.Expr)
+                    and isinstance(node.body[0].value, ast.Constant)
+                    and isinstance(node.body[0].value.value, str)
+                )
                 items.append({
                     "node": node,
                     "name": node.name,
                     "type": "class" if isinstance(node, ast.ClassDef) else "function",
                     "code": func_code,
                     "lineno": start_line,
-                    "end_lineno": end_line
+                    "end_lineno": end_line,
+                    "has_docstring": has_doc
                 })
                 # 递归：如果是类，继续提取类内部的方法
                 if isinstance(node, ast.ClassDef):
@@ -191,8 +199,13 @@ def handle_file_upload(uploaded_file):
     with open(file_path, 'r', encoding='utf-8') as f:
         return f.read()
 
-def process_code(source_code: str):
-    """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、.py 下载路径"""
+def process_code(source_code: str, incremental: bool = False):
+    """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、.py 下载路径
+
+    Args:
+        source_code: 源代码字符串
+        incremental: 增量更新模式，True 时跳过已有 docstring 的函数（节省 API 调用）
+    """
     if not source_code or not source_code.strip():
         return "", "未输入代码", "日志：无处理对象。", None, None
 
@@ -204,8 +217,26 @@ def process_code(source_code: str):
     annotated_code = source_code
     doc_entries = []
 
+    # 增量更新模式：跳过已有 docstring 的函数
+    to_process = []
+    skipped = 0
+    for item in items:
+        if incremental and item["has_docstring"]:
+            skipped += 1
+            log.append(f"⊘ {item['name']} 已有 docstring，跳过")
+            # 仍将现有 docstring 纳入 Markdown 文档，保证文档完整
+            existing = ast.get_docstring(item["node"])
+            if existing:
+                item["docstring"] = existing
+                doc_entries.append(item)
+        else:
+            to_process.append(item)
+
+    if skipped > 0:
+        log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
+
     # 按行号从大到小排序，避免插入导致的行号漂移
-    sorted_items = sorted(items, key=lambda x: x["lineno"], reverse=True)
+    sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
 
     for item in sorted_items:
         try:
@@ -217,6 +248,9 @@ def process_code(source_code: str):
             log.append(f"✓ {item['name']} 完成")
         except Exception as e:
             log.append(f"✗ {item['name']} 失败: {str(e)}")
+
+    if not to_process:
+        log.append("所有节点均已有注释，无需调用 LLM。")
 
     # 按原始顺序排序 doc_entries 用于文档生成
     doc_entries.sort(key=lambda x: x["lineno"])
@@ -277,6 +311,11 @@ with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo
     # 中间：操作按钮
     with gr.Row():
         btn = gr.Button("🚀 生成注释与文档", variant="primary", size="lg")
+    with gr.Row():
+        incremental_chk = gr.Checkbox(
+            label="增量更新模式（跳过已有注释的函数，节省 API 调用）",
+            value=False
+        )
 
     # 底部：输出区（Tab 分页）
     with gr.Tabs():
@@ -297,7 +336,7 @@ with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo
     file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
     btn.click(
         fn=process_code,
-        inputs=input_box,
+        inputs=[input_box, incremental_chk],
         outputs=[output_code, output_docs, output_log, download_md, download_py]
     )
 
