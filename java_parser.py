@@ -130,8 +130,8 @@ def _parse_declaration(decl_text: str):
     """
     if not decl_text or not decl_text.strip():
         return None
-    # 排除 new 表达式（匿名类）
-    if re.match(r'^\s*new\b', decl_text):
+    # 排除含 new 关键字的语句（匿名类实例化、字段初始化等，非方法声明）
+    if re.search(r'\bnew\b', decl_text):
         return None
     # 类/接口/枚举
     m = re.search(r'\b(class|interface|enum)\s+(\w+)', decl_text)
