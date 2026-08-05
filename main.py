@@ -1,7 +1,9 @@
 import os
 import ast
 import re
+import time
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import openai
 import gradio as gr
 from dotenv import load_dotenv
@@ -235,22 +237,53 @@ def process_code(source_code: str, incremental: bool = False):
     if skipped > 0:
         log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
 
-    # 按行号从大到小排序，避免插入导致的行号漂移
-    sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
-
-    for item in sorted_items:
-        try:
-            log.append(f"正在处理: {item['name']}...")
-            doc = generate_docstring(item)
-            item["docstring"] = doc
-            doc_entries.append(item)
-            annotated_code = insert_docstring_into_code(annotated_code, item, doc)
-            log.append(f"✓ {item['name']} 完成")
-        except Exception as e:
-            log.append(f"✗ {item['name']} 失败: {str(e)}")
-
     if not to_process:
         log.append("所有节点均已有注释，无需调用 LLM。")
+    else:
+        # ========== 阶段 1：并发调用 LLM 生成 docstring ==========
+        # OpenAI 客户端线程安全，可用线程池并发；LLM 调用为 IO 密集型，线程池即可
+        MAX_WORKERS = 5
+        log.append(f"=== 并发生成 docstring（{len(to_process)} 个节点，{MAX_WORKERS} 并发）===")
+        t0 = time.time()
+
+        results = {}  # name -> docstring
+        errors = {}   # name -> exception
+
+        def _gen(item):
+            """线程任务：调用 LLM 生成 docstring"""
+            try:
+                doc = generate_docstring(item)
+                return item["name"], doc, None
+            except Exception as e:
+                return item["name"], None, e
+
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {executor.submit(_gen, item): item for item in to_process}
+            for future in as_completed(futures):
+                name, doc, err = future.result()
+                if err:
+                    errors[name] = err
+                    log.append(f"✗ {name} 生成失败: {err}")
+                else:
+                    results[name] = doc
+                    log.append(f"✓ {name} 生成完成")
+
+        elapsed = time.time() - t0
+        log.append(f"=== LLM 并发阶段完成，耗时 {elapsed:.1f} 秒 ===")
+
+        # ========== 阶段 2：按行号从大到小串行插入 docstring ==========
+        # 必须串行：后一个插入依赖前一个插入后的代码；从底向上避免行号漂移
+        sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
+        for item in sorted_items:
+            if item["name"] not in results:
+                continue
+            try:
+                doc = results[item["name"]]
+                item["docstring"] = doc
+                doc_entries.append(item)
+                annotated_code = insert_docstring_into_code(annotated_code, item, doc)
+            except SyntaxError as e:
+                log.append(f"✗ {item['name']} 插入失败: {e}")
 
     # 按原始顺序排序 doc_entries 用于文档生成
     doc_entries.sort(key=lambda x: x["lineno"])
