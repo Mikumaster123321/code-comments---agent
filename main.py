@@ -28,36 +28,52 @@ MAX_TOKENS = 1024
 # ==================== 核心功能 ====================
 
 def get_defined_functions(source: str):
-    """使用 AST 提取所有顶级函数和类定义"""
+    """使用 AST 提取所有函数和类定义（递归包含类内部方法）"""
     tree = ast.parse(source)
     items = []
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            start_line = node.lineno
-            end_line = node.end_lineno
-            code_lines = source.splitlines()[start_line-1:end_line]
-            func_code = "\n".join(code_lines)
-            items.append({
-                "node": node,
-                "name": node.name,
-                "type": "class" if isinstance(node, ast.ClassDef) else "function",
-                "code": func_code,
-                "lineno": start_line,
-                "end_lineno": end_line
-            })
+
+    def _collect(nodes, class_context=None):
+        for node in nodes:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                start_line = node.lineno
+                end_line = node.end_lineno
+                code_lines = source.splitlines()[start_line-1:end_line]
+                func_code = "\n".join(code_lines)
+                items.append({
+                    "node": node,
+                    "name": node.name,
+                    "type": "class" if isinstance(node, ast.ClassDef) else "function",
+                    "code": func_code,
+                    "lineno": start_line,
+                    "end_lineno": end_line
+                })
+                # 递归：如果是类，继续提取类内部的方法
+                if isinstance(node, ast.ClassDef):
+                    _collect(node.body, class_context=node.name)
+
+    _collect(ast.iter_child_nodes(tree))
     return items
 
-PROMPT_TEMPLATE = """你是一位资深 Python 开发工程师。请为以下{func_type}生成中文文档字符串（docstring）。
-要求：
-1. 使用 Google 风格文档字符串。
-2. 必须包含：功能描述、Args（参数名、类型、说明）、Returns（类型、说明）、可能抛出的异常。
-3. 如果函数/类内有重要逻辑或算法，请在注释中简要说明。
-4. 只输出文档字符串本身，不要包含代码，不要使用代码块标记（不要 ``` ）。
-
-{func_type}名：{name}
-源代码：
-{code}
-"""
+PROMPT_TEMPLATE = (
+    "你是一位资深 Python 开发工程师。请为以下{func_type}生成中文文档字符串（docstring）的内容。\n"
+    "\n"
+    "⚠️ 极其重要的格式要求（不遵守会导致Python语法错误）：\n"
+    "1. 不要在开头和结尾添加任何三引号（\u0022\u0022\u0022或\u0027\u0027\u0027），我会在生成后自动包裹。\n"
+    "2. 不要使用任何Markdown代码块标记（不要 ``` ）。\n"
+    "3. 只输出文档字符串的纯文本内容，不要包含任何代码。\n"
+    "4. 内容内部如果需要出现引号，请使用单引号或转义，绝对不要出现连续三个双引号。\n"
+    "\n"
+    "文档内容要求（Google 风格）：\n"
+    "- 第一行：一句话功能描述（简洁明确）\n"
+    "- Args：参数名 + 类型 + 说明\n"
+    "- Returns：返回类型 + 说明\n"
+    "- Raises：可能抛出的异常 + 触发条件\n"
+    "- 重要逻辑或算法请简要说明\n"
+    "\n"
+    "{func_type}名：{name}\n"
+    "源代码：\n"
+    "{code}\n"
+)
 
 def generate_docstring(item: dict) -> str:
     """调用 LLM 生成文档字符串"""
@@ -73,28 +89,86 @@ def generate_docstring(item: dict) -> str:
         max_tokens=MAX_TOKENS
     )
     docstring = response.choices[0].message.content.strip()
-    # 清理可能的 markdown 代码块标记
-    docstring = re.sub(r'^```.*', '', docstring)
-    docstring = re.sub(r'```$', '', docstring)
+
+    # 彻底清理：去除所有可能的三引号包裹（防止 LLM 不听话）
+    # 注意：正则写法刻意避免三引号与字符串边界冲突
+    triple_double = chr(34) * 3   # """
+    triple_single = chr(39) * 3   # '''
+    docstring = re.sub(r'^' + triple_double, '', docstring)   # 开头的 """
+    docstring = re.sub(triple_double + r'$', '', docstring)   # 结尾的 """
+    docstring = re.sub(r'^' + triple_single, '', docstring)   # 开头的 '''
+    docstring = re.sub(triple_single + r'$', '', docstring)   # 结尾的 '''
+    docstring = re.sub(r'^```.*?\n', '', docstring)           # 开头的 markdown 代码块
+    docstring = re.sub(r'\n```$', '', docstring)              # 结尾的 markdown 代码块
+    docstring = re.sub(r'^```', '', docstring)                # 开头单独的 ```
+    docstring = re.sub(r'```$', '', docstring)                # 结尾单独的 ```
+
+    # 清理内容中残留的独立三引号行（避免破坏docstring边界）
+    cleaned_lines = []
+    bad_markers = (triple_double, triple_single)
+    for line in docstring.split('\n'):
+        stripped = line.strip()
+        if stripped in bad_markers:
+            continue
+        cleaned_lines.append(line)
+    docstring = "\n".join(cleaned_lines)
+
     return docstring.strip()
 
 def insert_docstring_into_code(source: str, item: dict, docstring: str) -> str:
-    """将文档字符串插入到原函数定义之后"""
+    """将文档字符串插入到函数/类定义体的第一行（签名结束后）"""
     lines = source.splitlines()
-    func_line = lines[item["lineno"] - 1]
-    indent = len(func_line) - len(func_line.lstrip())
-    base_indent = ' ' * indent
+    node = item["node"]
+    indent = len(lines[item["lineno"] - 1]) - len(lines[item["lineno"] - 1].lstrip())
     inner_indent = ' ' * (indent + 4)
 
-    # 格式化 docstring
-    formatted_doc = f'{inner_indent}"""\n'
-    for line in docstring.split('\n'):
-        formatted_doc += f'{inner_indent}{line}\n'
-    formatted_doc += f'{inner_indent}"""'
+    formatted_doc = _format_docstring(docstring, inner_indent)
 
-    insert_pos = item["lineno"]  # 在定义行之后插入
-    new_lines = lines[:insert_pos] + [formatted_doc] + lines[insert_pos:]
-    return "\n".join(new_lines)
+    # 判断是否已有 docstring（第一条语句是字符串字面量）
+    has_existing_doc = (
+        len(node.body) > 0
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+        and isinstance(node.body[0].value.value, str)
+    )
+
+    if has_existing_doc:
+        # 替换旧 docstring：node.body[0] 是 docstring 节点（ast.Expr）
+        doc_node = node.body[0]
+        start_idx = doc_node.lineno - 1       # 0-based，旧 docstring 首行
+        end_idx = doc_node.end_lineno         # 0-based slice，旧 docstring 之后的行
+        new_lines = lines[:start_idx] + [formatted_doc] + lines[end_idx:]
+    else:
+        # 没有 docstring：插入到函数体第一条语句之前
+        if node.body:
+            insert_idx = node.body[0].lineno - 1
+        else:
+            # 空函数体（如 pass）：插入到 end_lineno 之前
+            insert_idx = node.end_lineno - 1
+        new_lines = lines[:insert_idx] + [formatted_doc] + lines[insert_idx:]
+
+    result = "\n".join(new_lines)
+
+    # 安全校验：尝试 AST 解析，失败则回退不修改
+    try:
+        ast.parse(result)
+    except SyntaxError:
+        # 打印到日志（这里通过异常让调用方知道）
+        raise SyntaxError(f"插入 docstring 后语法错误，已跳过: {item['name']}")
+
+    return result
+
+
+def _format_docstring(docstring: str, inner_indent: str) -> str:
+    """格式化 docstring：统一换行、缩进和三引号包裹"""
+    # 先清理内容两端空白
+    docstring = docstring.strip()
+    # 逐行按 inner_indent 缩进
+    body_lines = []
+    for line in docstring.split('\n'):
+        body_lines.append(f"{inner_indent}{line}")
+    body = "\n".join(body_lines)
+    return f'{inner_indent}"""\n{body}\n{inner_indent}"""'
 
 def build_markdown_docs(doc_entries: list) -> str:
     """生成 Markdown API 文档"""
@@ -130,7 +204,10 @@ def process_code(source_code: str):
     annotated_code = source_code
     doc_entries = []
 
-    for item in items:
+    # 按行号从大到小排序，避免插入导致的行号漂移
+    sorted_items = sorted(items, key=lambda x: x["lineno"], reverse=True)
+
+    for item in sorted_items:
         try:
             log.append(f"正在处理: {item['name']}...")
             doc = generate_docstring(item)
@@ -141,14 +218,20 @@ def process_code(source_code: str):
         except Exception as e:
             log.append(f"✗ {item['name']} 失败: {str(e)}")
 
+    # 按原始顺序排序 doc_entries 用于文档生成
+    doc_entries.sort(key=lambda x: x["lineno"])
     markdown_doc = build_markdown_docs(doc_entries)
+
+    # 确保 .py 文件包含 UTF-8 编码声明，Windows 下 PyCharm 才能正确识别中文
+    if annotated_code and not annotated_code.startswith('# -*- coding:'):
+        annotated_code = '# -*- coding: utf-8 -*-\n' + annotated_code
 
     # 保存为临时 .md 文件，供下载
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
         f.write(markdown_doc)
         md_temp_path = f.name
 
-    # 保存注释后的 .py 文件，供下载
+    # 保存注释后的 .py 文件（含 UTF-8 编码声明），供下载
     with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
         f.write(annotated_code)
         py_temp_path = f.name
@@ -156,29 +239,67 @@ def process_code(source_code: str):
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 # ==================== Gradio 界面 ====================
-with gr.Blocks(title="代码注释与文档生成Agent") as demo:
+custom_css = """
+/* 限制 Code 组件的高度，强制内部内容滚动 */
+.code-container .cm-editor,
+.code-container .cm-scroller {
+    max-height: 500px !important;
+    overflow-y: auto !important;
+}
+
+/* 限制 Markdown 组件的高度，强制内容滚动 */
+.scrollable-md .prose,
+.scrollable-md .markdown-body {
+    max-height: 500px !important;
+    overflow-y: auto !important;
+}
+
+/* 统一左右栏宽度 */
+.equal-width > div {
+    flex: 1 !important;
+}
+"""
+with gr.Blocks(title="代码注释与文档生成Agent", css=custom_css) as demo:
     gr.Markdown("## 📝 代码注释与 API 文档自动生成 Agent")
     gr.Markdown("粘贴 Python 代码或上传 .py 文件，自动生成中文注释和 Markdown API 文档。")
 
+    # 顶部：输入区
+    with gr.Row(equal_height=True):
+        with gr.Column(elem_classes="equal-width"):
+            file_upload = gr.File(label="📤 上传 Python 文件 (.py)", file_types=[".py"])
+        with gr.Column(elem_classes="equal-width"):
+            input_box = gr.Code(
+                label="✏️ 输入代码（粘贴或上传文件后自动填充）",
+                language="python", lines=20, max_lines=20,
+                elem_classes="code-container"
+            )
+
+    # 中间：操作按钮
     with gr.Row():
-        with gr.Column():
-            file_upload = gr.File(label="上传 Python 文件 (.py)", file_types=[".py"])
-            input_box = gr.Code(label="输入代码（可直接粘贴或上传文件后自动填充）", language="python", lines=20)
-        with gr.Column():
-            output_code = gr.Code(label="带注释的代码", language="python", lines=20)
-            output_docs = gr.Markdown(label="生成的 API 文档")
-            output_log = gr.Textbox(label="处理日志", lines=5)
-            with gr.Row():
-                download_py = gr.File(label="下载注释后的代码 (.py)")
-                download_md = gr.File(label="下载 API 文档 (.md)")
+        btn = gr.Button("🚀 生成注释与文档", variant="primary", size="lg")
 
-    # 上传文件后自动填充到代码输入框
+    # 底部：输出区（Tab 分页）
+    with gr.Tabs():
+        with gr.Tab("📄 带注释的代码"):
+            output_code = gr.Code(
+                label="带注释的代码",
+                language="python", lines=20, max_lines=20,
+                elem_classes="code-container"
+            )
+            download_py = gr.File(label="⬇️ 下载注释后的代码 (.py)")
+        with gr.Tab("📚 API 文档"):
+            output_docs = gr.Markdown(label="生成的 API 文档", elem_classes="scrollable-md")
+            download_md = gr.File(label="⬇️ 下载 API 文档 (.md)")
+        with gr.Tab("📋 处理日志"):
+            output_log = gr.Textbox(label="处理日志", lines=10, max_lines=10)
+
+    # 绑定事件
     file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
-
-    btn = gr.Button("生成注释与文档", variant="primary")
-    btn.click(fn=process_code,
-              inputs=input_box,
-              outputs=[output_code, output_docs, output_log, download_md, download_py])
+    btn.click(
+        fn=process_code,
+        inputs=input_box,
+        outputs=[output_code, output_docs, output_log, download_md, download_py]
+    )
 
 if __name__ == "__main__":
     demo.launch()
