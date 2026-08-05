@@ -26,6 +26,32 @@ CUSTOM_CSS = """
 """
 
 
+def _update_file_types(language: str):
+    """根据语言切换文件上传组件接受的扩展名
+
+    Args:
+        language: 编程语言名称
+
+    Returns:
+        gr.File: 带更新后 file_types 的组件
+    """
+    if language == "Java":
+        return gr.File(file_types=[".java"])
+    return gr.File(file_types=[".py"])
+
+
+def _update_code_language(language: str):
+    """根据语言切换代码编辑器的语法高亮
+
+    Args:
+        language: 编程语言名称
+
+    Returns:
+        gr.Code: 带更新后 language 的组件
+    """
+    return gr.Code(language="java" if language == "Java" else "python")
+
+
 def create_ui():
     """创建并返回 Gradio 界面对象
 
@@ -34,12 +60,19 @@ def create_ui():
     """
     with gr.Blocks(title="代码注释与文档生成Agent") as demo:
         gr.Markdown("## 📝 代码注释与 API 文档自动生成 Agent")
-        gr.Markdown("粘贴 Python 代码或上传 .py 文件，自动生成中文注释和 Markdown API 文档。")
+        gr.Markdown("粘贴代码或上传文件，自动生成中文注释和 Markdown API 文档。支持 Python 和 Java。")
+
+        # 语言选择
+        with gr.Row():
+            language = gr.Dropdown(
+                choices=["Python", "Java"], value="Python",
+                label="编程语言"
+            )
 
         # 顶部：输入区
         with gr.Row(equal_height=True):
             with gr.Column(elem_classes="equal-width"):
-                file_upload = gr.File(label="📤 上传 Python 文件 (.py)", file_types=[".py"])
+                file_upload = gr.File(label="📤 上传源代码文件 (.py / .java)", file_types=[".py", ".java"])
             with gr.Column(elem_classes="equal-width"):
                 input_box = gr.Code(
                     label="✏️ 输入代码（粘贴或上传文件后自动填充）",
@@ -65,7 +98,7 @@ def create_ui():
                     language="python", lines=20, max_lines=20,
                     elem_classes="code-container"
                 )
-                download_py = gr.File(label="⬇️ 下载注释后的代码 (.py)")
+                download_src = gr.File(label="⬇️ 下载注释后的代码")
             with gr.Tab("📚 API 文档"):
                 output_docs = gr.Markdown(label="生成的 API 文档", elem_classes="scrollable-md")
                 download_md = gr.File(label="⬇️ 下载 API 文档 (.md)")
@@ -80,14 +113,18 @@ def create_ui():
 
         # 绑定事件
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
+        # 语言切换时更新文件类型和代码高亮
+        language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
+        language.change(fn=_update_code_language, inputs=language, outputs=input_box)
+        language.change(fn=_update_code_language, inputs=language, outputs=output_code)
         btn.click(
             fn=process_code,
-            inputs=[input_box, incremental_chk],
-            outputs=[output_code, output_docs, output_log, download_md, download_py]
+            inputs=[input_box, incremental_chk, language],
+            outputs=[output_code, output_docs, output_log, download_md, download_src]
         )
         analyze_btn.click(
             fn=analyze_code,
-            inputs=input_box,
+            inputs=[input_box, language],
             outputs=[quality_output, annotation_output, summary_output, analyze_log]
         )
 

@@ -135,3 +135,94 @@ def generate_code_summary(source: str) -> str:
         f"{source}"
     )
     return _call_llm_with_retry(prompt, 0.3, 512)
+
+
+# ==================== Java Javadoc 生成 ====================
+
+JAVA_PROMPT_TEMPLATE = (
+    "你是一位资深 Java 开发工程师。请为以下{func_type}生成中文 Javadoc 注释的内容。\n"
+    "\n"
+    "⚠️ 极其重要的格式要求（不遵守会导致 Java 语法错误）：\n"
+    "1. 不要在开头和结尾添加 /** 或 */ 标记，我会在生成后自动包裹。\n"
+    "2. 不要使用任何 Markdown 代码块标记（不要 ``` ）。\n"
+    "3. 只输出 Javadoc 的纯文本内容，不要包含任何代码。\n"
+    "4. 内容内部不要出现 */ 或 /** 字符串。\n"
+    "\n"
+    "文档内容要求（Javadoc 风格）：\n"
+    "- 第一行：一句话功能描述（简洁明确）\n"
+    "- @param：参数名 + 说明（每个参数一行）\n"
+    "- @return：返回值说明\n"
+    "- @throws：可能抛出的异常 + 触发条件\n"
+    "- 重要逻辑或算法请简要说明\n"
+    "\n"
+    "{func_type}名：{name}\n"
+    "源代码：\n"
+    "{code}\n"
+)
+
+
+def _clean_javadoc(text: str) -> str:
+    """清理 LLM 输出的 Javadoc：去除 /** */ 包裹、行首 * 标记和 Markdown 代码块
+
+    Args:
+        text: LLM 原始输出
+
+    Returns:
+        str: 清理后的纯文本 Javadoc 内容
+    """
+    M = re.MULTILINE
+    # 去除开头的 /**
+    text = re.sub(r'^\s*/\*\*', '', text, flags=M)
+    # 去除结尾的 */
+    text = re.sub(r'\*/\s*$', '', text, flags=M)
+    # 去除每行开头的 * 和可选空格
+    lines = [re.sub(r'^\s*\*\s?', '', line) for line in text.split('\n')]
+    text = '\n'.join(lines)
+    # 去除 Markdown 代码块标记
+    text = re.sub(r'^```[a-zA-Z]*\s*\n', '', text, flags=M)
+    text = re.sub(r'\n```$', '', text, flags=M)
+    text = re.sub(r'^```', '', text, flags=M)
+    text = re.sub(r'```$', '', text, flags=M)
+    return text.strip()
+
+
+def generate_javadoc(item: dict) -> str:
+    """调用 LLM 生成 Java Javadoc 注释
+
+    Args:
+        item: 方法/类信息字典，需包含 type/name/code
+
+    Returns:
+        str: 清理后的 Javadoc 文本
+    """
+    prompt = JAVA_PROMPT_TEMPLATE.format(
+        func_type="类" if item["type"] == "class" else "方法",
+        name=item["name"],
+        code=item["code"]
+    )
+    javadoc = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
+    return _clean_javadoc(javadoc)
+
+
+def generate_java_summary(source: str) -> str:
+    """调用 LLM 生成 Java 代码摘要：模块功能、核心类、依赖关系
+
+    Args:
+        source: Java 源代码字符串
+
+    Returns:
+        str: 代码摘要文本
+    """
+    prompt = (
+        "请分析以下 Java 代码，生成一段简洁的中文摘要（200字以内）。\n"
+        "摘要应包含：\n"
+        "1. 模块整体功能\n"
+        "2. 核心类和方法\n"
+        "3. 主要依赖关系\n"
+        "\n"
+        "只输出摘要文本，不要使用 Markdown 标题或代码块。\n"
+        "\n"
+        "源代码：\n"
+        f"{source}"
+    )
+    return _call_llm_with_retry(prompt, 0.3, 512)
