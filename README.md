@@ -1,11 +1,12 @@
 # 代码注释与 API 文档自动生成 Agent
 
-基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成 Google 风格中文文档字符串（docstring），并自动生成 Markdown API 文档。
+基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
 ## 功能特性
 
 ### 核心功能
-- **自动注释**：为 Python 函数/类 和 Java 类/方法生成 Google 风格 docstring / Javadoc
+- **自动注释**：为 Python 函数/类 和 Java 类/方法生成 docstring / Javadoc
+- **多风格模板选择**：通过预定义 Prompt 模板切换注释风格，Python 支持 Google 风格 / NumPy 风格 / reStructuredText；Java 支持标准 Javadoc / 极简行内注释；翻译重组时也按目标风格输出
 - **双语言支持**：同一套工具支持 Python & Java 两种主流语言，代码结构自动识别
 - **双模式输入**：支持直接粘贴代码或上传 `.py` / `.java` 文件
 - **批量文件处理**：支持一次上传多个 `.py`/`.java` 文件或整个 ZIP 压缩包（含递归子目录），批量生成注释后打包 ZIP 下载
@@ -186,6 +187,22 @@ code-comments---agent/
 ```
 
 ## 更新日志
+
+### v2.5.0 — 2026-08-07
+
+#### 注释风格模板选择（Python 3 种 + Java 2 种）
+- 新增 5 种注释风格，通过预定义 Prompt 模板灵活切换：
+  - **Python**：Google 风格（Args/Returns/Raises）/ NumPy 风格（Parameters/Returns + 类型短横线分隔）/ reStructuredText（:param/:type/:return/:rtype）
+  - **Java**：标准 Javadoc（/** ... */ + @param/@return/@throws）/ 极简行内注释（单行短注释 `// xxx`，用于小型项目快速生成）
+- `llm_service.py` 提供 `PYTHON_STYLE_*` / `JAVA_STYLE_*` 风格常量，生成与翻译流程统一走风格规则注入：
+  - 生成时按目标风格追加格式要求；翻译/重组时按目标风格重排输出结构
+  - 默认风格保持不变（Python 默认为 Google 风格，Java 默认为标准 Javadoc），向下兼容 v2.x API
+- `processor.process_code` 与 `process_batch_files` 新增 `python_style` / `java_style` 可选参数，风格信息从 UI 一路透传到 LLM 层
+- Gradio UI 新增"注释风格选择"分区：两个并列下拉框（Python 风格 / Java 风格），三语 i18n 文案同步更新
+- 新增 `test_styles.py` 单元测试（14 条），离线 mock LLM 调用即可验证：5 种风格 prompt 关键词注入、翻译规则适配、默认风格行为、processor 参数链路不报错（全部通过）
+
+#### 兼容性
+- 修复 Python 3.8 类型注解问题：`llm_service.py` / `processor.py` 顶部添加 `from __future__ import annotations`，并把 `str | None` 改为 `Optional[str]`，在 3.8 环境下正常 import
 
 ### v2.4.0 — 2026-08-07
 

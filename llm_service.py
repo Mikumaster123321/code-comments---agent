@@ -1,32 +1,152 @@
 # -*- coding: utf-8 -*-
-"""LLM 调用模块：生成 docstring 和代码摘要，内置重试机制"""
+from __future__ import annotations
+"""LLM 调用模块：生成 docstring/Javadoc（支持 Google/NumPy/reST/Javadoc/极简 多种风格），内置重试机制"""
 import re
 import time
+from typing import Optional
 import openai
 from config import client, MODEL, TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
 from i18n import LANG_NAME, LANG_CODE
 
-PROMPT_TEMPLATE = (
+# ================== 注释风格定义 ==================
+
+PYTHON_STYLE_GOOGLE = "Google 风格"
+PYTHON_STYLE_NUMPY = "NumPy 风格"
+PYTHON_STYLE_RST = "reStructuredText"
+JAVA_STYLE_JAVADOC = "标准 Javadoc"
+JAVA_STYLE_MINIMAL = "极简行内注释"
+
+PYTHON_STYLES = [PYTHON_STYLE_GOOGLE, PYTHON_STYLE_NUMPY, PYTHON_STYLE_RST]
+JAVA_STYLES = [JAVA_STYLE_JAVADOC, JAVA_STYLE_MINIMAL]
+
+# 通用基础 prompt（Python），最后拼接 {style_rules}
+PYTHON_PROMPT_BASE = (
     "你是一位资深 Python 开发工程师。请为以下{func_type}生成{lang_name}文档字符串（docstring）的内容。\n"
     "\n"
     "⚠️ 极其重要的格式要求（不遵守会导致Python语法错误）：\n"
-    "1. 不要在开头和结尾添加任何三引号（\u0022\u0022\u0022或\u0027\u0027\u0027），我会在生成后自动包裹。\n"
+    "1. 不要在开头和结尾添加任何三引号（\"\"\"或'''），我会在生成后自动包裹。\n"
     "2. 不要使用任何Markdown代码块标记（不要 ``` ）。\n"
     "3. 只输出文档字符串的纯文本内容，不要包含任何代码。\n"
     "4. 内容内部如果需要出现引号，请使用单引号或转义，绝对不要出现连续三个双引号。\n"
     "5. 文档内容必须使用 {lang_name} 撰写。\n"
     "\n"
-    "文档内容要求（Google 风格）：\n"
-    "- 第一行：一句话功能描述（简洁明确）\n"
-    "- Args：参数名 + 类型 + 说明\n"
-    "- Returns：返回类型 + 说明\n"
-    "- Raises：可能抛出的异常 + 触发条件\n"
-    "- 重要逻辑或算法请简要说明\n"
+    "{style_rules}\n"
     "\n"
     "{func_type}名：{name}\n"
     "源代码：\n"
     "{code}\n"
 )
+
+# Python 各风格的详细格式规则
+PYTHON_STYLE_RULES = {
+    PYTHON_STYLE_GOOGLE: (
+        "文档内容要求（Google 风格）：\n"
+        "- 第一行：一句话功能描述（简洁明确）\n"
+        "- 空一行后写参数/返回/异常（若有）\n"
+        "- Args:\n"
+        "    参数名: 参数类型或说明\n"
+        "    （每个参数一行，注意缩进为 4 空格）\n"
+        "- Returns:\n"
+        "    返回类型或说明\n"
+        "- Raises:\n"
+        "    异常类型: 触发条件\n"
+        "- 重要逻辑或算法请简要说明"
+    ),
+    PYTHON_STYLE_NUMPY: (
+        "文档内容要求（NumPy / Napoleon 风格）：\n"
+        "- 第一行：一句话功能描述（简洁明确）\n"
+        "- 空一行后写详细描述（可选），再写参数/返回等小节\n"
+        "- Parameters\n"
+        "----------\n"
+        "name : type\n"
+        "    每个参数说明（缩进 4 空格）\n"
+        "- Returns\n"
+        "-------\n"
+        "type\n"
+        "    返回值说明（缩进 4 空格）\n"
+        "- Raises\n"
+        "------\n"
+        "ExceptionType\n"
+        "    触发条件说明\n"
+        "- 小节分隔线长度必须与标题完全一致（例如 \"Parameters\" 下面 10 个 \"-\"）"
+    ),
+    PYTHON_STYLE_RST: (
+        "文档内容要求（reStructuredText / Sphinx 风格）：\n"
+        "- 第一行：一句话功能描述（简洁明确）\n"
+        "- 空一行后写参数/返回/异常（若有）\n"
+        "- :param name: 参数说明\n"
+        "  :type name: 参数类型\n"
+        "  （每个参数一对 :param/:type）\n"
+        "- :return: 返回值说明\n"
+        "  :rtype: 返回类型\n"
+        "- :raises ExceptionType: 触发条件说明"
+    ),
+}
+
+# 翻译时的风格重写规则（Python）：翻译后需按目标风格重新组织格式
+PYTHON_TRANSLATE_STYLE_RULES = {
+    PYTHON_STYLE_GOOGLE: (
+        "翻译完成后，请严格按 Google 风格重新组织文档结构（Args / Returns / Raises 小节）。\n"
+        "第一行一句话功能描述，空一行后参数/返回/异常小节，Args 内部每行 4 空格缩进。"
+    ),
+    PYTHON_STYLE_NUMPY: (
+        "翻译完成后，请严格按 NumPy Napoleon 风格重新组织文档结构。\n"
+        "使用 Parameters / Returns / Raises 作为小节标题，并在标题下方用等长的 \"-\" 作为分隔线，\n"
+        "参数格式为 \"name : type\"，下一行缩进 4 空格写说明。"
+    ),
+    PYTHON_STYLE_RST: (
+        "翻译完成后，请严格按 reStructuredText Sphinx 风格重新组织文档结构。\n"
+        "使用 :param name: / :type name: 描述参数，:return: / :rtype: 描述返回值，\n"
+        ":raises ExceptionType: 描述异常。"
+    ),
+}
+
+# ==================== Java 部分 ====================
+
+JAVA_PROMPT_BASE = (
+    "你是一位资深 Java 开发工程师。请为以下{func_type}生成{lang_name} Javadoc 注释的内容。\n"
+    "\n"
+    "⚠️ 极其重要的格式要求（不遵守会导致 Java 语法错误）：\n"
+    "1. 不要在开头和结尾添加 /** 或 */ 标记，我会在生成后自动包裹。\n"
+    "2. 不要使用任何 Markdown 代码块标记（不要 ``` ）。\n"
+    "3. 只输出 Javadoc 的纯文本内容，不要包含任何代码。\n"
+    "4. 内容内部不要出现 */ 或 /** 字符串。\n"
+    "5. 文档内容必须使用 {lang_name} 撰写。\n"
+    "\n"
+    "{style_rules}\n"
+    "\n"
+    "{func_type}名：{name}\n"
+    "源代码：\n"
+    "{code}\n"
+)
+
+JAVA_STYLE_RULES = {
+    JAVA_STYLE_JAVADOC: (
+        "文档内容要求（标准 Javadoc 风格）：\n"
+        "- 第一行：一句话功能描述（简洁明确）\n"
+        "- 空一行后写详细描述（可选）\n"
+        "- @param 参数名 参数说明（每个参数一行）\n"
+        "- @return 返回值说明（无返回值则不写）\n"
+        "- @throws 异常类型 触发条件说明"
+    ),
+    JAVA_STYLE_MINIMAL: (
+        "文档内容要求（极简行内注释风格）：\n"
+        "- 仅用 1~3 行描述**核心功能**，保持非常简短\n"
+        "- **严禁使用任何 @param / @return / @throws 标签**，不要罗列参数细节\n"
+        "- 适合快速阅读场景，仅表达此方法/类的作用"
+    ),
+}
+
+JAVA_TRANSLATE_STYLE_RULES = {
+    JAVA_STYLE_JAVADOC: (
+        "翻译完成后，请严格按标准 Javadoc 风格重组：保留 @param/@return/@throws 标签，\n"
+        "第一行一句话功能描述 + 空行 + 标签列表。"
+    ),
+    JAVA_STYLE_MINIMAL: (
+        "翻译完成后，请按**极简风格重写**：只保留 1~3 行核心功能描述，\n"
+        "删除所有 @param/@return/@throws 标签，严禁罗列参数细节。"
+    ),
+}
 
 
 def _call_llm_with_retry(prompt: str, temperature: float, max_tokens: int) -> str:
@@ -97,22 +217,27 @@ def _clean_docstring(docstring: str) -> str:
     return docstring.strip()
 
 
-def generate_docstring(item: dict, comment_lang: str = "中文") -> str:
+def generate_docstring(item: dict, comment_lang: str = "中文", style: Optional[str] = None) -> str:
     """调用 LLM 生成文档字符串
 
     Args:
         item: 函数/类信息字典，需包含 type/name/code
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
+        style: 注释风格，Google 风格 / NumPy 风格 / reStructuredText
 
     Returns:
         str: 清理后的 docstring 文本
     """
+    if style is None or style not in PYTHON_STYLE_RULES:
+        style = PYTHON_STYLE_GOOGLE
     lang_name = LANG_NAME.get(comment_lang, "Chinese (Simplified)")
-    prompt = PROMPT_TEMPLATE.format(
+    style_rules = PYTHON_STYLE_RULES[style]
+    prompt = PYTHON_PROMPT_BASE.format(
         func_type="类" if item["type"] == "class" else "函数",
         name=item["name"],
         code=item["code"],
         lang_name=lang_name,
+        style_rules=style_rules,
     )
     docstring = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
     return _clean_docstring(docstring)
@@ -144,23 +269,27 @@ def generate_code_summary(source: str, comment_lang: str = "中文") -> str:
     return _call_llm_with_retry(prompt, 0.3, 512)
 
 
-def translate_docstring(docstring: str, comment_lang: str) -> str:
-    """将已有 docstring 翻译为目标语言（若已是目标语言则原样返回）
+def translate_docstring(docstring: str, comment_lang: str, style: Optional[str] = None) -> str:
+    """将已有 docstring 翻译为目标语言，并按目标风格重组格式
 
     Args:
         docstring: 原始 docstring 文本
         comment_lang: 目标语言（"中文" / "English" / "日本語"）
+        style: 目标注释风格，Google 风格 / NumPy 风格 / reStructuredText
 
     Returns:
         str: 翻译后的 docstring 文本
     """
+    if style is None or style not in PYTHON_TRANSLATE_STYLE_RULES:
+        style = PYTHON_STYLE_GOOGLE
     lang_name = LANG_NAME.get(comment_lang, "Chinese (Simplified)")
+    style_rule = PYTHON_TRANSLATE_STYLE_RULES[style]
     prompt = (
-        f"请将以下文档字符串翻译为{lang_name}。如果已经是{lang_name}，请原样返回不要修改。\n"
+        f"请将以下文档字符串翻译为{lang_name}。如果已经是{lang_name}，请按风格规则重排格式。\n"
         f"\n"
         f"格式要求：\n"
         f"1. 不要添加三引号或 Markdown 标记\n"
-        f"2. 保持原有的段落结构（如 Args/Returns 等）\n"
+        f"2. {style_rule}\n"
         f"3. 只输出翻译后的纯文本\n"
         f"\n"
         f"文档字符串：\n"
@@ -171,28 +300,6 @@ def translate_docstring(docstring: str, comment_lang: str) -> str:
 
 
 # ==================== Java Javadoc 生成 ====================
-
-JAVA_PROMPT_TEMPLATE = (
-    "你是一位资深 Java 开发工程师。请为以下{func_type}生成{lang_name} Javadoc 注释的内容。\n"
-    "\n"
-    "⚠️ 极其重要的格式要求（不遵守会导致 Java 语法错误）：\n"
-    "1. 不要在开头和结尾添加 /** 或 */ 标记，我会在生成后自动包裹。\n"
-    "2. 不要使用任何 Markdown 代码块标记（不要 ``` ）。\n"
-    "3. 只输出 Javadoc 的纯文本内容，不要包含任何代码。\n"
-    "4. 内容内部不要出现 */ 或 /** 字符串。\n"
-    "5. 文档内容必须使用 {lang_name} 撰写。\n"
-    "\n"
-    "文档内容要求（Javadoc 风格）：\n"
-    "- 第一行：一句话功能描述（简洁明确）\n"
-    "- @param：参数名 + 说明（每个参数一行）\n"
-    "- @return：返回值说明\n"
-    "- @throws：可能抛出的异常 + 触发条件\n"
-    "- 重要逻辑或算法请简要说明\n"
-    "\n"
-    "{func_type}名：{name}\n"
-    "源代码：\n"
-    "{code}\n"
-)
 
 
 def _clean_javadoc(text: str) -> str:
@@ -220,22 +327,27 @@ def _clean_javadoc(text: str) -> str:
     return text.strip()
 
 
-def generate_javadoc(item: dict, comment_lang: str = "中文") -> str:
+def generate_javadoc(item: dict, comment_lang: str = "中文", style: Optional[str] = None) -> str:
     """调用 LLM 生成 Java Javadoc 注释
 
     Args:
         item: 方法/类信息字典，需包含 type/name/code
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
+        style: 注释风格，标准 Javadoc / 极简行内注释
 
     Returns:
         str: 清理后的 Javadoc 文本
     """
+    if style is None or style not in JAVA_STYLE_RULES:
+        style = JAVA_STYLE_JAVADOC
     lang_name = LANG_NAME.get(comment_lang, "Chinese (Simplified)")
-    prompt = JAVA_PROMPT_TEMPLATE.format(
+    style_rules = JAVA_STYLE_RULES[style]
+    prompt = JAVA_PROMPT_BASE.format(
         func_type="类" if item["type"] == "class" else "方法",
         name=item["name"],
         code=item["code"],
         lang_name=lang_name,
+        style_rules=style_rules,
     )
     javadoc = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
     return _clean_javadoc(javadoc)
@@ -267,23 +379,27 @@ def generate_java_summary(source: str, comment_lang: str = "中文") -> str:
     return _call_llm_with_retry(prompt, 0.3, 512)
 
 
-def translate_javadoc(javadoc: str, comment_lang: str) -> str:
-    """将已有 Javadoc 翻译为目标语言（若已是目标语言则原样返回）
+def translate_javadoc(javadoc: str, comment_lang: str, style: Optional[str] = None) -> str:
+    """将已有 Javadoc 翻译为目标语言，并按目标风格重组格式
 
     Args:
         javadoc: 原始 Javadoc 文本
         comment_lang: 目标语言（"中文" / "English" / "日本語"）
+        style: 目标注释风格，标准 Javadoc / 极简行内注释
 
     Returns:
         str: 翻译后的 Javadoc 文本
     """
+    if style is None or style not in JAVA_TRANSLATE_STYLE_RULES:
+        style = JAVA_STYLE_JAVADOC
     lang_name = LANG_NAME.get(comment_lang, "Chinese (Simplified)")
+    style_rule = JAVA_TRANSLATE_STYLE_RULES[style]
     prompt = (
-        f"请将以下 Javadoc 注释翻译为{lang_name}。如果已经是{lang_name}，请原样返回不要修改。\n"
+        f"请将以下 Javadoc 注释翻译为{lang_name}。如果已经是{lang_name}，请按风格规则重排格式。\n"
         f"\n"
         f"格式要求：\n"
         f"1. 不要添加 /** 或 */ 标记\n"
-        f"2. 保持原有的 @param/@return/@throws 结构\n"
+        f"2. {style_rule}\n"
         f"3. 只输出翻译后的纯文本\n"
         f"\n"
         f"Javadoc 内容：\n"

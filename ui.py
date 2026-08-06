@@ -433,6 +433,10 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("batch_gen_btn", lang)),      # 23 batch_gen_btn
         gr.update(label=t("batch_dl_btn", lang)),       # 24 batch_dl_btn
         gr.update(label=t("batch_log_label", lang)),    # 25 batch_log
+        # ===== 注释风格新增 =====
+        gr.update(value=t("style_section", lang)),      # 26 style_section_md
+        gr.update(label=t("python_style_label", lang)), # 27 python_style
+        gr.update(label=t("java_style_label", lang)),   # 28 java_style
     ]
 
 
@@ -458,6 +462,25 @@ def create_ui():
                 choices=["Python", "Java"], value="Python",
                 label=t("prog_lang_label", default_lang),
             )
+
+        # ===== 注释风格选择 =====
+        with gr.Column(elem_classes="card-section"):
+            style_section_md = gr.Markdown(t("style_section", default_lang))
+            with gr.Row():
+                with gr.Column(elem_classes="equal-width", scale=1):
+                    python_style = gr.Dropdown(
+                        choices=["Google 风格", "NumPy 风格", "reStructuredText"],
+                        value="Google 风格",
+                        label=t("python_style_label", default_lang),
+                        allow_custom_value=False,
+                    )
+                with gr.Column(elem_classes="equal-width", scale=1):
+                    java_style = gr.Dropdown(
+                        choices=["标准 Javadoc", "极简行内注释"],
+                        value="标准 Javadoc",
+                        label=t("java_style_label", default_lang),
+                        allow_custom_value=False,
+                    )
 
         # ===== 输入区 =====
         with gr.Column(elem_classes="card-section"):
@@ -593,17 +616,23 @@ def create_ui():
                 footer_md,          # 20
                 # ===== 批量处理新增 =====
                 batch_section_md,   # 21
-                batch_file_upload,  # 22
-                batch_gen_btn,      # 23
-                batch_dl_btn,       # 24
-                batch_log,          # 25
+                batch_file_upload, # 22
+                batch_gen_btn,     # 23
+                batch_dl_btn,      # 24
+                batch_log,         # 25
+                # ===== 注释风格新增 =====
+                style_section_md,  # 26
+                python_style,      # 27
+                java_style,        # 28
             ],
         )
 
-        # 生成注释（传入 UI 语言作为注释语言）
+        # 生成注释（传入 UI 语言作为注释语言，以及注释风格）
         btn.click(
-            fn=lambda code, plang, ulang: process_code(code, True, plang, ulang),
-            inputs=[input_box, language, ui_lang],
+            fn=lambda code, plang, ulang, pyst, jvst: process_code(
+                code, True, plang, ulang, python_style=pyst, java_style=jvst
+            ),
+            inputs=[input_box, language, ui_lang, python_style, java_style],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
@@ -630,9 +659,12 @@ def create_ui():
         )
 
         # ===== 批量处理事件绑定 =====
-        def _batch_gen(files, ulang):
+        def _batch_gen(files, ulang, pyst, jvst):
             """批量生成包装：返回 (日志, zip_state, zip_download_update)"""
-            log, zip_path = process_batch_files(files, comment_lang=ulang, incremental=True)
+            log, zip_path = process_batch_files(
+                files, comment_lang=ulang, incremental=True,
+                python_style=pyst, java_style=jvst,
+            )
             dl_update = gr.update(value=zip_path) if zip_path else gr.update()
             return log, zip_path, dl_update
 
@@ -644,7 +676,7 @@ def create_ui():
 
         batch_gen_btn.click(
             fn=_batch_gen,
-            inputs=[batch_file_upload, ui_lang],
+            inputs=[batch_file_upload, ui_lang, python_style, java_style],
             outputs=[batch_log, batch_zip_state, batch_dl_btn],
         )
         batch_dl_btn.click(

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 """主处理模块：协调解析、LLM 调用、注释插入，提供 process_code / analyze_code / 批量处理"""
 import ast
 import os
@@ -8,6 +9,7 @@ import shutil
 import zipfile
 import datetime
 import tempfile
+from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from Py.parser import get_defined_functions
@@ -65,13 +67,14 @@ def handle_file_upload(uploaded_file):
         return "", language
 
 
-def _process_python(source_code: str, incremental: bool, comment_lang: str = "中文"):
+def _process_python(source_code: str, incremental: bool, comment_lang: str = "中文", python_style: Optional[str] = None):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
     Args:
         source_code: Python 源代码字符串
         incremental: 增量更新模式
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
+        python_style: Python 注释风格（Google 风格 / NumPy 风格 / reStructuredText）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, py_path)
@@ -115,7 +118,7 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
         for item in to_translate_sorted:
             try:
                 existing = ast.get_docstring(item["node"])
-                translated = translate_docstring(existing, comment_lang)
+                translated = translate_docstring(existing, comment_lang, python_style)
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, translated)
@@ -138,7 +141,7 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
-                doc = generate_docstring(item, comment_lang)
+                doc = generate_docstring(item, comment_lang, python_style)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -200,13 +203,14 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 
-def _process_java(source_code: str, incremental: bool, comment_lang: str = "中文"):
+def _process_java(source_code: str, incremental: bool, comment_lang: str = "中文", java_style: Optional[str] = None):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
     Args:
         source_code: Java 源代码字符串
         incremental: 增量更新模式
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
+        java_style: Java 注释风格（标准 Javadoc / 极简行内注释）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, java_path)
@@ -259,7 +263,7 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
                 existing_text = extract_existing_javadoc(
                     source_lines, existing_range[0], existing_range[1]
                 )
-                translated = translate_javadoc(existing_text, comment_lang)
+                translated = translate_javadoc(existing_text, comment_lang, java_style)
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
@@ -282,7 +286,7 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
-                doc = generate_javadoc(item, comment_lang)
+                doc = generate_javadoc(item, comment_lang, java_style)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -341,7 +345,8 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, java_temp_path
 
 
-def process_code(source_code: str, incremental: bool = False, language: str = "Python", comment_lang: str = "中文"):
+def process_code(source_code: str, incremental: bool = False, language: str = "Python",
+                 comment_lang: str = "中文", python_style: Optional[str] = None, java_style: Optional[str] = None):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
@@ -349,6 +354,8 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
         incremental: 增量更新模式，True 时跳过已有注释的函数（节省 API 调用）
         language: 编程语言（"Python" 或 "Java"）
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
+        python_style: Python 注释风格（Google 风格 / NumPy 风格 / reStructuredText）
+        java_style: Java 注释风格（标准 Javadoc / 极简行内注释）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, src_path)
@@ -363,8 +370,8 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
         return source_code, "代码无效，无法生成注释。", "日志：代码无效（非有效 Java 代码），请检查输入。", None, None
 
     if language == "Java":
-        return _process_java(source_code, incremental, comment_lang)
-    return _process_python(source_code, incremental, comment_lang)
+        return _process_java(source_code, incremental, comment_lang, java_style)
+    return _process_python(source_code, incremental, comment_lang, python_style)
 
 
 def _is_valid_python(source_code: str) -> bool:
@@ -528,7 +535,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
 # 批量处理（多文件 / ZIP 压缩包）
 # ==================================================================
 
-def _resolve_upload_path(uploaded) -> str | None:
+def _resolve_upload_path(uploaded) -> Optional[str]:
     """兼容 Gradio 文件对象/字典/字符串，解析出可读取的本地路径
 
     Args:
@@ -621,7 +628,7 @@ def _extract_zip_safe(zip_path: str, target_dir: str) -> str:
     return target_dir
 
 
-def _build_batch_zip(output_dir: str, log_text: str, aggregate_md: str | None = None) -> str:
+def _build_batch_zip(output_dir: str, log_text: str, aggregate_md: Optional[str] = None) -> str:
     """将 output_dir 内处理后的结果打包为 zip，外加日志和聚合文档
 
     Args:
@@ -656,7 +663,9 @@ def process_batch_files(
     uploaded_files: list,
     comment_lang: str = "中文",
     incremental: bool = True,
-) -> tuple[str, str | None]:
+    python_style: Optional[str] = None,
+    java_style: Optional[str] = None,
+) -> tuple[str, Optional[str]]:
     """批量处理上传的多个文件或 ZIP 压缩包
 
     处理流程：
@@ -748,7 +757,8 @@ def process_batch_files(
             language = "Java" if abs_path.lower().endswith(".java") else "Python"
             try:
                 annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
-                    code, incremental=incremental, language=language, comment_lang=comment_lang
+                    code, incremental=incremental, language=language, comment_lang=comment_lang,
+                    python_style=python_style, java_style=java_style,
                 )
             except Exception as e:
                 log.append(f"  ✗ process_code 异常: {e}")

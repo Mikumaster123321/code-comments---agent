@@ -173,6 +173,21 @@ TRANSLATIONS = {
         "English": "Batch Process Log",
         "日本語": "一括処理ログ",
     },
+    "style_section": {
+        "中文": "### 🎨 注释风格选择",
+        "English": "### 🎨 Comment Style",
+        "日本語": "### 🎨 コメントスタイル",
+    },
+    "python_style_label": {
+        "中文": "Python 注释风格",
+        "English": "Python Docstring Style",
+        "日本語": "Python ドキュメントスタイル",
+    },
+    "java_style_label": {
+        "中文": "Java 注释风格",
+        "English": "Java Javadoc Style",
+        "日本語": "Java Javadoc スタイル",
+    },
 }
 
 
