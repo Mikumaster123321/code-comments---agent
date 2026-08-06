@@ -271,66 +271,23 @@ CUSTOM_CSS = """
     flex: 1 !important;
 }
 
-/* ===== 输出代码区：包裹层（用于定位浮动按钮）===== */
-.output-code-wrapper {
-    position: relative !important;
-}
-
-/* ===== 浮动按钮层（覆盖在代码编辑器右上角）===== */
-.code-btn-overlay {
-    position: absolute !important;
-    top: 10px !important;
-    right: 14px !important;
-    z-index: 20 !important;
-    gap: 6px !important;
-    flex-wrap: nowrap !important;
-    justify-content: flex-end !important;
-}
-.code-btn-overlay > * {
-    flex: 0 0 auto !important;
-}
-
-/* ===== 紧凑下载/复制按钮 ===== */
-.mini-download-btn {
-    min-width: 0 !important;
-    width: auto !important;
-    height: 28px !important;
-    padding: 3px 10px !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    line-height: 22px !important;
-    border-radius: 6px !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    color: #4f46e5 !important;
-    border: 1px solid #c7d2fe !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
-    white-space: nowrap !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 3px !important;
-    backdrop-filter: blur(4px) !important;
-}
-.mini-download-btn:hover {
-    background: #4f46e5 !important;
-    color: white !important;
-    border-color: #4f46e5 !important;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3) !important;
-    transform: translateY(-1px) !important;
-}
-.mini-download-btn:active {
-    transform: translateY(0) !important;
-}
-.mini-download-btn:disabled {
-    opacity: 0.4 !important;
-    cursor: not-allowed !important;
-}
-
 /* ===== 输入/输出代码编辑器统一亮色主题 ===== */
 .input-code-dark .cm-editor,
 .output-code-light .cm-editor {
     background: #ffffff !important;
+}
+
+/* ===== 隐藏 Gradio Code 组件原生下载/复制按钮（避免遮挡滚动条）===== */
+.code-container .gr-code-download,
+.code-container .gr-code-copy,
+.code-container [aria-label*="Download"],
+.code-container [aria-label*="Copy"],
+.code-container [aria-label*="下载"],
+.code-container [aria-label*="复制"],
+.code-container .cm-editor-header button,
+.code-header button.download,
+.code-header button.copy {
+    display: none !important;
 }
 
 /* ===== 页脚 ===== */
@@ -364,20 +321,6 @@ def _update_file_types(language: str):
     if language == "Java":
         return gr.update(file_types=[".java"])
     return gr.update(file_types=[".py"])
-
-
-def _download_src(state_src):
-    """下载注释后的源码"""
-    if state_src:
-        return gr.update(value=state_src)
-    return gr.update()
-
-
-def _download_md(state_md):
-    """下载 Markdown 文档"""
-    if state_md:
-        return gr.update(value=state_md)
-    return gr.update()
 
 
 def create_ui():
@@ -429,28 +372,20 @@ def create_ui():
 
         # ===== 输出区 =====
         with gr.Column(elem_classes="card-section"):
-            with gr.Tabs():
-                with gr.Tab("📄 带注释的代码"):
-                    with gr.Column(elem_classes="output-code-wrapper"):
-                        with gr.Row(elem_classes="code-btn-overlay"):
-                            dl_src_btn = gr.DownloadButton(
-                                "📥 下载源码", elem_classes="mini-download-btn"
-                            )
-                            dl_md_btn = gr.DownloadButton(
-                                "📥 下载文档", elem_classes="mini-download-btn"
-                            )
-                        output_code = gr.Code(
-                            label="",
-                            language=None,
-                            elem_classes="code-container output-code-light",
-                        )
+            with gr.Tabs() as tabs:
+                with gr.Tab("📄 带注释的代码", id="annotated_code"):
+                    output_code = gr.Code(
+                        label="",
+                        language=None,
+                        elem_classes="code-container output-code-light",
+                    )
                     state_src_path = gr.State(None)
                     state_md_path = gr.State(None)
 
-                with gr.Tab("📚 API 文档"):
+                with gr.Tab("📚 API 文档", id="api_docs"):
                     output_docs = gr.Markdown(elem_classes="scrollable-md")
 
-                with gr.Tab("🔍 代码分析"):
+                with gr.Tab("🔍 代码分析", id="code_analysis"):
                     gr.Markdown("### 📊 代码质量分析")
                     quality_output = gr.Markdown(elem_classes="scrollable-md")
                     gr.Markdown("### 🎯 类型注解检查")
@@ -459,7 +394,7 @@ def create_ui():
                     summary_output = gr.Markdown(elem_classes="scrollable-md")
                     analyze_log = gr.Textbox(label="分析日志")
 
-                with gr.Tab("📋 处理日志"):
+                with gr.Tab("📋 处理日志", id="process_log"):
                     output_log = gr.Textbox(label="处理日志")
 
         # ===== 页脚 =====
@@ -475,21 +410,17 @@ def create_ui():
             fn=process_code,
             inputs=[input_box, incremental_chk, language],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
-        )
-        dl_src_btn.click(
-            fn=_download_src,
-            inputs=[state_src_path],
-            outputs=[dl_src_btn],
-        )
-        dl_md_btn.click(
-            fn=_download_md,
-            inputs=[state_md_path],
-            outputs=[dl_md_btn],
+        ).then(
+            fn=lambda: gr.update(selected="annotated_code"),
+            outputs=[tabs],
         )
         analyze_btn.click(
             fn=analyze_code,
             inputs=[input_box, language],
             outputs=[quality_output, annotation_output, summary_output, analyze_log],
+        ).then(
+            fn=lambda: gr.update(selected="code_analysis"),
+            outputs=[tabs],
         )
 
     return demo
