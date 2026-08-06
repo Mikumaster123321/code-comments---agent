@@ -147,6 +147,32 @@ TRANSLATIONS = {
         "English": "Powered by DeepSeek LLM · Gradio 6.0 · Auto-generate comments & docs",
         "日本語": "Powered by DeepSeek LLM · Gradio 6.0 · コメントとドキュメントを自動生成",
     },
+    # ====== 批量处理新增 ======
+    "batch_section": {
+        "中文": "### 📦 批量处理（多文件 / ZIP 压缩包）",
+        "English": "### 📦 Batch Process (Multi-files / ZIP)",
+        "日本語": "### 📦 一括処理（複数ファイル / ZIP）",
+    },
+    "batch_upload_label": {
+        "中文": "批量上传：多个 .py/.java 文件或整个 .zip 压缩包（含递归子目录）",
+        "English": "Batch Upload: Multiple .py/.java files or a .zip archive (recursive subfolders)",
+        "日本語": "一括アップロード：複数の .py/.java ファイル、または .zip 圧縮フォルダ（再帰的にサブフォルダを含む）",
+    },
+    "batch_gen_btn": {
+        "中文": "🚀 批量生成注释并打包下载",
+        "English": "🚀 Batch Generate & Download ZIP",
+        "日本語": "🚀 一括コメント生成してZIPでダウンロード",
+    },
+    "batch_dl_btn": {
+        "中文": "📥 下载批量处理结果 (ZIP)",
+        "English": "📥 Download Batch Result (ZIP)",
+        "日本語": "📥 一括処理結果をダウンロード (ZIP)",
+    },
+    "batch_log_label": {
+        "中文": "批量处理日志",
+        "English": "Batch Process Log",
+        "日本語": "一括処理ログ",
+    },
 }
 
 

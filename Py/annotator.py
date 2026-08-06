@@ -84,12 +84,13 @@ def build_markdown_docs(doc_entries: list) -> str:
     Returns:
         str: Markdown 格式的 API 文档
     """
-    md = "# API 文档\n\n"
+    md = "# API Documentation\n\n"
     for entry in doc_entries:
-        md += f"## {entry['name']} ({'类' if entry['type']=='class' else '函数'})\n\n"
+        type_label = "Class" if entry["type"] == "class" else "Function"
+        md += f"## {entry['name']} ({type_label})\n\n"
         md += f"```python\n{entry['code']}\n```\n\n"
         md += f"{entry['docstring']}\n\n"
         if entry["type"] == "class":
-            md += "*(类文档，方法细节请见源码)*\n\n"
+            md += "*(Class-level documentation; method-level details are in source code)*\n\n"
         md += "---\n\n"
     return md

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Gradio 界面模块：构建美观的 Web 交互界面"""
 import gradio as gr
-from processor import process_code, analyze_code, handle_file_upload
+from processor import process_code, analyze_code, handle_file_upload, process_batch_files
 from i18n import LANGUAGES, t
 
 # ==================== 自定义 CSS ====================
@@ -427,6 +427,12 @@ def _apply_ui_language(lang: str):
         gr.update(label=t("tab_log", lang)),            # 18 tab_log
         gr.update(label=t("process_log_label", lang)),  # 19 output_log
         gr.update(value=t("footer", lang)),             # 20 footer_md
+        # ===== 批量处理新增 =====
+        gr.update(value=t("batch_section", lang)),      # 21 batch_section_md
+        gr.update(label=t("batch_upload_label", lang)), # 22 batch_file_upload
+        gr.update(value=t("batch_gen_btn", lang)),      # 23 batch_gen_btn
+        gr.update(label=t("batch_dl_btn", lang)),       # 24 batch_dl_btn
+        gr.update(label=t("batch_log_label", lang)),    # 25 batch_log
     ]
 
 
@@ -478,6 +484,33 @@ def create_ui():
             analyze_btn = gr.Button(
                 t("analyze_btn", default_lang), variant="secondary", size="lg",
                 elem_classes="action-btn",
+            )
+
+        # ===== 批量处理区（多文件 / ZIP） =====
+        with gr.Column(elem_classes="card-section"):
+            batch_section_md = gr.Markdown(t("batch_section", default_lang))
+            batch_file_upload = gr.File(
+                label=t("batch_upload_label", default_lang),
+                file_count="multiple",
+                file_types=[".py", ".java", ".zip"],
+            )
+            with gr.Row():
+                batch_gen_btn = gr.Button(
+                    t("batch_gen_btn", default_lang),
+                    variant="primary",
+                    size="lg",
+                    elem_classes="action-btn",
+                )
+                batch_dl_btn = gr.DownloadButton(
+                    label=t("batch_dl_btn", default_lang),
+                    variant="secondary",
+                    size="lg",
+                    elem_classes="dl-download-btn",
+                )
+            batch_zip_state = gr.State(None)
+            batch_log = gr.Textbox(
+                label=t("batch_log_label", default_lang),
+                lines=10,
             )
 
         # ===== 输出区 =====
@@ -558,6 +591,12 @@ def create_ui():
                 tab_log,            # 18
                 output_log,         # 19
                 footer_md,          # 20
+                # ===== 批量处理新增 =====
+                batch_section_md,   # 21
+                batch_file_upload,  # 22
+                batch_gen_btn,      # 23
+                batch_dl_btn,       # 24
+                batch_log,          # 25
             ],
         )
 
@@ -588,6 +627,30 @@ def create_ui():
         ).then(
             fn=lambda: gr.update(selected="code_analysis"),
             outputs=[tabs],
+        )
+
+        # ===== 批量处理事件绑定 =====
+        def _batch_gen(files, ulang):
+            """批量生成包装：返回 (日志, zip_state, zip_download_update)"""
+            log, zip_path = process_batch_files(files, comment_lang=ulang, incremental=True)
+            dl_update = gr.update(value=zip_path) if zip_path else gr.update()
+            return log, zip_path, dl_update
+
+        def _batch_dl(state_zip):
+            """下载批量 zip"""
+            if state_zip:
+                return gr.update(value=state_zip)
+            return gr.update()
+
+        batch_gen_btn.click(
+            fn=_batch_gen,
+            inputs=[batch_file_upload, ui_lang],
+            outputs=[batch_log, batch_zip_state, batch_dl_btn],
+        )
+        batch_dl_btn.click(
+            fn=_batch_dl,
+            inputs=[batch_zip_state],
+            outputs=[batch_dl_btn],
         )
 
     return demo
