@@ -124,6 +124,13 @@ TRANSLATIONS = {
         "English": "### 📝 Code Summary",
         "日本語": "### 📝 コードサマリー",
     },
+    # 代码标签
+    "output_code_label": {
+        "中文": "代码",
+        "English": "Code",
+        "日本語": "コード",
+    },
+    # 分析/处理日志标签
     "analyze_log_label": {
         "中文": "分析日志",
         "English": "Analysis Log",

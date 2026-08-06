@@ -415,17 +415,18 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("gen_btn", lang)),            # 6  btn
         gr.update(value=t("analyze_btn", lang)),        # 7  analyze_btn
         gr.update(label=t("tab_annotated", lang)),      # 8  tab_annotated
-        gr.update(value=t("dl_src_btn", lang)),         # 9  dl_src_btn
-        gr.update(value=t("dl_md_btn", lang)),          # 10 dl_md_btn
-        gr.update(label=t("tab_docs", lang)),           # 11 tab_docs
-        gr.update(label=t("tab_analysis", lang)),       # 12 tab_analysis
-        gr.update(value=t("quality_title", lang)),      # 13 quality_title_md
-        gr.update(value=t("annotation_title", lang)),   # 14 annotation_title_md
-        gr.update(value=t("summary_title", lang)),      # 15 summary_title_md
-        gr.update(label=t("analyze_log_label", lang)),  # 16 analyze_log
-        gr.update(label=t("tab_log", lang)),            # 17 tab_log
-        gr.update(label=t("process_log_label", lang)),  # 18 output_log
-        gr.update(value=t("footer", lang)),             # 19 footer_md
+        gr.update(label=t("output_code_label", lang)), # 9  output_code
+        gr.update(label=t("dl_src_btn", lang)),         # 10 dl_src_btn
+        gr.update(label=t("dl_md_btn", lang)),          # 11 dl_md_btn
+        gr.update(label=t("tab_docs", lang)),           # 12 tab_docs
+        gr.update(label=t("tab_analysis", lang)),       # 13 tab_analysis
+        gr.update(value=t("quality_title", lang)),      # 14 quality_title_md
+        gr.update(value=t("annotation_title", lang)),   # 15 annotation_title_md
+        gr.update(value=t("summary_title", lang)),      # 16 summary_title_md
+        gr.update(label=t("analyze_log_label", lang)),  # 17 analyze_log
+        gr.update(label=t("tab_log", lang)),            # 18 tab_log
+        gr.update(label=t("process_log_label", lang)),  # 19 output_log
+        gr.update(value=t("footer", lang)),             # 20 footer_md
     ]
 
 
@@ -485,7 +486,7 @@ def create_ui():
                 tab_annotated = gr.Tab(t("tab_annotated", default_lang), id="annotated_code")
                 with tab_annotated:
                     output_code = gr.Code(
-                        label="",
+                        label=t("output_code_label", default_lang),
                         language=None,
                         elem_classes="code-container output-code-light",
                     )
@@ -545,17 +546,18 @@ def create_ui():
                 btn,                # 6
                 analyze_btn,        # 7
                 tab_annotated,      # 8
-                dl_src_btn,         # 9
-                dl_md_btn,          # 10
-                tab_docs,           # 11
-                tab_analysis,       # 12
-                quality_title_md,   # 13
-                annotation_title_md,# 14
-                summary_title_md,   # 15
-                analyze_log,        # 16
-                tab_log,            # 17
-                output_log,         # 18
-                footer_md,          # 19
+                output_code,        # 9
+                dl_src_btn,         # 10
+                dl_md_btn,          # 11
+                tab_docs,           # 12
+                tab_analysis,       # 13
+                quality_title_md,   # 14
+                annotation_title_md,# 15
+                summary_title_md,   # 16
+                analyze_log,        # 17
+                tab_log,            # 18
+                output_log,         # 19
+                footer_md,          # 20
             ],
         )
 
