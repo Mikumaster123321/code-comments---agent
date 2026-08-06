@@ -2,6 +2,7 @@
 """Gradio 界面模块：构建美观的 Web 交互界面"""
 import gradio as gr
 from processor import process_code, analyze_code, handle_file_upload
+from i18n import LANGUAGES, t
 
 # ==================== 自定义 CSS ====================
 CUSTOM_CSS = """
@@ -51,6 +52,29 @@ CUSTOM_CSS = """
     font-weight: 400 !important;
     position: relative !important;
     z-index: 1 !important;
+}
+/* 顶部标题行：标题左 + 语言切换右 */
+.header-row {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+}
+.header-row > div:first-child {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+.header-lang-switcher {
+    min-width: 160px !important;
+    max-width: 200px !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+.header-lang-switcher label {
+    color: rgba(255,255,255,0.9) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    margin-bottom: 4px !important;
 }
 
 /* ===== 卡片容器 ===== */
@@ -372,40 +396,74 @@ def _download_md(state_md):
     return gr.update()
 
 
+def _apply_ui_language(lang: str):
+    """切换 UI 语言时，返回所有组件的更新列表
+
+    Args:
+        lang: 目标语言（"中文" / "English" / "日本語"）
+
+    Returns:
+        list: 各组件的 gr.update，顺序与 outputs 列表严格一致
+    """
+    return [
+        gr.update(value=t("app_title", lang)),          # 0  app_title_md
+        gr.update(value=t("app_subtitle", lang)),       # 1  app_subtitle_md
+        gr.update(label=t("prog_lang_label", lang)),    # 2  language
+        gr.update(value=t("input_section", lang)),      # 3  input_section_md
+        gr.update(label=t("upload_label", lang)),       # 4  file_upload
+        gr.update(label=t("editor_label", lang)),       # 5  input_box
+        gr.update(value=t("gen_btn", lang)),            # 6  btn
+        gr.update(value=t("analyze_btn", lang)),        # 7  analyze_btn
+        gr.update(label=t("tab_annotated", lang)),      # 8  tab_annotated
+        gr.update(value=t("dl_src_btn", lang)),         # 9  dl_src_btn
+        gr.update(value=t("dl_md_btn", lang)),          # 10 dl_md_btn
+        gr.update(label=t("tab_docs", lang)),           # 11 tab_docs
+        gr.update(label=t("tab_analysis", lang)),       # 12 tab_analysis
+        gr.update(value=t("quality_title", lang)),      # 13 quality_title_md
+        gr.update(value=t("annotation_title", lang)),   # 14 annotation_title_md
+        gr.update(value=t("summary_title", lang)),      # 15 summary_title_md
+        gr.update(label=t("analyze_log_label", lang)),  # 16 analyze_log
+        gr.update(label=t("tab_log", lang)),            # 17 tab_log
+        gr.update(label=t("process_log_label", lang)),  # 18 output_log
+        gr.update(value=t("footer", lang)),             # 19 footer_md
+    ]
+
+
 def create_ui():
     """创建并返回 Gradio 界面对象"""
-    with gr.Blocks(title="代码注释 Agent") as demo:
-        # ===== 顶部导航 =====
+    default_lang = "中文"
+    with gr.Blocks(title=t("page_title", default_lang)) as demo:
+        # ===== 顶部导航（标题左 + 语言切换右）=====
         with gr.Column(elem_classes="app-header"):
-            gr.Markdown("# 📝 代码注释与 API 文档自动生成 Agent")
-            gr.Markdown("粘贴代码或上传文件，AI 自动生成多语言注释和 Markdown API 文档 · 支持 Python & Java")
+            with gr.Row(elem_classes="header-row"):
+                with gr.Column():
+                    app_title_md = gr.Markdown(t("app_title", default_lang))
+                    app_subtitle_md = gr.Markdown(t("app_subtitle", default_lang))
+                with gr.Column(elem_classes="header-lang-switcher"):
+                    ui_lang = gr.Dropdown(
+                        choices=LANGUAGES, value=default_lang,
+                        label=t("ui_lang_label", default_lang),
+                    )
 
-        # ===== 语言选择 =====
+        # ===== 编程语言选择 =====
         with gr.Column(elem_classes="card-section"):
-            with gr.Row():
-                language = gr.Dropdown(
-                    choices=["Python", "Java"], value="Python",
-                    label="🌐 编程语言", scale=1,
-                )
-                comment_language = gr.Dropdown(
-                    choices=["中文", "English", "日本語"],
-                    value="中文",
-                    label="🌐 注释语言",
-                    scale=1,
-                )
+            language = gr.Dropdown(
+                choices=["Python", "Java"], value="Python",
+                label=t("prog_lang_label", default_lang),
+            )
 
         # ===== 输入区 =====
         with gr.Column(elem_classes="card-section"):
-            gr.Markdown("### 📥 代码输入")
+            input_section_md = gr.Markdown(t("input_section", default_lang))
             with gr.Row():
                 with gr.Column(elem_classes="equal-width", scale=1):
                     file_upload = gr.File(
-                        label="上传源代码文件",
+                        label=t("upload_label", default_lang),
                         file_types=[".py", ".java"],
                     )
                 with gr.Column(elem_classes="equal-width", scale=2):
                     input_box = gr.Code(
-                        label="✏️ 代码编辑器",
+                        label=t("editor_label", default_lang),
                         language=None,
                         elem_classes="code-container input-code-dark",
                     )
@@ -413,18 +471,19 @@ def create_ui():
         # ===== 操作按钮 =====
         with gr.Row():
             btn = gr.Button(
-                "🚀 生成注释与文档", variant="primary", size="lg",
+                t("gen_btn", default_lang), variant="primary", size="lg",
                 elem_classes="action-btn",
             )
             analyze_btn = gr.Button(
-                "🔍 分析代码", variant="secondary", size="lg",
+                t("analyze_btn", default_lang), variant="secondary", size="lg",
                 elem_classes="action-btn",
             )
 
         # ===== 输出区 =====
         with gr.Column(elem_classes="card-section"):
             with gr.Tabs() as tabs:
-                with gr.Tab("📄 带注释的代码", id="annotated_code"):
+                tab_annotated = gr.Tab(t("tab_annotated", default_lang), id="annotated_code")
+                with tab_annotated:
                     output_code = gr.Code(
                         label="",
                         language=None,
@@ -432,45 +491,78 @@ def create_ui():
                     )
                     with gr.Row(elem_classes="dl-btn-row"):
                         dl_src_btn = gr.DownloadButton(
-                            "📥 下载注释后的代码",
+                            t("dl_src_btn", default_lang),
                             elem_classes="dl-download-btn",
                             variant="primary",
                         )
                         dl_md_btn = gr.DownloadButton(
-                            "📥 下载 Markdown 文档",
+                            t("dl_md_btn", default_lang),
                             elem_classes="dl-download-btn",
                             variant="secondary",
                         )
                     state_src_path = gr.State(None)
                     state_md_path = gr.State(None)
 
-                with gr.Tab("📚 API 文档", id="api_docs"):
+                tab_docs = gr.Tab(t("tab_docs", default_lang), id="api_docs")
+                with tab_docs:
                     output_docs = gr.Markdown(elem_classes="scrollable-md")
 
-                with gr.Tab("🔍 代码分析", id="code_analysis"):
-                    gr.Markdown("### 📊 代码质量分析")
+                tab_analysis = gr.Tab(t("tab_analysis", default_lang), id="code_analysis")
+                with tab_analysis:
+                    quality_title_md = gr.Markdown(t("quality_title", default_lang))
                     quality_output = gr.Markdown(elem_classes="scrollable-md")
-                    gr.Markdown("### 🎯 类型注解检查")
+                    annotation_title_md = gr.Markdown(t("annotation_title", default_lang))
                     annotation_output = gr.Markdown(elem_classes="scrollable-md")
-                    gr.Markdown("### 📝 代码摘要")
+                    summary_title_md = gr.Markdown(t("summary_title", default_lang))
                     summary_output = gr.Markdown(elem_classes="scrollable-md")
-                    analyze_log = gr.Textbox(label="分析日志")
+                    analyze_log = gr.Textbox(label=t("analyze_log_label", default_lang))
 
-                with gr.Tab("📋 处理日志", id="process_log"):
-                    output_log = gr.Textbox(label="处理日志")
+                tab_log = gr.Tab(t("tab_log", default_lang), id="process_log")
+                with tab_log:
+                    output_log = gr.Textbox(label=t("process_log_label", default_lang))
 
         # ===== 页脚 =====
-        gr.Markdown(
-            "Powered by DeepSeek LLM · Gradio 6.0 · 自动生成中文注释与文档",
+        footer_md = gr.Markdown(
+            t("footer", default_lang),
             elem_classes="app-footer",
         )
 
         # ===== 事件绑定 =====
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=[input_box, language])
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
+
+        # UI 语言切换 → 更新所有界面文本（顺序与 _apply_ui_language 返回值严格一致）
+        ui_lang.change(
+            fn=_apply_ui_language,
+            inputs=[ui_lang],
+            outputs=[
+                app_title_md,       # 0
+                app_subtitle_md,    # 1
+                language,           # 2
+                input_section_md,   # 3
+                file_upload,        # 4
+                input_box,          # 5
+                btn,                # 6
+                analyze_btn,        # 7
+                tab_annotated,      # 8
+                dl_src_btn,         # 9
+                dl_md_btn,          # 10
+                tab_docs,           # 11
+                tab_analysis,       # 12
+                quality_title_md,   # 13
+                annotation_title_md,# 14
+                summary_title_md,   # 15
+                analyze_log,        # 16
+                tab_log,            # 17
+                output_log,         # 18
+                footer_md,          # 19
+            ],
+        )
+
+        # 生成注释（传入 UI 语言作为注释语言）
         btn.click(
-            fn=lambda code, lang, clang: process_code(code, True, lang, clang),
-            inputs=[input_box, language, comment_language],
+            fn=lambda code, plang, ulang: process_code(code, True, plang, ulang),
+            inputs=[input_box, language, ui_lang],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
@@ -486,9 +578,10 @@ def create_ui():
             inputs=[state_md_path],
             outputs=[dl_md_btn],
         )
+        # 分析代码（传入 UI 语言作为摘要语言）
         analyze_btn.click(
-            fn=analyze_code,
-            inputs=[input_box, language, comment_language],
+            fn=lambda code, plang, ulang: analyze_code(code, plang, ulang),
+            inputs=[input_box, language, ui_lang],
             outputs=[quality_output, annotation_output, summary_output, analyze_log],
         ).then(
             fn=lambda: gr.update(selected="code_analysis"),

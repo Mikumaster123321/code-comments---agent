@@ -9,6 +9,7 @@ from Py.parser import get_defined_functions
 from llm_service import (
     generate_docstring, generate_code_summary,
     generate_javadoc, generate_java_summary,
+    translate_docstring, translate_javadoc,
 )
 from Py.annotator import insert_docstring_into_code, build_markdown_docs
 from Java.java_parser import get_defined_functions as get_java_functions
@@ -18,6 +19,7 @@ from Java.java_annotator import (
 )
 from Py.analyzer import analyze_code_quality, check_type_annotations
 from config import MAX_WORKERS
+from i18n import LANG_CODE, needs_translation
 
 
 def handle_file_upload(uploaded_file):
@@ -50,17 +52,18 @@ def handle_file_upload(uploaded_file):
         return "", language
 
 
-def _process_python(source_code: str, incremental: bool, comment_language: str = "中文"):
+def _process_python(source_code: str, incremental: bool, comment_lang: str = "中文"):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
     Args:
         source_code: Python 源代码字符串
         incremental: 增量更新模式
-        comment_language: 注释语言（如"中文"、"English"、"日本語"）
+        comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, py_path)
     """
+    lang_code = LANG_CODE.get(comment_lang, "zh")
     items = get_defined_functions(source_code)
     if not items:
         return source_code, "未检测到函数或类", "日志：无处理对象。", None, None
@@ -69,22 +72,44 @@ def _process_python(source_code: str, incremental: bool, comment_language: str =
     annotated_code = source_code
     doc_entries = []
 
-    # 增量更新模式：跳过已有 docstring 的函数
+    # 增量更新模式：跳过已有 docstring 的函数，但需翻译非目标语言的注释
     to_process = []
+    to_translate = []
     skipped = 0
     for item in items:
         if incremental and item["has_docstring"]:
-            skipped += 1
-            log.append(f"⊘ {item['name']} 已有 docstring，跳过")
             existing = ast.get_docstring(item["node"])
-            if existing:
-                item["docstring"] = existing
-                doc_entries.append(item)
+            if existing and needs_translation(existing, lang_code):
+                # 已有注释但语言不匹配，需翻译
+                to_translate.append(item)
+            else:
+                skipped += 1
+                log.append(f"⊘ {item['name']} 已有 docstring，跳过")
+                if existing:
+                    item["docstring"] = existing
+                    doc_entries.append(item)
         else:
             to_process.append(item)
 
     if skipped > 0:
         log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
+
+    # 翻译已有注释（非目标语言）
+    if to_translate:
+        log.append(f"=== 翻译已有注释为 {comment_lang}（{len(to_translate)} 个节点）===")
+        for item in to_translate:
+            try:
+                existing = ast.get_docstring(item["node"])
+                translated = translate_docstring(existing, comment_lang)
+                item["docstring"] = translated
+                doc_entries.append(item)
+                annotated_code = insert_docstring_into_code(annotated_code, item, translated)
+                log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
+            except Exception as e:
+                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                if existing:
+                    item["docstring"] = existing
+                    doc_entries.append(item)
 
     if not to_process:
         log.append("所有节点均已有注释，无需调用 LLM。")
@@ -98,7 +123,7 @@ def _process_python(source_code: str, incremental: bool, comment_language: str =
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
-                doc = generate_docstring(item, comment_language)
+                doc = generate_docstring(item, comment_lang)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -146,17 +171,18 @@ def _process_python(source_code: str, incremental: bool, comment_language: str =
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 
-def _process_java(source_code: str, incremental: bool, comment_language: str = "中文"):
+def _process_java(source_code: str, incremental: bool, comment_lang: str = "中文"):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
     Args:
         source_code: Java 源代码字符串
         incremental: 增量更新模式
-        comment_language: 注释语言（如"中文"、"English"、"日本語"）
+        comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, java_path)
     """
+    lang_code = LANG_CODE.get(comment_lang, "zh")
     items = get_java_functions(source_code)
     if not items:
         return source_code, "未检测到类或方法", "日志：无处理对象。", None, None
@@ -166,25 +192,52 @@ def _process_java(source_code: str, incremental: bool, comment_language: str = "
     doc_entries = []
     source_lines = source_code.splitlines()
 
-    # 增量更新模式：跳过已有 Javadoc 的方法
+    # 增量更新模式：跳过已有 Javadoc 的方法，但需翻译非目标语言的注释
     to_process = []
+    to_translate = []
     skipped = 0
     for item in items:
         if incremental and item["has_docstring"]:
-            skipped += 1
-            log.append(f"⊘ {item['name']} 已有 Javadoc，跳过")
             existing_range = item.get("existing_javadoc")
+            existing_text = None
             if existing_range:
                 existing_text = extract_existing_javadoc(
                     source_lines, existing_range[0], existing_range[1]
                 )
-                item["docstring"] = existing_text
-                doc_entries.append(item)
+            if existing_text and needs_translation(existing_text, lang_code):
+                # 已有注释但语言不匹配，需翻译
+                to_translate.append(item)
+            else:
+                skipped += 1
+                log.append(f"⊘ {item['name']} 已有 Javadoc，跳过")
+                if existing_text:
+                    item["docstring"] = existing_text
+                    doc_entries.append(item)
         else:
             to_process.append(item)
 
     if skipped > 0:
         log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
+
+    # 翻译已有注释（非目标语言）
+    if to_translate:
+        log.append(f"=== 翻译已有注释为 {comment_lang}（{len(to_translate)} 个节点）===")
+        for item in to_translate:
+            try:
+                existing_range = item.get("existing_javadoc")
+                existing_text = extract_existing_javadoc(
+                    source_lines, existing_range[0], existing_range[1]
+                )
+                translated = translate_javadoc(existing_text, comment_lang)
+                item["docstring"] = translated
+                doc_entries.append(item)
+                annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
+                log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
+            except Exception as e:
+                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                if existing_text:
+                    item["docstring"] = existing_text
+                    doc_entries.append(item)
 
     if not to_process:
         log.append("所有节点均已有注释，无需调用 LLM。")
@@ -198,7 +251,7 @@ def _process_java(source_code: str, incremental: bool, comment_language: str = "
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
-                doc = generate_javadoc(item, comment_language)
+                doc = generate_javadoc(item, comment_lang)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -243,14 +296,14 @@ def _process_java(source_code: str, incremental: bool, comment_language: str = "
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, java_temp_path
 
 
-def process_code(source_code: str, incremental: bool = False, language: str = "Python", comment_language: str = "中文"):
+def process_code(source_code: str, incremental: bool = False, language: str = "Python", comment_lang: str = "中文"):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
         source_code: 源代码字符串
         incremental: 增量更新模式，True 时跳过已有注释的函数（节省 API 调用）
         language: 编程语言（"Python" 或 "Java"）
-        comment_language: 注释语言（如"中文"、"English"、"日本語"）
+        comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, src_path)
@@ -265,8 +318,8 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
         return source_code, "代码无效，无法生成注释。", "日志：代码无效（非有效 Java 代码），请检查输入。", None, None
 
     if language == "Java":
-        return _process_java(source_code, incremental, comment_language)
-    return _process_python(source_code, incremental, comment_language)
+        return _process_java(source_code, incremental, comment_lang)
+    return _process_python(source_code, incremental, comment_lang)
 
 
 def _is_valid_python(source_code: str) -> bool:
@@ -327,12 +380,12 @@ def _is_valid_java(source_code: str) -> bool:
     return matched >= 1 or brace_count >= 2
 
 
-def _analyze_java(source_code: str, comment_language: str = "中文"):
+def _analyze_java(source_code: str, comment_lang: str = "中文"):
     """Java 代码分析：大括号校验 + 代码摘要
 
     Args:
         source_code: Java 源代码字符串
-        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
+        comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
         tuple: (quality_report, annotation_report, summary, log_text)
@@ -363,7 +416,7 @@ def _analyze_java(source_code: str, comment_language: str = "中文"):
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_java_summary(source_code, comment_language)
+        summary = generate_java_summary(source_code, comment_lang)
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"
@@ -372,13 +425,13 @@ def _analyze_java(source_code: str, comment_language: str = "中文"):
     return quality_report, annotation_report, summary, "\n".join(log)
 
 
-def analyze_code(source_code: str, language: str = "Python", comment_language: str = "中文"):
+def analyze_code(source_code: str, language: str = "Python", comment_lang: str = "中文"):
     """主分析函数，返回质量报告、类型注解报告、摘要、日志
 
     Args:
         source_code: 源代码字符串
         language: 编程语言（"Python" 或 "Java"）
-        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
+        comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
         tuple: (quality_report, annotation_report, summary, log_text)
@@ -387,7 +440,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_language: s
         return "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
 
     if language == "Java":
-        return _analyze_java(source_code, comment_language)
+        return _analyze_java(source_code, comment_lang)
 
     # Python 代码有效性验证
     if not _is_valid_python(source_code):
@@ -417,7 +470,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_language: s
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_code_summary(source_code, comment_language)
+        summary = generate_code_summary(source_code, comment_lang)
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"
