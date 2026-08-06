@@ -290,6 +290,41 @@ CUSTOM_CSS = """
     display: none !important;
 }
 
+/* ===== 下载按钮行 ===== */
+.dl-btn-row {
+    margin-top: 16px !important;
+    gap: 16px !important;
+}
+.dl-btn-row > div {
+    flex: 1 !important;
+    max-width: 50% !important;
+}
+
+/* ===== 下载按钮美化 ===== */
+.dl-download-btn {
+    height: 46px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    padding: 10px 20px !important;
+    letter-spacing: 0.01em !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+.dl-download-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px -4px rgba(0,0,0,0.12) !important;
+}
+.dl-download-btn:active {
+    transform: translateY(0) !important;
+}
+.dl-download-btn:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+
 /* ===== 页脚 ===== */
 .app-footer {
     text-align: center !important;
@@ -321,6 +356,20 @@ def _update_file_types(language: str):
     if language == "Java":
         return gr.update(file_types=[".java"])
     return gr.update(file_types=[".py"])
+
+
+def _download_src(state_src):
+    """下载注释后的源码"""
+    if state_src:
+        return gr.update(value=state_src)
+    return gr.update()
+
+
+def _download_md(state_md):
+    """下载 Markdown 文档"""
+    if state_md:
+        return gr.update(value=state_md)
+    return gr.update()
 
 
 def create_ui():
@@ -379,6 +428,17 @@ def create_ui():
                         language=None,
                         elem_classes="code-container output-code-light",
                     )
+                    with gr.Row(elem_classes="dl-btn-row"):
+                        dl_src_btn = gr.DownloadButton(
+                            "📥 下载注释后的代码",
+                            elem_classes="dl-download-btn",
+                            variant="primary",
+                        )
+                        dl_md_btn = gr.DownloadButton(
+                            "📥 下载 Markdown 文档",
+                            elem_classes="dl-download-btn",
+                            variant="secondary",
+                        )
                     state_src_path = gr.State(None)
                     state_md_path = gr.State(None)
 
@@ -413,6 +473,16 @@ def create_ui():
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],
+        )
+        dl_src_btn.click(
+            fn=_download_src,
+            inputs=[state_src_path],
+            outputs=[dl_src_btn],
+        )
+        dl_md_btn.click(
+            fn=_download_md,
+            inputs=[state_md_path],
+            outputs=[dl_md_btn],
         )
         analyze_btn.click(
             fn=analyze_code,
