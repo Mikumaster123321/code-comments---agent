@@ -3,11 +3,11 @@
 
 启动 Gradio Web 界面。
 架构拆分：
-  config.py         — 配置（API Key、模型参数）
-  llm_service.py    — LLM 调用（docstring/Javadoc 生成、代码摘要，含重试）
-  processor.py      — 主处理逻辑（多语言调度、并发生成 + 串行插入）
-  ui.py             — Gradio 界面构建
   main.py           — 入口文件（本文件）
+  ui.py             — Gradio 界面构建
+  processor.py      — 主处理逻辑（多语言调度、并发生成 + 串行插入）
+  llm_service.py    — LLM 调用（docstring/Javadoc 生成、代码摘要，含重试）
+  config.py         — 配置（API Key、模型参数）
   Py/               — Python 专用模块
     parser.py         — AST 解析（提取函数/类定义）
     annotator.py      — 注释插入与 Markdown 文档生成

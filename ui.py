@@ -99,6 +99,7 @@ CUSTOM_CSS = """
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Menlo', monospace !important;
     line-height: 1.6 !important;
     background: #ffffff !important;
+    overflow: auto !important;
 }
 .code-container .cm-content,
 .code-container .cm-line,
@@ -270,56 +271,52 @@ CUSTOM_CSS = """
     flex: 1 !important;
 }
 
-/* ===== 编辑器头部 ===== */
-.editor-header-bar {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    margin-bottom: 8px !important;
-    gap: 12px !important;
-    padding: 0 !important;
-}
-.editor-header-bar .prose,
-.editor-header-bar p,
-.editor-header-bar strong {
-    margin: 0 !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #111827 !important;
-    letter-spacing: -0.01em !important;
-}
-.editor-header-btns {
-    display: flex !important;
-    gap: 6px !important;
-    flex-shrink: 0 !important;
+/* ===== 输出代码区：包裹层（用于定位浮动按钮）===== */
+.output-code-wrapper {
+    position: relative !important;
 }
 
-/* ===== 紧凑下载按钮 ===== */
+/* ===== 浮动按钮层（覆盖在代码编辑器右上角）===== */
+.code-btn-overlay {
+    position: absolute !important;
+    top: 10px !important;
+    right: 14px !important;
+    z-index: 20 !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+}
+.code-btn-overlay > * {
+    flex: 0 0 auto !important;
+}
+
+/* ===== 紧凑下载/复制按钮 ===== */
 .mini-download-btn {
     min-width: 0 !important;
     width: auto !important;
-    height: 30px !important;
-    padding: 4px 12px !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
+    height: 28px !important;
+    padding: 3px 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
     line-height: 22px !important;
     border-radius: 6px !important;
-    background: white !important;
+    background: rgba(255, 255, 255, 0.92) !important;
     color: #4f46e5 !important;
     border: 1px solid #c7d2fe !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
-    box-shadow: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
     white-space: nowrap !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 4px !important;
+    gap: 3px !important;
+    backdrop-filter: blur(4px) !important;
 }
 .mini-download-btn:hover {
     background: #4f46e5 !important;
     color: white !important;
     border-color: #4f46e5 !important;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3) !important;
     transform: translateY(-1px) !important;
 }
 .mini-download-btn:active {
@@ -328,16 +325,6 @@ CUSTOM_CSS = """
 .mini-download-btn:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
-}
-
-/* ===== 下载按钮容器修正 ===== */
-.editor-header-btns .gr-button,
-.editor-header-btns .gr-download-button {
-    min-width: 0 !important;
-    padding: 4px 12px !important;
-    height: 30px !important;
-    font-size: 12px !important;
-    width: auto !important;
 }
 
 /* ===== 输入/输出代码编辑器统一亮色主题 ===== */
@@ -444,20 +431,19 @@ def create_ui():
         with gr.Column(elem_classes="card-section"):
             with gr.Tabs():
                 with gr.Tab("📄 带注释的代码"):
-                    with gr.Row(elem_classes="editor-header-bar"):
-                        gr.Markdown("**📄 带注释的代码**")
-                        with gr.Row(elem_classes="editor-header-btns"):
+                    with gr.Column(elem_classes="output-code-wrapper"):
+                        with gr.Row(elem_classes="code-btn-overlay"):
                             dl_src_btn = gr.DownloadButton(
                                 "📥 下载源码", elem_classes="mini-download-btn"
                             )
                             dl_md_btn = gr.DownloadButton(
                                 "📥 下载文档", elem_classes="mini-download-btn"
                             )
-                    output_code = gr.Code(
-                        label="",
-                        language=None,
-                        elem_classes="code-container output-code-light",
-                    )
+                        output_code = gr.Code(
+                            label="",
+                            language=None,
+                            elem_classes="code-container output-code-light",
+                        )
                     state_src_path = gr.State(None)
                     state_md_path = gr.State(None)
 
@@ -483,7 +469,7 @@ def create_ui():
         )
 
         # ===== 事件绑定 =====
-        file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=input_box)
+        file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=[input_box, language])
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
         btn.click(
             fn=process_code,

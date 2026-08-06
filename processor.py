@@ -21,19 +21,33 @@ from config import MAX_WORKERS
 
 
 def handle_file_upload(uploaded_file):
-    """读取上传的源代码文件内容，填充到代码输入框
+    """读取上传的源代码文件内容，根据扩展名自动识别语言
 
     Args:
-        uploaded_file: Gradio 文件对象或文件路径字符串
+        uploaded_file: Gradio 文件对象、文件路径字符串或文件信息字典
 
     Returns:
-        str: 文件内容
+        tuple: (文件内容, 识别的语言 "Python" / "Java")
     """
     if uploaded_file is None:
-        return ""
-    file_path = uploaded_file.name if hasattr(uploaded_file, "name") else uploaded_file
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return f.read()
+        return "", "Python"
+    # 兼容多种输入格式：Gradio文件对象（有.name）、字符串路径、字典对象
+    if hasattr(uploaded_file, "name"):
+        file_path = uploaded_file.name
+    elif isinstance(uploaded_file, dict):
+        # Gradio 6.x 可能传递 {"path": ..., "url": ..., "orig_name": ...}
+        file_path = uploaded_file.get("path") or uploaded_file.get("name") or uploaded_file.get("orig_name", "")
+    else:
+        file_path = str(uploaded_file)
+    if not file_path:
+        return "", "Python"
+    ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
+    language = "Java" if ext == "java" else "Python"
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read(), language
+    except (IOError, OSError):
+        return "", language
 
 
 def _process_python(source_code: str, incremental: bool):
