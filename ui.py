@@ -378,14 +378,21 @@ def create_ui():
         # ===== 顶部导航 =====
         with gr.Column(elem_classes="app-header"):
             gr.Markdown("# 📝 代码注释与 API 文档自动生成 Agent")
-            gr.Markdown("粘贴代码或上传文件，AI 自动生成中文注释和 Markdown API 文档 · 支持 Python & Java")
+            gr.Markdown("粘贴代码或上传文件，AI 自动生成多语言注释和 Markdown API 文档 · 支持 Python & Java")
 
         # ===== 语言选择 =====
         with gr.Column(elem_classes="card-section"):
-            language = gr.Dropdown(
-                choices=["Python", "Java"], value="Python",
-                label="🌐 编程语言",
-            )
+            with gr.Row():
+                language = gr.Dropdown(
+                    choices=["Python", "Java"], value="Python",
+                    label="🌐 编程语言", scale=1,
+                )
+                comment_language = gr.Dropdown(
+                    choices=["中文", "English", "日本語"],
+                    value="中文",
+                    label="🌐 注释语言",
+                    scale=1,
+                )
 
         # ===== 输入区 =====
         with gr.Column(elem_classes="card-section"):
@@ -462,8 +469,8 @@ def create_ui():
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=[input_box, language])
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
         btn.click(
-            fn=lambda code, lang: process_code(code, True, lang),
-            inputs=[input_box, language],
+            fn=lambda code, lang, clang: process_code(code, True, lang, clang),
+            inputs=[input_box, language, comment_language],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
@@ -481,7 +488,7 @@ def create_ui():
         )
         analyze_btn.click(
             fn=analyze_code,
-            inputs=[input_box, language],
+            inputs=[input_box, language, comment_language],
             outputs=[quality_output, annotation_output, summary_output, analyze_log],
         ).then(
             fn=lambda: gr.update(selected="code_analysis"),

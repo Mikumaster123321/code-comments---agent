@@ -50,12 +50,13 @@ def handle_file_upload(uploaded_file):
         return "", language
 
 
-def _process_python(source_code: str, incremental: bool):
+def _process_python(source_code: str, incremental: bool, comment_language: str = "中文"):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
     Args:
         source_code: Python 源代码字符串
         incremental: 增量更新模式
+        comment_language: 注释语言（如"中文"、"English"、"日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, py_path)
@@ -97,7 +98,7 @@ def _process_python(source_code: str, incremental: bool):
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
-                doc = generate_docstring(item)
+                doc = generate_docstring(item, comment_language)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -145,12 +146,13 @@ def _process_python(source_code: str, incremental: bool):
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 
-def _process_java(source_code: str, incremental: bool):
+def _process_java(source_code: str, incremental: bool, comment_language: str = "中文"):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
     Args:
         source_code: Java 源代码字符串
         incremental: 增量更新模式
+        comment_language: 注释语言（如"中文"、"English"、"日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, java_path)
@@ -196,7 +198,7 @@ def _process_java(source_code: str, incremental: bool):
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
-                doc = generate_javadoc(item)
+                doc = generate_javadoc(item, comment_language)
                 return item["name"], doc, None
             except Exception as e:
                 return item["name"], None, e
@@ -241,13 +243,14 @@ def _process_java(source_code: str, incremental: bool):
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, java_temp_path
 
 
-def process_code(source_code: str, incremental: bool = False, language: str = "Python"):
+def process_code(source_code: str, incremental: bool = False, language: str = "Python", comment_language: str = "中文"):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
         source_code: 源代码字符串
         incremental: 增量更新模式，True 时跳过已有注释的函数（节省 API 调用）
         language: 编程语言（"Python" 或 "Java"）
+        comment_language: 注释语言（如"中文"、"English"、"日本語"）
 
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, src_path)
@@ -262,8 +265,8 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
         return source_code, "代码无效，无法生成注释。", "日志：代码无效（非有效 Java 代码），请检查输入。", None, None
 
     if language == "Java":
-        return _process_java(source_code, incremental)
-    return _process_python(source_code, incremental)
+        return _process_java(source_code, incremental, comment_language)
+    return _process_python(source_code, incremental, comment_language)
 
 
 def _is_valid_python(source_code: str) -> bool:
@@ -324,11 +327,12 @@ def _is_valid_java(source_code: str) -> bool:
     return matched >= 1 or brace_count >= 2
 
 
-def _analyze_java(source_code: str):
+def _analyze_java(source_code: str, comment_language: str = "中文"):
     """Java 代码分析：大括号校验 + 代码摘要
 
     Args:
         source_code: Java 源代码字符串
+        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
 
     Returns:
         tuple: (quality_report, annotation_report, summary, log_text)
@@ -359,7 +363,7 @@ def _analyze_java(source_code: str):
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_java_summary(source_code)
+        summary = generate_java_summary(source_code, comment_language)
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"
@@ -368,12 +372,13 @@ def _analyze_java(source_code: str):
     return quality_report, annotation_report, summary, "\n".join(log)
 
 
-def analyze_code(source_code: str, language: str = "Python"):
+def analyze_code(source_code: str, language: str = "Python", comment_language: str = "中文"):
     """主分析函数，返回质量报告、类型注解报告、摘要、日志
 
     Args:
         source_code: 源代码字符串
         language: 编程语言（"Python" 或 "Java"）
+        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
 
     Returns:
         tuple: (quality_report, annotation_report, summary, log_text)
@@ -382,7 +387,7 @@ def analyze_code(source_code: str, language: str = "Python"):
         return "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
 
     if language == "Java":
-        return _analyze_java(source_code)
+        return _analyze_java(source_code, comment_language)
 
     # Python 代码有效性验证
     if not _is_valid_python(source_code):
@@ -412,7 +417,7 @@ def analyze_code(source_code: str, language: str = "Python"):
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_code_summary(source_code)
+        summary = generate_code_summary(source_code, comment_language)
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"

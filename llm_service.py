@@ -6,7 +6,7 @@ import openai
 from config import client, MODEL, TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
 
 PROMPT_TEMPLATE = (
-    "你是一位资深 Python 开发工程师。请为以下{func_type}生成中文文档字符串（docstring）的内容。\n"
+    "你是一位资深 Python 开发工程师。请为以下{func_type}生成{comment_language}文档字符串（docstring）的内容。\n"
     "\n"
     "⚠️ 极其重要的格式要求（不遵守会导致Python语法错误）：\n"
     "1. 不要在开头和结尾添加任何三引号（\u0022\u0022\u0022或\u0027\u0027\u0027），我会在生成后自动包裹。\n"
@@ -95,11 +95,12 @@ def _clean_docstring(docstring: str) -> str:
     return docstring.strip()
 
 
-def generate_docstring(item: dict) -> str:
+def generate_docstring(item: dict, comment_language: str = "中文") -> str:
     """调用 LLM 生成文档字符串
 
     Args:
         item: 函数/类信息字典，需包含 type/name/code
+        comment_language: 注释语言（如"中文"、"English"、"日本語"）
 
     Returns:
         str: 清理后的 docstring 文本
@@ -107,23 +108,25 @@ def generate_docstring(item: dict) -> str:
     prompt = PROMPT_TEMPLATE.format(
         func_type="类" if item["type"] == "class" else "函数",
         name=item["name"],
-        code=item["code"]
+        code=item["code"],
+        comment_language=comment_language,
     )
     docstring = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
     return _clean_docstring(docstring)
 
 
-def generate_code_summary(source: str) -> str:
+def generate_code_summary(source: str, comment_language: str = "中文") -> str:
     """调用 LLM 生成代码摘要：模块功能、核心类、依赖关系
 
     Args:
         source: Python 源代码字符串
+        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
 
     Returns:
         str: 代码摘要文本
     """
     prompt = (
-        "请分析以下 Python 代码，生成一段简洁的中文摘要（200字以内）。\n"
+        f"请分析以下 Python 代码，生成一段简洁的{comment_language}摘要（200字以内）。\n"
         "摘要应包含：\n"
         "1. 模块整体功能\n"
         "2. 核心类和函数\n"
@@ -140,7 +143,7 @@ def generate_code_summary(source: str) -> str:
 # ==================== Java Javadoc 生成 ====================
 
 JAVA_PROMPT_TEMPLATE = (
-    "你是一位资深 Java 开发工程师。请为以下{func_type}生成中文 Javadoc 注释的内容。\n"
+    "你是一位资深 Java 开发工程师。请为以下{func_type}生成{comment_language} Javadoc 注释的内容。\n"
     "\n"
     "⚠️ 极其重要的格式要求（不遵守会导致 Java 语法错误）：\n"
     "1. 不要在开头和结尾添加 /** 或 */ 标记，我会在生成后自动包裹。\n"
@@ -186,11 +189,12 @@ def _clean_javadoc(text: str) -> str:
     return text.strip()
 
 
-def generate_javadoc(item: dict) -> str:
+def generate_javadoc(item: dict, comment_language: str = "中文") -> str:
     """调用 LLM 生成 Java Javadoc 注释
 
     Args:
         item: 方法/类信息字典，需包含 type/name/code
+        comment_language: 注释语言（如"中文"、"English"、"日本語"）
 
     Returns:
         str: 清理后的 Javadoc 文本
@@ -198,23 +202,25 @@ def generate_javadoc(item: dict) -> str:
     prompt = JAVA_PROMPT_TEMPLATE.format(
         func_type="类" if item["type"] == "class" else "方法",
         name=item["name"],
-        code=item["code"]
+        code=item["code"],
+        comment_language=comment_language,
     )
     javadoc = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
     return _clean_javadoc(javadoc)
 
 
-def generate_java_summary(source: str) -> str:
+def generate_java_summary(source: str, comment_language: str = "中文") -> str:
     """调用 LLM 生成 Java 代码摘要：模块功能、核心类、依赖关系
 
     Args:
         source: Java 源代码字符串
+        comment_language: 摘要语言（如"中文"、"English"、"日本語"）
 
     Returns:
         str: 代码摘要文本
     """
     prompt = (
-        "请分析以下 Java 代码，生成一段简洁的中文摘要（200字以内）。\n"
+        f"请分析以下 Java 代码，生成一段简洁的{comment_language}摘要（200字以内）。\n"
         "摘要应包含：\n"
         "1. 模块整体功能\n"
         "2. 核心类和方法\n"
