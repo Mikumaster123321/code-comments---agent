@@ -382,15 +382,10 @@ def create_ui():
 
         # ===== 语言选择 =====
         with gr.Column(elem_classes="card-section"):
-            with gr.Row():
-                language = gr.Dropdown(
-                    choices=["Python", "Java"], value="Python",
-                    label="🌐 编程语言", scale=3,
-                )
-                incremental_chk = gr.Checkbox(
-                    label="增量更新模式（跳过已有注释的函数，节省 API 调用）",
-                    value=False, scale=7,
-                )
+            language = gr.Dropdown(
+                choices=["Python", "Java"], value="Python",
+                label="🌐 编程语言",
+            )
 
         # ===== 输入区 =====
         with gr.Column(elem_classes="card-section"):
@@ -467,8 +462,8 @@ def create_ui():
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=[input_box, language])
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
         btn.click(
-            fn=process_code,
-            inputs=[input_box, incremental_chk, language],
+            fn=lambda code, lang: process_code(code, True, lang),
+            inputs=[input_box, language],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
