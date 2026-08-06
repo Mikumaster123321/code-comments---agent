@@ -31,6 +31,9 @@ def step1_upload():
             self.name = path
 
     source = handle_file_upload(FakeUpload(JAVA_FILE))
+    if isinstance(source, tuple):
+        source, lang = source
+        print(f"  识别语言: {lang}")
     assert source, "上传后内容不应为空"
     assert "public class Library" in source, "应包含 Library 类"
     print(f"  文件大小: {len(source)} 字符, {source.count(chr(10))} 行")

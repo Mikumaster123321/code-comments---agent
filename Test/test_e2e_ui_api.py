@@ -119,11 +119,12 @@ def filter_adults(users: List[User], min_age: int = 18) -> List[User]:
     return [u for u in users if u.age >= min_age]
 """
     try:
-        # analyze_code: inputs=[input_box, language], outputs=[quality, annotation, summary, log]
+        # analyze_code: inputs=[input_box, language, ui_lang], outputs=[quality, annotation, summary, log]
         result = client.predict(
             py_code,
             "Python",
-            api_name="/analyze_code"
+            "中文",
+            api_name="/lambda_2"
         )
         if isinstance(result, (list, tuple)) and len(result) >= 3:
             quality, annotation, summary = result[0], result[1], result[2]
@@ -166,7 +167,8 @@ public class Calculator {
         result = client.predict(
             java_code,
             "Java",
-            api_name="/analyze_code"
+            "中文",
+            api_name="/lambda_2"
         )
         if isinstance(result, (list, tuple)) and len(result) >= 3:
             quality, annotation, summary = result[0], result[1], result[2]
@@ -210,43 +212,30 @@ class ShopCart:
         return total
 """
     try:
-        # process_code: inputs=[input_box, incremental, language]
-        # outputs=[output_code, output_docs, output_log, state_md_path, state_src_path]
+        # process_code: inputs=[input_box, language, ui_lang], outputs=[output_code, output_docs, output_log, state_md_path, state_src_path]
+        # HTTP API 不暴露 State，仅返回 3 个可见输出
         result = client.predict(
             py_code,
-            False,  # incremental
             "Python",
-            api_name="/process_code"
+            "中文",
+            api_name="/lambda"
         )
-        if isinstance(result, (list, tuple)) and len(result) >= 5:
-            annotated, doc, log, md_path, src_path = result[:5]
+        if isinstance(result, (list, tuple)) and len(result) >= 3:
+            annotated, doc, log = result[0], result[1], result[2]
             print(f"[INFO] 注释代码长度: {len(annotated) if annotated else 0}")
             print(f"[INFO] 文档长度: {len(doc) if doc else 0}")
-            print(f"[INFO] 源码下载路径: {src_path}")
             if not annotated or '"""' not in annotated:
                 print("[FAIL] 未生成docstring注释")
                 return False
             print("[INFO] Docstring已生成")
-            # 验证下载文件
-            if src_path and os.path.exists(src_path):
-                print(f"[INFO] 下载文件存在，大小: {os.path.getsize(src_path)} bytes")
-                try:
-                    with open(src_path, 'r', encoding='utf-8') as f:
-                        ast.parse(f.read())
-                    print("[PASS] Python注释生成+下载+AST语法验证通过")
-                    return True
-                except SyntaxError as se:
-                    print(f"[FAIL] 下载文件AST解析失败: {se}")
-                    return False
-            else:
-                # 直接验证annotated
-                try:
-                    ast.parse(annotated)
-                    print("[PASS] Python注释生成+AST语法验证通过（直接验证）")
-                    return True
-                except SyntaxError as se:
-                    print(f"[FAIL] 注释代码AST解析失败: {se}")
-                    return False
+            # 直接验证annotated（HTTP API 无法获取 State 中的下载路径）
+            try:
+                ast.parse(annotated)
+                print("[PASS] Python注释生成+AST语法验证通过（直接验证）")
+                return True
+            except SyntaxError as se:
+                print(f"[FAIL] 注释代码AST解析失败: {se}")
+                return False
         print(f"[FAIL] 返回格式不符预期")
         return False
     except Exception as e:
@@ -274,41 +263,26 @@ public class Calculator {
     try:
         result = client.predict(
             java_code,
-            False,
             "Java",
-            api_name="/process_code"
+            "中文",
+            api_name="/lambda"
         )
-        if isinstance(result, (list, tuple)) and len(result) >= 5:
-            annotated, doc, log, md_path, src_path = result[:5]
+        if isinstance(result, (list, tuple)) and len(result) >= 3:
+            annotated, doc, log = result[0], result[1], result[2]
             print(f"[INFO] 注释代码长度: {len(annotated) if annotated else 0}")
             print(f"[INFO] 文档长度: {len(doc) if doc else 0}")
-            print(f"[INFO] 源码下载路径: {src_path}")
             if not annotated or "/**" not in annotated:
                 print("[FAIL] 未生成Javadoc注释")
                 return False
             print("[INFO] Javadoc已生成")
-            # 验证下载文件
-            if src_path and os.path.exists(src_path):
-                print(f"[INFO] 下载文件存在，大小: {os.path.getsize(src_path)} bytes")
-                with open(src_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                # 结构检查
-                checks = ["class Calculator", "public int add", "public int multiply", "public static void main"]
-                for check in checks:
-                    if check not in content:
-                        print(f"[FAIL] 下载文件缺失关键结构: {check}")
-                        return False
-                print("[PASS] Java注释生成+下载+结构验证通过")
-                return True
-            else:
-                # 直接验证annotated
-                checks = ["class Calculator", "public int add", "public int multiply"]
-                for check in checks:
-                    if check not in annotated:
-                        print(f"[FAIL] 注释代码缺失关键结构: {check}")
-                        return False
-                print("[PASS] Java注释生成+结构验证通过（直接验证）")
-                return True
+            # 直接验证annotated（HTTP API 无法获取 State 中的下载路径）
+            checks = ["class Calculator", "public int add", "public int multiply"]
+            for check in checks:
+                if check not in annotated:
+                    print(f"[FAIL] 注释代码缺失关键结构: {check}")
+                    return False
+            print("[PASS] Java注释生成+结构验证通过（直接验证）")
+            return True
         print(f"[FAIL] 返回格式不符预期")
         return False
     except Exception as e:
@@ -330,7 +304,7 @@ def test_invalid_code_via_api(client):
     ]
     for code, lang, desc in cases:
         try:
-            result = client.predict(code, lang, api_name="/analyze_code")
+            result = client.predict(code, lang, "中文", api_name="/lambda_2")
             if isinstance(result, (list, tuple)) and len(result) >= 3:
                 combined = result[0] + result[1] + result[2]
                 print(f"\n[INFO] [{lang}/{desc}] input='{code}'")
