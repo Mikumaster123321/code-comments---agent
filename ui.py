@@ -6,6 +6,7 @@ from processor import (
     process_batch_files, build_split_diff_html,
     process_code_with_progress, process_batch_with_progress,
     CancelToken,
+    NAMING_SAME, NAMING_SUFFIX, NAMING_SUBDIR,
 )
 from i18n import LANGUAGES, t
 
@@ -451,6 +452,9 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("preflight_btn", lang)),  # 32 preflight_btn
         gr.update(label=t("preflight_label", lang)),  # 33 preflight_result_md
         gr.update(label=t("estimate_label", lang)),   # 34 cost_estimate_md
+        # ===== v2.3.5 ZIP 输出命名策略新增 =====
+        gr.update(value=t("naming_section", lang)),   # 35 naming_section_md
+        gr.update(label=t("naming_label", lang)),     # 36 naming_strategy
     ]
 
 
@@ -569,6 +573,19 @@ def create_ui():
                     size="lg",
                     elem_classes="action-btn",
                 )
+            # ===== v2.3.5 ZIP 输出命名策略 =====
+            naming_section_md = gr.Markdown(t("naming_section", default_lang))
+            naming_strategy = gr.Dropdown(
+                choices=[
+                    (t("naming_suffix_label", default_lang), NAMING_SUFFIX),
+                    (t("naming_same_label", default_lang), NAMING_SAME),
+                    (t("naming_subdir_label", default_lang), NAMING_SUBDIR),
+                ],
+                value=NAMING_SUFFIX,
+                label=t("naming_label", default_lang),
+                allow_custom_value=False,
+            )
+
             batch_zip_state = gr.State(None)
             batch_log = gr.Textbox(
                 label=t("batch_log_label", default_lang),
@@ -682,6 +699,9 @@ def create_ui():
                 preflight_btn,     # 32
                 preflight_result_md,  # 33
                 cost_estimate_md,  # 34
+                # ===== v2.3.5 ZIP 输出命名策略新增 =====
+                naming_section_md,   # 35
+                naming_strategy,     # 36
             ],
         )
 
@@ -877,9 +897,11 @@ def create_ui():
         )
 
         # ===== 批量处理事件绑定（生成器版） =====
-        def _batch_gen_progress(files, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
+        def _batch_gen_progress(files, ulang, pyst, jvst, naming, cancel_token_state, progress=gr.Progress()):
             """批量生成（生成器），outputs 结构：
             [batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel]
+
+            v2.3.5 新增 naming 参数：ZIP 源码输出命名策略 same / suffix / subdir。
             """
             token = CancelToken()
             def _cb(ratio, desc):
@@ -888,6 +910,7 @@ def create_ui():
             for log_text, zip_path in process_batch_with_progress(
                 files, comment_lang=ulang, incremental=True,
                 python_style=pyst, java_style=jvst,
+                naming_strategy=naming,
                 cancel_token=token, progress_cb=_cb,
             ):
                 if first:
@@ -906,7 +929,7 @@ def create_ui():
 
         batch_gen_btn.click(
             fn=_batch_gen_progress,
-            inputs=[batch_file_upload, ui_lang, python_style, java_style, state_batch_cancel],
+            inputs=[batch_file_upload, ui_lang, python_style, java_style, naming_strategy, state_batch_cancel],
             outputs=[batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel],
         )
         batch_cancel_btn.click(

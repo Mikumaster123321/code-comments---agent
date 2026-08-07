@@ -225,6 +225,34 @@ TRANSLATIONS = {
         "English": "Java Javadoc Style",
         "日本語": "Java Javadoc スタイル",
     },
+    # ====== v2.3.5 批量 ZIP 输出命名策略 ======
+    "naming_section": {
+        "中文": "### 📦 ZIP 输出命名策略",
+        "English": "### 📦 ZIP Output Naming",
+        "日本語": "### 📦 ZIP 出力命名戦略",
+    },
+    "naming_label": {
+        "中文": "批量下载文件名规则",
+        "English": "Batch download naming rule",
+        "日本語": "一括ダウンロード命名規則",
+    },
+    # 3 个策略选项（UI 传入 Dropdown 的 choices 标签，由翻译 + i18n 渲染；
+    #  实际传到 processor 的 value 是固定英文 same / suffix / subdir）
+    "naming_same_label": {
+        "中文": "与源文件同名（覆盖到项目目录时使用）",
+        "English": "Same as source (for overwrite in project)",
+        "日本語": "ソースと同名（プロジェクト上書き用）",
+    },
+    "naming_suffix_label": {
+        "中文": "文件名加 _annotated 后缀（默认，安全不覆盖）",
+        "English": "Add _annotated suffix (default, safe)",
+        "日本語": "ファイル名に _annotated 接尾（既定、上書き回避）",
+    },
+    "naming_subdir_label": {
+        "中文": "放入 annotated/ 子目录（保留原目录结构）",
+        "English": "Move to annotated/ subdirectory (keep tree)",
+        "日本語": "annotated/ サブフォルダに格納（元ツリー保持）",
+    },
 }
 
 

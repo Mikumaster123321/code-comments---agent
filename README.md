@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.4**（2026-08-07 · v2.3.0 的小更新 · Java 有效性检测严格化 + 注释后语法二次校验）
+**当前版本：v2.3.5**（2026-08-07 · v2.3.0 的小更新 · 批量 ZIP 输出命名策略可配置 + 源目录结构保留）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,51 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.5 — 2026-08-07（v2.3.0 小更新 #5）
+
+#### 📁 输出 ZIP 保持文件名匹配 + 结构可配置
+用户反馈：批量下载的 ZIP 内部原先直接按"上传时的文件名（无父目录）"平铺写入，解压后需要手动改名/覆盖到原工程目录；同时对于 CI 场景希望要么"直接同名覆盖"、要么"统一放子目录 annotated/ "，而不是每次都手工整理。
+
+##### 3 种命名策略（processor.NAMING_SAME / NAMING_SUFFIX / NAMING_SUBDIR）
+在批量区新增下拉框「ZIP 输出命名策略」（中文 / English / 日本語 三语），用户可直接选：
+
+| 策略值 | UI 显示 | 效果（以 `src/pkg/utils.py` 为例） | 典型场景 |
+| --- | --- | --- | --- |
+| `same` | 同名覆盖（保留原文件名） | `src/pkg/utils.py`（原样） | CI 流水线：解压后直接覆盖源文件 |
+| `suffix`（默认） | 添加 `_annotated` 后缀 | `src/pkg/utils_annotated.py` | 人工对比：不覆盖源文件，方便 diff |
+| `subdir` | 放到 `annotated/` 子目录 | `annotated/src/pkg/utils.py` | 目录整洁：所有结果放一个顶层文件夹 |
+
+- **`processing.log` / `API_DOCS_ALL.md` 始终在 ZIP 根**，不受命名策略影响（3 种策略均一致）。
+- 非法值自动降级到 `suffix`，不会抛异常阻断下载。
+
+##### 关键实现细节
+1. **`_apply_naming_strategy(rel_path, strategy)` 独立纯函数**：输入 POSIX 相对路径，输出命名后的归档相对路径；覆盖 3 策略 × 无子目录 / 有子目录 / Windows 反斜杠输入共 8 条分支；`T1_ApplyNamingStrategy` 8 条单元测试 100% 覆盖。
+2. **`_build_batch_zip(output_stage, ..., naming_strategy)` 打包时应用策略**：只对源码文件（`.py`/`.java`）走 `_apply_naming_strategy`，`processing.log`/`API_DOCS_ALL.md` 直接写根；`T2_BuildBatchZipMemberNames` 3 条用例校验 SAME / SUFFIX / SUBDIR 三类成员名一致。
+3. **`process_batch_files` 与 `process_batch_with_progress` 同时加 `naming_strategy` 参数**，签名保持向后兼容（默认 `NAMING_SUFFIX`）；内部重构"非 zip 单文件上传"路径：不再简单把 `basename` 当作 rel_path 打平，而是收集全部原始源路径后：
+   - 按 `Path.parts` 求最长公共前缀 → 公共父级 → 再向上退一层（common_len>1 时 -1）→ 对每个源文件做 `os.path.relpath(src_abs, common_parent)`；
+   - 跨盘符无公共前缀时退化为 `basename`，不会报错。
+   - 保证上传 `src/pkg/utils.py + src/pkg/Helper.java` 时 ZIP 内仍保有 `pkg/utils.py / pkg/Helper.java` 的层级关系，而非平铺 `utils.py`。
+4. **UI 层** (`ui.py`)：
+   - 批量区（紧靠 batch_log 前）新增 `naming_section_md` 说明 + `naming_strategy` Dropdown（3 个策略以"显示名→值"元组注册，默认选中 NAMING_SUFFIX）；
+   - `_apply_ui_language` 返回列表追加 35/36 两项，`ui_lang.change(outputs=...)` 同步增加；
+   - `_batch_gen_progress` 新增 `naming` 第 5 个入参并透传到 `process_batch_with_progress(naming_strategy=naming)`；
+   - `batch_gen_btn.click(inputs=...)` 追加 `naming_strategy` 组件入参。
+5. **i18n** (`i18n.py` TRANSLATIONS)：新增 5 个 key 三语文案——`naming_section`（小节标题说明）、`naming_label`（下拉框 label）、`naming_same_label` / `naming_suffix_label` / `naming_subdir_label`（3 个选项显示名）；`T4_I18n` 校验均存在且非空。
+
+##### 兼容性
+- `processor.process_batch_files` / `process_batch_with_progress` 旧签名调用者（无 naming_strategy）零侵入：默认 `suffix`，行为与旧版一致（旧版同样是 `processing.log`/`API_DOCS_ALL.md` + 平铺源码，现在默认策略仅多一个 `_annotated` 后缀保护源文件、更安全）。
+- `processor.py` 顶部补 `from pathlib import Path`（此前只在局部使用，import 合规）。
+- `ui.py` / `i18n.py` 仅新增字段与返回项，无旧组件 id 变更、无 layout 调整冲突。
+- 无新增第三方依赖。
+
+##### 测试覆盖（`test_batch_naming.py` 共 16 用例，全通过）
+| 类 | 用例数 | 覆盖 |
+| --- | --- | --- |
+| T1_ApplyNamingStrategy | 8 | same/suffix/subdir × 无子目录/有子目录 + 非法值降级 + Windows 反斜杠归一化 |
+| T2_BuildBatchZipMemberNames | 3 | same/suffix/subdir 打包结果成员名（源码 + log + aggregate doc） |
+| T3_ProcessBatchFilesEndToEnd | 4 | py 单文件 suffix + java 单文件 same + 多文件 subdir（含 AST 校验） + 非法值降级 |
+| T4_I18n | 1 | naming_* 5 个 key 三语存在非空 |
 
 ### v2.3.4 — 2026-08-07（v2.3.0 小更新 #4）
 

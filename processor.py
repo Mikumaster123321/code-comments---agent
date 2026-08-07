@@ -19,6 +19,7 @@ import html
 import threading
 import math
 import subprocess
+from pathlib import Path
 from typing import Optional, Iterator, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 
@@ -52,6 +53,21 @@ ALLOWED_SRC_EXTS = {".py", ".java"}
 ALLOWED_ZIP_EXTS = {".zip"}
 # 批量处理时忽略的目录名（大小写敏感粗略过滤）
 SKIP_DIR_NAMES = {"__pycache__", ".git", ".idea", ".venv", "venv", "node_modules"}
+
+# ===== v2.3.5 批量 ZIP 输出命名策略 =====
+# same: 与源文件同名（直接覆盖到项目目录时使用）
+# suffix: 文件名 + _annotated 后缀（默认，避免误覆盖原始文件）
+# subdir: 按文件名放到 annotated/ 子目录下，保持原目录结构，再下一层是 annotated/
+NAMING_SAME = "same"
+NAMING_SUFFIX = "suffix"
+NAMING_SUBDIR = "subdir"
+NAMING_STRATEGIES = {NAMING_SAME, NAMING_SUFFIX, NAMING_SUBDIR}
+# 三种策略的 i18n 友好标签（非 UI 展示；UI 走 i18n.py 翻译字典）
+NAMING_LABELS = {
+    NAMING_SAME: "Same name as source (overwrite friendly)",
+    NAMING_SUFFIX: "Add _annotated suffix (default, safe)",
+    NAMING_SUBDIR: "Move to annotated/ subdirectory",
+}
 
 
 # ==================================================================
@@ -1280,13 +1296,48 @@ def _extract_zip_safe(zip_path: str, target_dir: str) -> str:
     return target_dir
 
 
-def _build_batch_zip(output_dir: str, log_text: str, aggregate_md: Optional[str] = None) -> str:
+def _apply_naming_strategy(rel_path: str, strategy: str) -> str:
+    """按命名策略把输出相对路径转换为 ZIP 归档路径
+
+    v2.3.5 新增：批量 ZIP 输出文件命名可配置。
+
+    Args:
+        rel_path: 原始输出路径（POSIX 斜杠分隔），如 "mylib/utils.py" / "Main.java"
+        strategy: NAMING_SAME / NAMING_SUFFIX / NAMING_SUBDIR
+
+    Returns:
+        str: 应用策略后的新归档路径（POSIX 斜杠分隔）
+    """
+    strategy = strategy if strategy in NAMING_STRATEGIES else NAMING_SUFFIX
+    posix = rel_path.replace("\\", "/")
+    directory, basename = posix.rsplit("/", 1) if "/" in posix else ("", posix)
+    stem, ext = basename.rsplit(".", 1) if "." in basename else (basename, "")
+    ext = f".{ext}" if ext else ""
+
+    if strategy == NAMING_SAME:
+        return posix
+    if strategy == NAMING_SUFFIX:
+        new_name = f"{stem}_annotated{ext}"
+        return f"{directory}/{new_name}" if directory else new_name
+    # NAMING_SUBDIR: 所有源码放入 annotated/ 顶层子目录，原目录结构保留
+    return f"annotated/{posix}"
+
+
+def _build_batch_zip(
+    output_dir: str,
+    log_text: str,
+    aggregate_md: Optional[str] = None,
+    naming_strategy: str = NAMING_SUFFIX,
+) -> str:
     """将 output_dir 内处理后的结果打包为 zip，外加日志和聚合文档
+
+    v2.3.5 新增 naming_strategy：按策略重命名归档路径（默认 _annotated 后缀）。
 
     Args:
         output_dir: 包含 annotated 源代码文件的输出目录（结构完整）
         log_text: 处理日志文本
         aggregate_md: 聚合 Markdown 文档（可空）
+        naming_strategy: 输出命名策略 NAMING_SAME / NAMING_SUFFIX / NAMING_SUBDIR
 
     Returns:
         str: 打包后的临时 zip 文件绝对路径
@@ -1297,12 +1348,13 @@ def _build_batch_zip(output_dir: str, log_text: str, aggregate_md: Optional[str]
     )
     zip_out.close()
     with zipfile.ZipFile(zip_out.name, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        # 1. 源码（保持相对路径）
+        # 1. 源码（保持相对路径，按 naming_strategy 重命名）
         for current, _, filenames in os.walk(output_dir):
             for fn in filenames:
                 abs_p = os.path.join(current, fn)
                 rel_p = os.path.relpath(abs_p, output_dir).replace(os.sep, "/")
-                zf.write(abs_p, rel_p)
+                archive_p = _apply_naming_strategy(rel_p, naming_strategy)
+                zf.write(abs_p, archive_p)
         # 2. 处理日志
         zf.writestr("processing.log", log_text.encode("utf-8"))
         # 3. 聚合文档
@@ -1317,6 +1369,7 @@ def process_batch_files(
     incremental: bool = True,
     python_style: Optional[str] = None,
     java_style: Optional[str] = None,
+    naming_strategy: str = NAMING_SUFFIX,
 ) -> tuple[str, Optional[str]]:
     """批量处理上传的多个文件或 ZIP 压缩包
 
@@ -1331,10 +1384,15 @@ def process_batch_files(
         uploaded_files: Gradio Upload 的文件列表（file_count="multiple" / 或包含 zip）
         comment_lang: 注释目标语言（"中文" / "English" / "日本語"）
         incremental: 是否增量模式（默认 True，跳过匹配注释并翻译不匹配的）
+        python_style: Python 注释风格（Google 风格 / NumPy 风格 / reStructuredText）
+        java_style: Java 注释风格（标准 Javadoc / 极简行内注释）
+        naming_strategy: ZIP 源码输出命名策略 NAMING_SAME / NAMING_SUFFIX（默认） / NAMING_SUBDIR
 
     Returns:
         (log_text, zip_path): 处理日志文本 + 打包 zip 的临时路径（可用于 gr.DownloadButton）
     """
+    if naming_strategy not in NAMING_STRATEGIES:
+        naming_strategy = NAMING_SUFFIX
     log: list[str] = []
     # 1. 展开上传，解析路径
     if not uploaded_files:
@@ -1342,6 +1400,8 @@ def process_batch_files(
     # 统一成列表：用户可能传单个（非列表）或列表
     raw_list = uploaded_files if isinstance(uploaded_files, (list, tuple)) else [uploaded_files]
     file_records: list[tuple[str, str]] = []  # (本地绝对路径, 归档用相对路径)
+    # 对非 zip 单文件上传，用「原始源路径」记录 → 后续基于它们求公共父级，保留目录结构
+    nonzip_sources: list[tuple[str, str]] = []  # (staged_path, original_src_abs_path)
     tmp_root = tempfile.mkdtemp(prefix="batch_annot_")
     try:
         extract_stage = os.path.join(tmp_root, "in")
@@ -1369,15 +1429,53 @@ def process_batch_files(
                 except Exception as e:
                     log.append(f"[错误] 解压 {name} 失败: {e}")
             elif ext in ALLOWED_SRC_EXTS:
-                # 单文件：直接复制到 extract_stage/<原文件名>，保留原名
+                # 单文件：先复制到 stage，延迟决定 rel_path（放到 nonzip_sources，之后根据公共父级决定）
                 staged = os.path.join(extract_stage, f"file_{idx:02d}_{name}")
                 idx += 1
                 shutil.copyfile(src_path, staged)
-                rel_p = name.replace(os.sep, "/")
-                file_records.append((staged, rel_p))
+                nonzip_sources.append((staged, os.path.abspath(src_path)))
                 log.append(f"[文件] 加入待处理: {name}")
             else:
                 log.append(f"[跳过] 不支持的文件类型: {name} ({ext})")
+
+        # 1b. 非 zip 单文件：按原始源路径计算公共父级，生成 rel_path（保留目录结构）
+        if nonzip_sources:
+            # 求所有原始源文件的最长公共父目录（按绝对路径分割后的公共前缀）
+            parts_list = [Path(src_abs).parts for _, src_abs in nonzip_sources]
+            common_len = 0
+            min_len = min(len(p) for p in parts_list)
+            for i in range(min_len):
+                if len({p[i] for p in parts_list}) == 1:
+                    common_len = i + 1
+                else:
+                    break
+            # 如果 common_len 已把「文件名」也匹配了（多文件相同路径，几乎不会发生），
+            # 退一格避免 relpath 为空。
+            if common_len == min(len(p) for p in parts_list) and len(parts_list) > 1:
+                common_len = max(0, common_len - 1)
+            # 关键：公共父级再向上退一层，使 relpath 保留「源目录相对结构」。
+            # 例：src/pkg/utils.py + src/pkg/Helper.java → 公共 parts 到 src/pkg；
+            #     退一层到 src → relpath 为 pkg/utils.py / pkg/Helper.java。
+            # common_len == 1 通常只剩盘符，不再退。
+            if common_len > 1:
+                common_len -= 1
+            if common_len > 0:
+                parent_parts = parts_list[0][:common_len]
+                # 卷标如 (C:\\, ...) 在 Windows 下 os.path.join 会报错，用 Path 构造
+                common_parent = str(Path(*parent_parts))
+            else:
+                common_parent = None
+            # 生成 rel_path：保留从公共父级到文件的相对路径
+            for staged, src_abs in nonzip_sources:
+                if common_parent and src_abs.startswith(common_parent + os.sep):
+                    rel_raw = os.path.relpath(src_abs, common_parent)
+                elif common_parent and os.path.abspath(src_abs).startswith(os.path.abspath(common_parent) + os.sep):
+                    rel_raw = os.path.relpath(src_abs, common_parent)
+                else:
+                    # 没有公共父级（跨盘）：退化为 basename（避免全部打平 + 避免引用越界变量）
+                    rel_raw = os.path.basename(src_abs)
+                rel_p = rel_raw.replace(os.sep, "/")
+                file_records.append((staged, rel_p))
 
         if not file_records:
             log.append("[错误] 没有发现可处理的 .py/.java 源文件")
@@ -1391,7 +1489,10 @@ def process_batch_files(
         fail = 0
         aggregate_docs: list[str] = []
         log.append("")
-        log.append(f"=== 批量处理开始：共 {total} 个文件，注释语言: {comment_lang}，增量: {incremental} ===")
+        log.append(
+            f"=== 批量处理开始：共 {total} 个文件，注释语言: {comment_lang}，增量: {incremental}，"
+            f"命名策略: {naming_strategy} ==="
+        )
         for abs_path, rel_path in file_records:
             log.append("-" * 60)
             log.append(f"  [处理中] {rel_path}")
@@ -1444,7 +1545,7 @@ def process_batch_files(
         # 3. 聚合文档与打包
         aggregate_md = "\n\n".join(aggregate_docs) if aggregate_docs else None
         try:
-            zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md)
+            zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md, naming_strategy)
         except Exception as e:
             log.append(f"[错误] 打包 zip 失败: {e}")
             return "\n".join(log), None
@@ -1464,6 +1565,7 @@ def process_batch_with_progress(
     incremental: bool = True,
     python_style: Optional[str] = None,
     java_style: Optional[str] = None,
+    naming_strategy: str = NAMING_SUFFIX,
     cancel_token: Optional[CancelToken] = None,
     progress_cb: Optional[Callable[[float, str], None]] = None,
 ) -> Iterator[tuple[str, Optional[str]]]:
@@ -1474,9 +1576,13 @@ def process_batch_with_progress(
       2. 最终 yield 一次 (log_text, zip_path) 含打包结果路径；
       3. 支持 CancelToken 取消（取消后立即返回已处理成功的部分打包结果）。
 
+    v2.3.5 新增 naming_strategy 参数：ZIP 源码输出命名策略 same / suffix（默认） / subdir。
+
     Yields:
         (log_text: str, zip_path: str | None)
     """
+    if naming_strategy not in NAMING_STRATEGIES:
+        naming_strategy = NAMING_SUFFIX
     cancel_token = cancel_token or CancelToken()
 
     log: list[str] = []
@@ -1486,6 +1592,7 @@ def process_batch_with_progress(
 
     raw_list = uploaded_files if isinstance(uploaded_files, (list, tuple)) else [uploaded_files]
     file_records: list[tuple[str, str]] = []
+    nonzip_sources: list[tuple[str, str]] = []  # (staged_path, original_src_abs_path)
     tmp_root = tempfile.mkdtemp(prefix="batch_annot_")
     try:
         extract_stage = os.path.join(tmp_root, "in")
@@ -1521,8 +1628,7 @@ def process_batch_with_progress(
                 staged = os.path.join(extract_stage, f"file_{idx:02d}_{name}")
                 idx += 1
                 shutil.copyfile(src_path, staged)
-                rel_p = name.replace(os.sep, "/")
-                file_records.append((staged, rel_p))
+                nonzip_sources.append((staged, os.path.abspath(src_path)))
                 log.append(f"[文件] 加入待处理: {name}")
             else:
                 log.append(f"[跳过] 不支持的文件类型: {name} ({ext})")
@@ -1531,6 +1637,36 @@ def process_batch_with_progress(
                 log.append("⚠️ 批量任务已取消（解压阶段）")
                 yield "\n".join(log), None
                 return
+
+        # 1b. 非 zip 单文件：按原始源路径计算公共父级，生成 rel_path（保留目录结构）
+        if nonzip_sources:
+            parts_list = [Path(src_abs).parts for _, src_abs in nonzip_sources]
+            common_len = 0
+            min_len = min(len(p) for p in parts_list)
+            for i in range(min_len):
+                if len({p[i] for p in parts_list}) == 1:
+                    common_len = i + 1
+                else:
+                    break
+            if common_len == min(len(p) for p in parts_list) and len(parts_list) > 1:
+                common_len = max(0, common_len - 1)
+            # 关键：公共父级再向上退一层（保证 relpath 保留源目录相对结构）
+            if common_len > 1:
+                common_len -= 1
+            if common_len > 0:
+                parent_parts = parts_list[0][:common_len]
+                common_parent = str(Path(*parent_parts))
+            else:
+                common_parent = None
+            for staged, src_abs in nonzip_sources:
+                if common_parent and src_abs.startswith(common_parent + os.sep):
+                    rel_raw = os.path.relpath(src_abs, common_parent)
+                elif common_parent and os.path.abspath(src_abs).startswith(os.path.abspath(common_parent) + os.sep):
+                    rel_raw = os.path.relpath(src_abs, common_parent)
+                else:
+                    rel_raw = os.path.basename(src_abs)
+                rel_p = rel_raw.replace(os.sep, "/")
+                file_records.append((staged, rel_p))
 
         if not file_records:
             log.append("[错误] 没有发现可处理的 .py/.java 源文件")
@@ -1544,7 +1680,10 @@ def process_batch_with_progress(
         fail = 0
         aggregate_docs: list[str] = []
         log.append("")
-        log.append(f"=== 批量处理开始：共 {total} 个文件，注释语言: {comment_lang}，增量: {incremental} ===")
+        log.append(
+            f"=== 批量处理开始：共 {total} 个文件，注释语言: {comment_lang}，增量: {incremental}，"
+            f"命名策略: {naming_strategy} ==="
+        )
         yield "\n".join(log), None
 
         for i, (abs_path, rel_path) in enumerate(file_records, 1):
@@ -1623,7 +1762,7 @@ def process_batch_with_progress(
                 pass
         aggregate_md = "\n\n".join(aggregate_docs) if aggregate_docs else None
         try:
-            zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md)
+            zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md, naming_strategy)
         except Exception as e:
             log.append(f"[错误] 打包 zip 失败: {e}")
             yield "\n".join(log), None
