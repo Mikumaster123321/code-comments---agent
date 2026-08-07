@@ -1,5 +1,7 @@
 # 代码注释与 API 文档自动生成 Agent
 
+**当前版本：v2.3.2**（2026-08-07 · v2.3.0 的小更新 · 函数/类导航大纲 + 锚点跳转）
+
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
 ## 功能特性
@@ -192,28 +194,33 @@ code-comments---agent/
 
 ## 更新日志
 
-> **版本号规则**
-> - **大版本 `vX.Y.0`**：仅记录**技术含量极强的里程碑级更新**（架构重构、新语言支持、批量处理、i18n、风格模板、Diff 视图这类从 0 到 1 的模块级能力）。
-> - **小更新 `vX.Y.1`、`vX.Y.2` …**：**不再单独占用独立版本号段落**，归入**最近一次大版本的 `🔧 小更新合集` 子节**中，以日期 + 功能标签的形式合并展开记录。
-> - 本节按时间**倒序**排列，最新的大版本在最顶部。
+> **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
 
----
+### v2.3.2 — 2026-08-07（v2.3.0 小更新 #2）
 
-### v2.6.0 — 2026-08-07（技术含量极强里程碑：并排 Split Diff 视图引擎）
+#### 函数/类导航大纲 Sidebar（一键跳转锚点）
+- **`tab_annotated` 顶部大纲栏**：在「带注释的代码」Tab 的 Code 组件上方新增 `outline_md`（`gr.Markdown` 大纲），渲染内容来自新增的 `processor.build_outline_markdown(source, language, title)`：解析 `Py.parser.get_defined_functions` / `Java.java_parser.get_defined_functions` 结果转成可点击 Markdown 列表，每项为 `- 🧩/🔧 [`name` (Class/Function/Method) ](#slug-id) — *Llineno*`，并附带提示"💡 点击条目跳转至「API 文档」Tab 对应章节"
+- **`tab_docs` 顶部目录栏**：在「API 文档」Tab 顶部再新增 `docs_toc_md`（与大纲内容一致，方便切到 Docs Tab 后也立即有目录可点）；`ui._apply_ui_language` 新增第 30、31 位 2 个占位 `gr.update()`（切换 UI 语言时大纲内容继承最新）
+- **`btn.click` outputs 7→9 元组**：新增第 8 位 `outline_md`、第 9 位 `docs_toc_md`；`_gen_real` 所有分支（首帧 / 中间帧 / 最终帧 / 无最终帧取消帧）严格 yield 9 项，**中间帧返回 None 继承上一帧不闪烁**，首帧立即先渲染 `early_outline`（保证点击生成按钮瞬间就能看到函数/类列表，不必等 LLM），最终帧再用最新 UI 语言再渲染一次
+- **API 文档内置 TOC + 锚点 Heading**：
+  - `Py.annotator.build_markdown_docs` 升级：新增 `_slugify(name, prefix, used)`（字母/数字/连字符/下划线保留，其余转 `-`，重名自动 `-2`/`-3` 去重）；先遍历分配 `cls-` / `fn-` 前缀的 `slug_id` 写入每个 doc_entry；顶部追加 `## 📑 Table of Contents` 目录段；每条详情的 `##` Heading 改为 `## 🧩/🔧 name (Type) — Llineno <a id="slug_id"></a>`
+  - `Java.java_annotator.build_java_markdown_docs` 同步升级：类前缀 `cls-`、方法前缀 `m-`（区别 Python 的 `fn-` 避免命名空间冲突）；同样的 TOC + Heading 锚点结构
+  - 两个 `annotator.py` 顶部新增 `from __future__ import annotations`，保证 Python 3.8 下 `set | None` 联合类型注解不抛 `TypeError`
+- **processor 层独立 API**：
+  - `processor._slugify_name(name, prefix, used)`：processor 内部版本 slug 器（局部 `import re`，避免在顶部 import 顺序上与 annotator 产生不一致）
+  - `processor.build_outline_markdown(source, language="Python", title="📋 函数/类导航大纲")`：独立入口（**不依赖 llm_service 运行期调用**，import 期只依赖 parser，测试无需 LLM mock 就能跑）；`language=="Java"` 自动走 `get_java_functions`；空源/语法错误异常吞掉返回空字符串
+- **锚点一致性保证（最关键）**：processor 与 annotator 各自 slug 规则完全一致——相同 name / type / 相同 used 集合插入顺序 → 相同 slug_id；`test_outline_slugs_match_annotator_slugs_python` 用真实 1 个 Class + 2 个 Method + helper/main 函数验证：`doc_entries[*].slug_id` 既出现在 `build_markdown_docs` 的 `<a id="..."></a>`，也出现在 `build_outline_markdown` 的 `#slug_id` 链接中
+- **i18n 三语**：新增 `outline_title`：中文「📋 函数/类导航大纲（点击跳转至 API 文档对应章节）」/ 英文「📋 Functions / Classes Outline (click to jump in API Docs tab)」/ 日文「📋 関数/クラス目次（クリックでAPIドキュメントへジャンプ）」
 
-#### 🚩 大版本功能：代码对比 Diff 视图（GitHub 风格并排 Split）
-- 输出区新增第 5 个 Tab **🆚 代码差异 (Diff)**，在"注释后的代码"Tab 之后，用户生成完成后可直接切 Tab 查看差异
-- 左右分栏并排显示：Before（左，注释前原始代码）/ After（右，注释后代码），各自独立行号，视觉对齐
-- **行级高亮**：新增行绿底（`#e6ffec`）、删除行红底（`#ffebe9`）、未变行白底；行号列同步着色
-- 顶部统计条：`+N 插入 / -M 删除 / K 未变`，完全相同代码自动提示"✅ 未检测到代码差异"
-- `processor.build_split_diff_html` 核心函数：基于 `difflib.SequenceMatcher` 的 opcodes 直接逐行渲染；自动 HTML escape `<>&"` 等特殊字符，避免 XSS 与样式错乱
-- 三语 i18n：Diff Tab 标签支持 中文 / English / 日本語 跟随 UI 语言切换
-- 事件绑定：`btn.click → .then(build_split_diff_html, inputs=[input_box, output_code, language], outputs=[diff_html])`，生成完注释后自动异步计算 Diff，不阻塞原有 UI 跳转
-- 新增 7 条 Diff 单元测试（`TestDiffView`），覆盖：同文无差异、纯插入 docstring、纯删除、替换行、空输入、语言标签传递、HTML 特殊字符 escape（全部通过）
-- Diff Tab 未破坏原 process_code 签名：ui 层直接以 `input_box.value`（原始输入）和 `output_code.value`（注释后输出）为输入，processor 零侵入
+#### 新增测试 + 回归（4 进程独立，合计 70/70 通过）
+- **新增 `test_outline_navigation.py` 9 条**：`SlugifyTests`（2 条：基础 slug 规则 + 重名去重）、`BuildOutlineMarkdownTests`（4 条：非空 Python 大纲含 fn-/cls- 前缀 & 行号 & 提示 / 空源空 / 语法错空不抛异常 / outline slug 与 annotator doc_entries slug 完全对齐）、`BuildMarkdownDocsTOCTests`（2 条：Python docs TOC 段存在 + 锚点 Heading & 行号 / Java docs `cls-` + `m-` 前缀 TOC + 锚点）、`I18nOutlineTitleTests`（1 条：三语翻译齐全且中文包含「大纲」）
+- **py_compile 全自有 .py（root + Py + Java）**：语法 0 错误
+- **独立进程 unittest 4 套件**：`test_styles 21/21` ✅ + `test_smoke_comprehensive 24/24` ✅ + `test_progress_cancel 16/16` ✅ + `test_outline_navigation 9/9` ✅ = **70/70 全部通过**
+- 注：同进程 `discover -p test_*.py` 下 `test_styles` 与 `test_smoke_comprehensive` 各自对 `sys.modules["openai"].OpenAI` 注入顺序不兼容，会报 `capture.prompts[0]` 空 IndexError（**v2.3.1 既有问题，与本改动无关**），生产执行请分文件或分进程跑（各自独立进程 100% 通过）
 
-#### 🔧 小更新合集（归入本大版本，不单独占版本号）
-##### ① 2026-08-07 功能 A：实时进度条 + 可取消任务
+### v2.3.1 — 2026-08-07（v2.3.0 小更新 #1）
+
+#### 实时进度条 + 可取消任务
 - **单文件生成**：`btn.click` 改用生成器函数 `_gen_real(progress=gr.Progress())`，每一步更新 UI 内置进度条的百分比（0.05 ~ 1.00）和阶段描述（"解析代码结构" / "翻译已有注释" / "调用 LLM 生成注释..." / "插入注释到源码" / "构建 API 文档" / "完成"）
 - **批量处理**：`batch_gen_btn.click` 改用生成器函数 `_batch_gen_progress(progress=gr.Progress())`，每个文件处理完成后更新 `x/N 处理 xxx.py` 描述，0%~5% 展开 ZIP，5%~95% 按文件数线性推进，95% 后打包 ZIP
 - **取消按钮**：在"生成注释"和"批量生成"右侧新增红色停止样式按钮（`variant="stop"`）：
@@ -231,77 +238,102 @@ code-comments---agent/
 - **新增 16 条测试 `test_progress_cancel.py`**：CancelToken 线程安全（4 线程×10000 次并发 cancel/reset）、边界单 yield、有效代码多帧 yield+最终帧非空路径、progress_cb 最终 ratio=1.0、取消场景 md_p/src_p 仍为文件路径、批量空输入/非法路径、两个新增 i18n key 三语齐全 — 全部 16/16 通过
 - **回归测试**：原 21+24=45 条老用例一次通过，无破坏性改动
 
-##### ② 2026-08-07 功能 B：函数/类导航大纲 Sidebar + API 文档 TOC 锚点跳转
-- **`tab_annotated` 顶部大纲栏**：在「带注释的代码」Tab 的 Code 组件上方新增 `outline_md`（`gr.Markdown` 大纲），渲染内容来自新增的 `processor.build_outline_markdown(source, language, title)`：解析 `Py.parser.get_defined_functions` / `Java.java_parser.get_defined_functions` 结果转成可点击 Markdown 列表，每项为 `- 🧩/🔧 [`name` (Class/Function/Method) ](#slug-id) — *Llineno*`，并附带提示"💡 点击条目跳转至「API 文档」Tab 对应章节"
-- **`tab_docs` 顶部目录栏**：在「API 文档」Tab 顶部再新增 `docs_toc_md`（与大纲内容一致，方便切到 Docs Tab 后也立即有目录可点）；`ui._apply_ui_language` 新增第 30、31 位 2 个占位 `gr.update()`（切换 UI 语言时大纲内容继承最新）
-- **`btn.click` outputs 7→9 元组**：新增第 8 位 `outline_md`、第 9 位 `docs_toc_md`；`_gen_real` 所有分支（首帧 / 中间帧 / 最终帧 / 无最终帧取消帧）严格 yield 9 项，**中间帧返回 None 继承上一帧不闪烁**，首帧立即先渲染 `early_outline`（保证点击生成按钮瞬间就能看到函数/类列表，不必等 LLM），最终帧再用最新 UI 语言再渲染一次
-- **API 文档内置 TOC + 锚点 Heading**：
-  - `Py.annotator.build_markdown_docs` 升级：新增 `_slugify(name, prefix, used)`（字母/数字/连字符/下划线保留，其余转 `-`，重名自动 `-2`/`-3` 去重）；先遍历分配 `cls-` / `fn-` 前缀的 `slug_id` 写入每个 doc_entry；顶部追加 `## 📑 Table of Contents` 目录段；每条详情的 `##` Heading 改为 `## 🧩/🔧 name (Type) — Llineno <a id="slug_id"></a>`
-  - `Java.java_annotator.build_java_markdown_docs` 同步升级：类前缀 `cls-`、方法前缀 `m-`（区别 Python 的 `fn-` 避免命名空间冲突）；同样的 TOC + Heading 锚点结构
-  - 两个 `annotator.py` 顶部新增 `from __future__ import annotations`，保证 Python 3.8 下 `set | None` 联合类型注解不抛 `TypeError`
-- **processor 层独立 API**：
-  - `processor._slugify_name(name, prefix, used)`：processor 内部版本 slug 器（局部 `import re`，避免在顶部 import 顺序上与 annotator 产生不一致）
-  - `processor.build_outline_markdown(source, language="Python", title="📋 函数/类导航大纲")`：独立入口（**不依赖 llm_service 运行期调用**，import 期只依赖 parser，测试无需 LLM mock 就能跑）；`language=="Java"` 自动走 `get_java_functions`；空源/语法错误异常吞掉返回空字符串
-- **锚点一致性保证（最关键）**：processor 与 annotator 各自 slug 规则完全一致——相同 name / type / 相同 used 集合插入顺序 → 相同 slug_id；`test_outline_slugs_match_annotator_slugs_python` 用真实 1 个 Class + 2 个 Method + helper/main 函数验证：`doc_entries[*].slug_id` 既出现在 `build_markdown_docs` 的 `<a id="..."></a>`，也出现在 `build_outline_markdown` 的 `#slug_id` 链接中
-- **i18n 三语**：新增 `outline_title`：中文「📋 函数/类导航大纲（点击跳转至 API 文档对应章节）」/ 英文「📋 Functions / Classes Outline (click to jump in API Docs tab)」/ 日文「📋 関数/クラス目次（クリックでAPIドキュメントへジャンプ）」
-- **新增 `test_outline_navigation.py` 9 条**：`SlugifyTests`（2 条：基础 slug 规则 + 重名去重）、`BuildOutlineMarkdownTests`（4 条：非空 Python 大纲含 fn-/cls- 前缀 & 行号 & 提示 / 空源空 / 语法错空不抛异常 / outline slug 与 annotator doc_entries slug 完全对齐）、`BuildMarkdownDocsTOCTests`（2 条：Python docs TOC 段存在 + 锚点 Heading & 行号 / Java docs `cls-` + `m-` 前缀 TOC + 锚点）、`I18nOutlineTitleTests`（1 条：三语翻译齐全且中文包含「大纲」）
+### v2.3.0 — 2026-08-07（大版本：代码差异对比底层能力）
 
----
+#### 代码对比 Diff 视图（GitHub 风格并排 Split）
+- 输出区新增第 5 个 Tab **🆚 代码差异 (Diff)**，在"注释后的代码"Tab 之后，用户生成完成后可直接切 Tab 查看差异
+- 左右分栏并排显示：Before（左，注释前原始代码）/ After（右，注释后代码），各自独立行号，视觉对齐
+- **行级高亮**：新增行绿底（`#e6ffec`）、删除行红底（`#ffebe9`）、未变行白底；行号列同步着色
+- 顶部统计条：`+N 插入 / -M 删除 / K 未变`，完全相同代码自动提示"✅ 未检测到代码差异"
+- `processor.build_split_diff_html` 核心函数：基于 `difflib.SequenceMatcher` 的 opcodes 直接逐行渲染；自动 HTML escape `<>&"` 等特殊字符，避免 XSS 与样式错乱
+- 三语 i18n：Diff Tab 标签支持 中文 / English / 日本語 跟随 UI 语言切换
+- 事件绑定：`btn.click → .then(build_split_diff_html, inputs=[input_box, output_code, language], outputs=[diff_html])`，生成完注释后自动异步计算 Diff，不阻塞原有 UI 跳转
+- 新增 7 条 Diff 单元测试（`TestDiffView`），覆盖：同文无差异、纯插入 docstring、纯删除、替换行、空输入、语言标签传递、HTML 特殊字符 escape（全部通过）
+- Diff Tab 未破坏原 process_code 签名：ui 层直接以 `input_box.value`（原始输入）和 `output_code.value`（注释后输出）为输入，processor 零侵入
 
-### v2.5.0 — 2026-08-07（技术含量极强里程碑：5 种注释风格 Prompt 工程）
-- **注释风格模板选择（Python 3 种 + Java 2 种）**：通过预定义 Prompt 模板灵活切换
+### v2.2.2 — 2026-08-07（v2.2.0 小更新 #2）
+
+#### 注释风格模板选择（Python 3 种 + Java 2 种）
+- 新增 5 种注释风格，通过预定义 Prompt 模板灵活切换：
   - **Python**：Google 风格（Args/Returns/Raises）/ NumPy 风格（Parameters/Returns + 类型短横线分隔）/ reStructuredText（:param/:type/:return/:rtype）
   - **Java**：标准 Javadoc（/** ... */ + @param/@return/@throws）/ 极简行内注释（单行短注释 `// xxx`，用于小型项目快速生成）
-- `llm_service.py` 提供 `PYTHON_STYLE_*` / `JAVA_STYLE_*` 风格常量，生成与翻译流程统一走风格规则注入：生成时按目标风格追加格式要求；翻译/重组时按目标风格重排输出结构；默认风格保持不变（Python 默认为 Google 风格，Java 默认为标准 Javadoc），向下兼容 v2.x API
+- `llm_service.py` 提供 `PYTHON_STYLE_*` / `JAVA_STYLE_*` 风格常量，生成与翻译流程统一走风格规则注入：
+  - 生成时按目标风格追加格式要求；翻译/重组时按目标风格重排输出结构
+  - 默认风格保持不变（Python 默认为 Google 风格，Java 默认为标准 Javadoc），向下兼容 v2.x API
 - `processor.process_code` 与 `process_batch_files` 新增 `python_style` / `java_style` 可选参数，风格信息从 UI 一路透传到 LLM 层
 - Gradio UI 新增"注释风格选择"分区：两个并列下拉框（Python 风格 / Java 风格），三语 i18n 文案同步更新
 - 新增 `test_styles.py` 单元测试（14 条），离线 mock LLM 调用即可验证：5 种风格 prompt 关键词注入、翻译规则适配、默认风格行为、processor 参数链路不报错（全部通过）
-- **兼容性修复**：`llm_service.py` / `processor.py` 顶部添加 `from __future__ import annotations`，并把 `str | None` 改为 `Optional[str]`，在 Python 3.8 环境下正常 import
 
----
+#### 兼容性
+- 修复 Python 3.8 类型注解问题：`llm_service.py` / `processor.py` 顶部添加 `from __future__ import annotations`，并把 `str | None` 改为 `Optional[str]`，在 3.8 环境下正常 import
 
-### v2.4.0 — 2026-08-07（技术含量极强里程碑：批量 ZIP 调度 + 并发生成 + 反 ZIP Slip）
-- **批量文件/文件夹处理功能**：新增批量上传入口，支持一次选择多个 `.py` / `.java` 文件，或上传整个 `.zip` 压缩包（含递归子目录）；两种方式可混合使用
-- `process_batch_files` 批量调度器：
-  - 安全解压 ZIP（内置 **zip slip 路径穿越防护**，兼容 Windows 下中文文件名编码问题：UTF-8 失败时自动回退 `cp437 → GBK` 解码）
+### v2.2.1 — 2026-08-07（v2.2.0 小更新 #1）
+
+#### 批量文件/文件夹处理功能
+- 新增批量上传入口：支持一次选择多个 `.py` / `.java` 文件，或上传整个 `.zip` 压缩包（支持递归子目录）；两种方式可混合使用
+- 新增 `process_batch_files` 批量处理调度器：
+  - 安全解压 ZIP（内置 zip slip 路径穿越防护，兼容 Windows 下中文文件名编码问题：UTF-8 失败时自动回退 `cp437 → GBK` 解码）
   - 按扩展名自动分流到 Python / Java 解析器
   - 使用 `ThreadPoolExecutor` 并发调用 LLM，多文件总耗时显著降低
   - 保持原目录结构写出注释后的源码文件，方便用户直接覆盖
-- 结果 ZIP 自动包含：所有源文件注释版（保持目录结构）+ `processing.log`（按文件逐行记录跳过/生成/翻译/失败明细）+ `API_DOCS_ALL.md`（所有文件 API 文档聚合版，代码块内嵌注释同步到最终语言）
+- 结果打包 ZIP 自动包含：
+  - 所有源文件的注释版（保持目录结构）
+  - `processing.log`：按文件逐行记录跳过 / 生成 / 翻译 / 失败明细
+  - `API_DOCS_ALL.md`：所有文件 API 文档的聚合版，代码块内嵌注释同步到最终语言
 - 新增批量处理 UI 区域：批量上传组件、批量生成按钮、批量下载按钮、批量日志文本框，UI 文案跟随界面语言三语翻译
-- **翻译与 Markdown 文档一致性修复（技术难度很高的隐性 bug）**：
-  - 修复翻译注释时按原行号升序插入导致后续节点 `lineno` 错位、`clean_text/__init__/register/login` 等函数插入失败的 bug → 改为与生成流程一致的**行号倒序**插入（倒序不会让后续行号偏移）
-  - 修复 `build_markdown_docs` / `build_java_markdown_docs` 中硬编码中文标题（"API 文档"、"类"、"函数"、"方法"）导致 EN/JA 界面聚合文档语言检测失败 → 改为通用英文标题
-  - 修复聚合文档 `API_DOCS_ALL.md` 内嵌代码块保留原始中文注释问题 → 所有注释插入完成后，统一从最终 `annotated_code` 重新解析 AST / Java 结构并刷新每个 `doc_entries[i].code`，确保 Markdown 代码块与最终源码一致
 
----
+#### 翻译与 Markdown 文档一致性修复
+- 修复翻译注释时按原行号升序插入导致的后续节点 `lineno` 错位、`clean_text/__init__/register/login` 等函数插入失败的 bug：改为与生成流程一致的**行号倒序**插入
+- 修复 `build_markdown_docs` / `build_java_markdown_docs` 中硬编码中文标题（"API 文档"、"类"、"函数"、"方法"）导致 EN/JA 界面聚合文档语言检测失败的问题：改为通用英文标题
+- 修复聚合文档 `API_DOCS_ALL.md` 内嵌代码块保留原始中文注释问题：所有注释插入完成后，统一从最终 `annotated_code` 重新解析 AST / Java 结构并刷新每个 `doc_entries[i].code`，确保 Markdown 代码块与最终源码一致
 
-### v2.3.0 — 2026-08-07（技术含量极强里程碑：i18n 三语 + 增量翻译链路 + 字符集自动判定）
-- **多语言支持（i18n）**：右上角新增语言切换下拉框（中文 / English / 日本語），一键切换整个界面语言
+### v2.2.0 — 2026-08-07（大版本：多语言 i18n 底层能力）
+
+#### 多语言支持（i18n）
+- 右上角新增语言切换下拉框（中文 / English / 日本語），一键切换整个界面语言
 - 生成的注释语言跟随界面语言：英文界面生成英文注释，日文界面生成日文注释
-- **已有注释自动翻译（技术含量极高）**：增量模式下自动检测注释语言，若与目标语言不一致则调用 LLM 翻译为对应语言；支持**中日英字符集智能检测**（汉字 / 假名 / 拉丁字符 Unicode 范围自动判定是否需要翻译）
-- 修复多语言下 DownloadButton 标签不更新、输出代码框标签未翻译等 UI 联动 bug
-- **交互优化**：增量更新模式改为默认永久开启（移除勾选框）；点击"生成注释与文档"自动跳转到"带注释的代码"Tab；点击"分析代码"跳转"代码分析"Tab；移除遮挡滚动条的原生下载/复制按钮，改为输出下方并排美化"下载注释后的代码"+"下载文档"两个按钮
+- 已有注释自动翻译：增量模式下自动检测注释语言，若与目标语言不一致则调用 LLM 翻译为对应语言
+- 字符集智能检测：支持中日英（汉字 / 假名 / 拉丁字符）自动判定是否需要翻译
+- 修复多语言下 DownloadButton 标签不更新、输出代码框标签未翻译等问题
 
----
+#### 交互优化
+- 增量更新模式改为默认永久开启，移除界面勾选框，操作更简洁
+- 点击"生成注释与文档"自动跳转到"带注释的代码"标签页
+- 点击"分析代码"自动跳转到"代码分析"标签页
+- 移除遮挡滚动条的原生下载/复制按钮，改为输出下方并排的"下载注释后的代码"与"下载文档"两个美化按钮
 
-### v2.2.0 — 2026-08-06（技术含量极强里程碑：前端体系化重构 + 代码有效性门控）
-- **前端界面重构**：代码编辑器统一白底 / 深色文字 / 中性灰边框亮色主题；编辑器支持滚动条（`overflow: auto`），长代码不再被拉伸；整体布局/样式（卡片容器、Tab 导航、按钮、滚动条）全面体系化美化；修复 Gradio 6.0 下代码编辑器显示"错误"、Java 编辑器切换语言显示"错误"的兼容性 bug
-- **代码有效性验证（技术门控）**：分析前先验证代码结构（函数/类/导入/控制流/赋值）；无效或无意义代码（如纯字符串）直接返回友好提示 → **不再触发 LLM**，从源头避免幻觉内容（如 SVM 误判），显著节省 token 成本
-- 新增端到端测试用例（上传、分析、注释、下载、无效代码验证）；精简目录结构，删除冗余开发脚本，核心模块收敛为 `main.py`、`ui.py`、`processor.py`、`llm_service.py`、`config.py`、`i18n.py` 6 个主模块 + `Py/`、`Java/` 两个语言子包
+### v2.1.1 — 2026-08-06（v2.1.0 小更新 #1）
 
----
+#### 前端界面重构
+- 代码编辑器统一为白底、深色文字、中性灰边框的亮色主题
+- 编辑器支持显示滚动条（overflow: auto），长代码不再被拉伸
+- 优化整体布局与样式：卡片容器、Tab 导航、按钮、滚动条全面美化
+- 修复 Gradio 6.0 下代码编辑器显示"错误"、Java 编辑器切换语言显示"错误"的问题
 
-### v2.1.0 — 2026-08-06（技术含量极强里程碑：Java 语言双语支持 + 手写解析器）
-- **Java 语言支持（从零实现，无第三方 javalang 依赖）**：新增 Java 代码解析器，手写基于正则 + 大括号栈匹配的结构提取器，支持类、方法、构造器、枚举、内部类、匿名类（排除匿名类实例化 `new ClassName() { ... }` 误判）
-- 新增 Javadoc 注释自动生成，支持 `@param` / `@return` / `@throws` 标签；支持复杂嵌套 Java 代码（接口、泛型、静态嵌套类、Lambda 等）
-- 新增 Java 代码有效性验证（大括号匹配校验 + 字符串/注释中括号屏蔽算法，技术复杂度极高）
+#### 代码有效性验证
+- 新增代码有效性校验：分析前先验证代码结构（函数/类/导入/控制流/赋值）
+- 无效或无意义的代码（如纯字符串）直接返回友好提示，不再触发 LLM，避免幻觉内容（如 SVM 误判）
+
+#### 测试与结构
+- 新增端到端测试用例（上传、分析、注释、下载、无效代码验证）
+- 精简目录结构，删除冗余开发脚本，核心模块收敛为 `main.py`、`ui.py`、`processor.py`、`llm_service.py`、`config.py`、`i18n.py`
+
+### v2.1.0 — 2026-08-06（大版本：Java 语言 + 目录结构分语言）
+
+#### Java 语言支持
+- 新增 Java 代码解析器，支持类、方法、构造器、枚举、内部类、匿名类（排除匿名类实例化误判）
+- 新增 Javadoc 注释自动生成，支持 `@param`、`@return`、`@throws` 标签
+- 支持复杂嵌套 Java 代码（接口、泛型、静态嵌套类、Lambda 等）
+- 新增 Java 代码有效性验证（大括号匹配校验，屏蔽字符串中的括号）
+
+#### 目录结构优化
 - 按语言和功能分文件夹组织：`Py/`（Python 解析/注释/分析）、`Java/`（Java 解析/注释）
+- 修复 Java 解析器排除匿名类实例化（`new ClassName() { ... }`）的问题
 
----
+### v2.0.0 — 2026-08-05（大版本：架构重构 + 并发生成 + 代码质量体系）
 
-### v2.0.0 — 2026-08-05（技术含量极强里程碑：架构从单体 549 行 → 8 模块拆分）
-- **架构重构（整个工具从玩具走向工程化的最重要一步）**：将单文件 `main.py`（549 行）拆分为 8 个职责清晰的模块
+#### 架构重构
+- 将单文件 `main.py`（549 行）拆分为 8 个职责清晰的模块：
   - `config.py` — 配置外置（API Key、模型参数、重试/并发配置）
   - `parser.py` — AST 解析（提取函数/类定义）
   - `llm_service.py` — LLM 调用（docstring 生成、代码摘要）
@@ -310,26 +342,25 @@ code-comments---agent/
   - `processor.py` — 主处理逻辑（并发生成 + 串行插入）
   - `ui.py` — Gradio 界面构建
   - `main.py` — 入口文件（仅 19 行）
-- **新增核心能力**：
-  - 增量更新模式：跳过已有 docstring 的函数，节省 API 调用
-  - 并发调用优化：ThreadPoolExecutor 并发调用 LLM，处理时间从 30 秒 → 7 秒
-  - 代码质量分析：圈复杂度、嵌套深度、函数长度、参数数量检测
-  - 类型注解检查：识别缺失类型注解的参数和返回值
-  - 代码摘要生成：LLM 生成模块功能摘要
-  - LLM 调用重试机制：API 失败自动重试 3 次（带退避）
-- **Bug 修复集群（共 8 条）**：
-  - `__init__` 方法返回值注解误报（约定返回 None，无需注解）
-  - `match/case` 语句不计入圈复杂度（Python 3.10+）
-  - Gradio 6.0 的 `css` 参数警告（移至 `launch()`）
-  - `_clean_docstring` 三引号清理正则未按行匹配（补 `re.MULTILINE`）
-  - 中文注释未正确包裹在三引号导致语法错误
-  - 代码过长时文本框被拉长（加滚动条）
-  - 类型注解检查误判 `self`/`cls` 参数
 
----
+#### 新增功能
+- **增量更新模式**：跳过已有 docstring 的函数，节省 API 调用
+- **并发调用优化**：使用 ThreadPoolExecutor 并发调用 LLM，处理时间从 30 秒缩短至 7 秒
+- **代码质量分析**：圈复杂度、嵌套深度、函数长度、参数数量检测
+- **类型注解检查**：识别缺失类型注解的参数和返回值
+- **代码摘要生成**：调用 LLM 生成模块功能摘要
+- **LLM 调用重试机制**：API 失败时自动重试 3 次（带退避）
 
-### v1.0.0 — 初始版本（项目起点里程碑）
+#### Bug 修复
+- 修复 `__init__` 方法返回值注解误报问题（约定返回 None，无需注解）
+- 修复 `match/case` 语句不计入圈复杂度的问题（Python 3.10+）
+- 修复 Gradio 6.0 的 `css` 参数警告（移至 `launch()` 方法）
+- 修复 `_clean_docstring` 三引号清理正则未按行匹配的问题（添加 `re.MULTILINE`）
+- 修复中文注释未正确包裹在三引号中导致语法错误的问题
+- 修复代码过长时文本框被拉长的问题（添加滚动条）
+- 修复类型注解检查误判 `self`/`cls` 参数的问题
+
+### v1.0.0 — 初始版本
 - 基础功能：AST 解析、LLM 注释生成、Gradio 界面
 - 支持文件上传与下载
 - Markdown API 文档生成
-
