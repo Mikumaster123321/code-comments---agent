@@ -92,6 +92,11 @@ TRANSLATIONS = {
         "English": "🔍 Code Analysis",
         "日本語": "🔍 コード分析",
     },
+    "tab_diff": {
+        "中文": "🆚 代码差异 (Diff)",
+        "English": "🆚 Code Diff",
+        "日本語": "🆚 コード差分 (Diff)",
+    },
     "tab_log": {
         "中文": "📋 处理日志",
         "English": "📋 Process Log",

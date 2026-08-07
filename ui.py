@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Gradio 界面模块：构建美观的 Web 交互界面"""
 import gradio as gr
-from processor import process_code, analyze_code, handle_file_upload, process_batch_files
+from processor import process_code, analyze_code, handle_file_upload, process_batch_files, build_split_diff_html
 from i18n import LANGUAGES, t
 
 # ==================== 自定义 CSS ====================
@@ -437,6 +437,8 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("style_section", lang)),      # 26 style_section_md
         gr.update(label=t("python_style_label", lang)), # 27 python_style
         gr.update(label=t("java_style_label", lang)),   # 28 java_style
+        # ===== Diff 视图新增 =====
+        gr.update(label=t("tab_diff", lang)),           # 29 tab_diff
     ]
 
 
@@ -560,6 +562,10 @@ def create_ui():
                     state_src_path = gr.State(None)
                     state_md_path = gr.State(None)
 
+                tab_diff = gr.Tab(t("tab_diff", default_lang), id="code_diff")
+                with tab_diff:
+                    diff_html = gr.HTML()
+
                 tab_docs = gr.Tab(t("tab_docs", default_lang), id="api_docs")
                 with tab_docs:
                     output_docs = gr.Markdown(elem_classes="scrollable-md")
@@ -624,6 +630,8 @@ def create_ui():
                 style_section_md,  # 26
                 python_style,      # 27
                 java_style,        # 28
+                # ===== Diff 视图新增 =====
+                tab_diff,          # 29
             ],
         )
 
@@ -634,6 +642,10 @@ def create_ui():
             ),
             inputs=[input_box, language, ui_lang, python_style, java_style],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
+        ).then(
+            fn=build_split_diff_html,
+            inputs=[input_box, output_code, language],
+            outputs=[diff_html],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],

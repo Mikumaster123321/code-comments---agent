@@ -9,6 +9,8 @@ import shutil
 import zipfile
 import datetime
 import tempfile
+import difflib
+import html
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -804,3 +806,195 @@ def process_batch_files(
             shutil.rmtree(tmp_root, ignore_errors=True)
         except Exception:
             pass
+
+
+# ==================== Diff 视图辅助函数 ====================
+def _diff_lang_class(language: str) -> str:
+    return "language-python" if language == "Python" else "language-java"
+
+
+def build_split_diff_html(original_code: str, annotated_code: str, language: str = "Python") -> str:
+    """生成并排 Split Diff（GitHub 风格）HTML：左 Before / 右 After，新增行绿底，删除行红底。
+
+    Args:
+        original_code: 注释前的原始代码
+        annotated_code: 注释后的代码
+        language: 编程语言（影响展示标签）
+
+    Returns:
+        str: 可直接交给 gr.HTML 渲染的完整 HTML 片段
+    """
+    if not original_code and not annotated_code:
+        return '<div class="diff-empty">未输入代码，没有差异可展示。</div>'
+
+    before_lines = original_code.splitlines(keepends=False) if original_code else []
+    after_lines = annotated_code.splitlines(keepends=False) if annotated_code else []
+
+    sm = difflib.SequenceMatcher(a=before_lines, b=after_lines)
+    opcodes = sm.get_opcodes()
+
+    # 统计
+    insert_count = 0
+    delete_count = 0
+    equal_count = 0
+    for tag, _i1, _i2, _j1, _j2 in opcodes:
+        if tag == "equal":
+            equal_count += (_i2 - _i1)
+        elif tag == "insert":
+            insert_count += (_j2 - _j1)
+        elif tag == "delete":
+            delete_count += (_i2 - _i1)
+        elif tag == "replace":
+            delete_count += (_i2 - _i1)
+            insert_count += (_j2 - _j1)
+
+    diff_stats = f"+{insert_count} 插入 / -{delete_count} 删除 / {equal_count} 未变"
+
+    # 生成行
+    before_no = 1
+    after_no = 1
+    rows_html_parts = []
+    fmt_lang = _diff_lang_class(language)
+
+    def _esc(s: str) -> str:
+        if s is None:
+            return "&nbsp;"
+        return html.escape(s) if s != "" else "&nbsp;"
+
+    def _cell(class_name: str, line_no: Optional[int], content: str) -> str:
+        ln = "&nbsp;" if line_no is None else str(line_no)
+        return (
+            f'<td class="diff-ln {class_name}">{ln}</td>'
+            f'<td class="diff-code {class_name}"><pre class="{fmt_lang}">{_esc(content)}</pre></td>'
+        )
+
+    for tag, i1, i2, j1, j2 in opcodes:
+        if tag == "equal":
+            for k in range(i2 - i1):
+                b_line = before_lines[i1 + k]
+                a_line = after_lines[j1 + k]
+                rows_html_parts.append(
+                    "<tr>"
+                    + _cell("diff-eq", before_no, b_line)
+                    + _cell("diff-eq", after_no, a_line)
+                    + "</tr>"
+                )
+                before_no += 1
+                after_no += 1
+        elif tag == "insert":
+            for k in range(j2 - j1):
+                a_line = after_lines[j1 + k]
+                rows_html_parts.append(
+                    "<tr>"
+                    + _cell("diff-empty", None, "")
+                    + _cell("diff-add", after_no, a_line)
+                    + "</tr>"
+                )
+                after_no += 1
+        elif tag == "delete":
+            for k in range(i2 - i1):
+                b_line = before_lines[i1 + k]
+                rows_html_parts.append(
+                    "<tr>"
+                    + _cell("diff-del", before_no, b_line)
+                    + _cell("diff-empty", None, "")
+                    + "</tr>"
+                )
+                before_no += 1
+        elif tag == "replace":
+            b_len = i2 - i1
+            a_len = j2 - j1
+            n = max(b_len, a_len)
+            for k in range(n):
+                b_class = "diff-del" if k < b_len else "diff-empty"
+                b_line = before_lines[i1 + k] if k < b_len else ""
+                b_no = before_no if k < b_len else None
+                a_class = "diff-add" if k < a_len else "diff-empty"
+                a_line = after_lines[j1 + k] if k < a_len else ""
+                a_no = after_no if k < a_len else None
+                rows_html_parts.append(
+                    "<tr>"
+                    + _cell(b_class, b_no, b_line)
+                    + _cell(a_class, a_no, a_line)
+                    + "</tr>"
+                )
+                if k < b_len:
+                    before_no += 1
+                if k < a_len:
+                    after_no += 1
+
+    if insert_count == 0 and delete_count == 0:
+        diff_stats += "  ✅ 未检测到代码差异"
+
+    rows_html = "\n".join(rows_html_parts)
+
+    return f"""
+<div class="diff-wrapper">
+  <style>
+    .diff-wrapper {{ font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif; }}
+    .diff-header {{
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; border: 1px solid #d0d7de; border-radius: 6px 6px 0 0;
+      background: #f6f8fa; font-size: 13px; color: #24292f;
+      font-weight: 600;
+    }}
+    .diff-stats {{ color: #1a7f37; font-weight: 600; }}
+    .diff-stats span.del {{ color: #cf222e; margin-left: 6px; }}
+    .diff-table-wrap {{
+      border: 1px solid #d0d7de; border-top: none; border-radius: 0 0 6px 6px;
+      overflow-x: auto; background: #fff;
+    }}
+    .diff-table {{
+      width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px;
+    }}
+    .diff-table td {{ padding: 0; vertical-align: top; border: 0; font-family: Consolas, "Liberation Mono", Menlo, monospace; }}
+    .diff-ln {{
+      width: 50px; text-align: right; padding: 1px 8px 1px 6px !important;
+      color: #8c959f; user-select: none; background: #f6f8fa;
+      border-right: 1px solid #eaeef2; white-space: nowrap;
+    }}
+    .diff-code {{
+      padding: 1px 8px !important; white-space: pre;
+    }}
+    .diff-code pre {{ margin: 0; padding: 0; background: transparent; border: 0; font-size: 12.5px; line-height: 20px; }}
+    tr.diff-row td {{ border-top: 1px solid #f6f8fa; }}
+    .diff-eq.diff-ln {{ background: #f6f8fa; }}
+    .diff-eq.diff-code {{ background: #ffffff; }}
+    .diff-add.diff-ln {{ background: #ccffd8; color: #0f7b00; }}
+    .diff-add.diff-code {{ background: #e6ffec; }}
+    .diff-del.diff-ln {{ background: #ffd7d5; color: #ad0a0a; }}
+    .diff-del.diff-code {{ background: #ffebe9; }}
+    .diff-empty.diff-ln {{ background: #fafbfc; border-right: 1px solid #eaeef2; }}
+    .diff-empty.diff-code {{ background: #fafbfc; }}
+    .diff-cols-head {{
+      display: grid; grid-template-columns: 1fr 1fr;
+      border: 1px solid #d0d7de; border-top: none;
+      background: #f6f8fa;
+    }}
+    .diff-cols-head > div {{
+      padding: 6px 16px; font-size: 12px; color: #57606a; font-weight: 600;
+    }}
+    .diff-cols-head > div.before {{ border-right: 1px solid #eaeef2; }}
+    .diff-empty {{ padding: 20px; color: #57606a; text-align: center; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; }}
+  </style>
+  <div class="diff-header">
+    <div>🔍 Diff 视图（Before / After）</div>
+    <div class="diff-stats">{diff_stats}</div>
+  </div>
+  <div class="diff-cols-head">
+    <div class="before">⬅ Before：注释前原始代码（{language}）</div>
+    <div class="after">➡ After：注释后代码（{language}）</div>
+  </div>
+  <div class="diff-table-wrap">
+    <table class="diff-table">
+      <colgroup>
+        <col style="width:50px"><col style="width:calc(50% - 50px)">
+        <col style="width:50px"><col style="width:calc(50% - 50px)">
+      </colgroup>
+      <tbody>
+        {rows_html}
+      </tbody>
+    </table>
+  </div>
+</div>
+"""

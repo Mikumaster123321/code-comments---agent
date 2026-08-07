@@ -48,7 +48,7 @@ from llm_service import (
     PYTHON_STYLE_GOOGLE, PYTHON_STYLE_NUMPY, PYTHON_STYLE_RST,
     JAVA_STYLE_JAVADOC, JAVA_STYLE_MINIMAL,
 )
-from processor import process_code
+from processor import process_code, build_split_diff_html
 
 
 # ==================== mock 工具 ====================
@@ -224,6 +224,73 @@ class TestProcessorStyleArgPass(unittest.TestCase):
         prompt = capture.prompts[0]
         # 必须注入极简关键词
         self.assertIn("极简", prompt)
+
+
+# ==================== Diff 视图测试 ====================
+class TestDiffView(unittest.TestCase):
+    """验证 build_split_diff_html 输出结构、统计、样式关键词正确。"""
+
+    def test_same_code_no_diff(self):
+        """相同代码 → 统计 0/0/未变，提示 未检测到差异。"""
+        html = build_split_diff_html("def f(x):\n    return x\n",
+                                     "def f(x):\n    return x\n",
+                                     "Python")
+        self.assertIn("未检测到代码差异", html)
+        self.assertIn("+0 插入 / -0 删除 / 2 未变", html)
+        self.assertIn("Before", html)
+        self.assertIn("After", html)
+        self.assertIn("</table>", html)
+
+    def test_insert_docstring_shows_add(self):
+        """在函数上方插入三引号 docstring → after 新增行渲染为 diff-add，无删除行。"""
+        before = "def foo():\n    return 42\n"
+        after = '"""模块功能。"""\ndef foo():\n    """功能说明。"""\n    return 42\n'
+        html = build_split_diff_html(before, after, "Python")
+        # 新增行存在（具体 td cell class 片段）
+        self.assertIn('<td class="diff-code diff-add">', html)
+        # 删除行不存在（注意：CSS 样式表里总有 diff-del 字面量，因此必须匹配 td 的具体 class）
+        self.assertNotIn('<td class="diff-code diff-del">', html)
+        self.assertNotIn('<td class="diff-ln diff-del">', html)
+        self.assertIn('+2 插入 / -0 删除 / 2 未变', html)
+        # 包含模块 docstring 内容 HTML escape 后的片段
+        self.assertIn("模块功能", html)
+
+    def test_delete_line_shows_del(self):
+        """删除行 → diff-del td cell 出现。"""
+        before = "a = 1\nb = 2\nc = 3\n"
+        after = "a = 1\nc = 3\n"
+        html = build_split_diff_html(before, after, "Python")
+        self.assertIn('<td class="diff-code diff-del">', html)
+        self.assertIn("+0 插入 / -1 删除 / 2 未变", html)
+
+    def test_replace_line_adds_and_deletes(self):
+        """替换行 → 同时有 add 和 del。"""
+        before = "x = 'old'\n"
+        after = "x = 'new'\n"
+        html = build_split_diff_html(before, after, "Java")
+        self.assertIn("diff-add", html)
+        self.assertIn("diff-del", html)
+        self.assertIn("Java", html)
+
+    def test_empty_input(self):
+        """空输入不报错。"""
+        html = build_split_diff_html("", "", "Python")
+        self.assertIn("未输入代码，没有差异可展示。", html)
+
+    def test_language_label_propagates(self):
+        """语言标签正确显示在 Before/After 头部。"""
+        html_py = build_split_diff_html("a=1\n", "a=1\n", "Python")
+        self.assertIn("（Python）", html_py)
+        html_java = build_split_diff_html("a=1;\n", "a=1;\n", "Java")
+        self.assertIn("（Java）", html_java)
+
+    def test_html_escape_special_chars(self):
+        """HTML 特殊字符如 < > & 被 escape，避免 XSS / 样式错乱。"""
+        before = "s = '<script>alert(1)</script>'\n"
+        after = "s = '<script>alert(1)</script>'\n"
+        html = build_split_diff_html(before, after, "Python")
+        # < 应被转义为 &lt;，而不是直接出现在 DOM 里
+        self.assertIn("&lt;script&gt;", html)
 
 
 if __name__ == "__main__":

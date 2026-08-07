@@ -7,6 +7,7 @@
 ### 核心功能
 - **自动注释**：为 Python 函数/类 和 Java 类/方法生成 docstring / Javadoc
 - **多风格模板选择**：通过预定义 Prompt 模板切换注释风格，Python 支持 Google 风格 / NumPy 风格 / reStructuredText；Java 支持标准 Javadoc / 极简行内注释；翻译重组时也按目标风格输出
+- **代码差异 Diff 视图**：新增并排 Split Diff（GitHub 风格）Tab，左栏 Before（注释前原始代码）/ 右栏 After（注释后），新增行绿色高亮、删除行红色高亮、行号对齐、顶部显示 +N 插入 / -M 删除 / K 未变统计，一目了然哪些函数被加了注释
 - **双语言支持**：同一套工具支持 Python & Java 两种主流语言，代码结构自动识别
 - **双模式输入**：支持直接粘贴代码或上传 `.py` / `.java` 文件
 - **批量文件处理**：支持一次上传多个 `.py`/`.java` 文件或整个 ZIP 压缩包（含递归子目录），批量生成注释后打包 ZIP 下载
@@ -187,6 +188,19 @@ code-comments---agent/
 ```
 
 ## 更新日志
+
+### v2.6.0 — 2026-08-07
+
+#### 代码对比 Diff 视图（GitHub 风格并排 Split）
+- 输出区新增第 5 个 Tab **🆚 代码差异 (Diff)**，在"注释后的代码"Tab 之后，用户生成完成后可直接切 Tab 查看差异
+- 左右分栏并排显示：Before（左，注释前原始代码）/ After（右，注释后代码），各自独立行号，视觉对齐
+- **行级高亮**：新增行绿底（`#e6ffec`）、删除行红底（`#ffebe9`）、未变行白底；行号列同步着色
+- 顶部统计条：`+N 插入 / -M 删除 / K 未变`，完全相同代码自动提示"✅ 未检测到代码差异"
+- `processor.build_split_diff_html` 核心函数：基于 `difflib.SequenceMatcher` 的 opcodes 直接逐行渲染；自动 HTML escape `<>&"` 等特殊字符，避免 XSS 与样式错乱
+- 三语 i18n：Diff Tab 标签支持 中文 / English / 日本語 跟随 UI 语言切换
+- 事件绑定：`btn.click → .then(build_split_diff_html, inputs=[input_box, output_code, language], outputs=[diff_html])`，生成完注释后自动异步计算 Diff，不阻塞原有 UI 跳转
+- 新增 7 条 Diff 单元测试（`TestDiffView`），覆盖：同文无差异、纯插入 docstring、纯删除、替换行、空输入、语言标签传递、HTML 特殊字符 escape（全部通过）
+- Diff Tab 未破坏原 process_code 签名：ui 层直接以 `input_box.value`（原始输入）和 `output_code.value`（注释后输出）为输入，processor 零侵入
 
 ### v2.5.0 — 2026-08-07
 
