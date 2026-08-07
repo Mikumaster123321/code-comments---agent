@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.3**（2026-08-07 · v2.3.0 的小更新 · API Key 预检 + Token 用量估算）
+**当前版本：v2.3.4**（2026-08-07 · v2.3.0 的小更新 · Java 有效性检测严格化 + 注释后语法二次校验）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,33 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.4 — 2026-08-07（v2.3.0 小更新 #4）
+
+#### 修复 v2.3.3 端到端测试报告中的潜在问题
+v2.3.3 完整端到端测试（49 用例全通过）后，测试报告列出 4 项潜在问题；本次修复其中可落地的 2 项（另 2 项为"mock LLM 难以验证翻译质量"和"无 Gradio UI 交互测试"，属测试基础设施限制，非产品缺陷，不在本次范围）。
+
+##### 1. Java 有效性检测宽松（修复）
+- **问题**：旧版 `_is_valid_java` 只要源码出现 1 个 Java 关键字或 2 个大括号即判为有效，导致 `"hello class world"`、`"int x = 1; print(x);"` 等无意义文本被误判为有效 Java 代码并触发后续 LLM 调用，可能产生幻觉输出。
+- **修复**：`processor._is_valid_java` 改为严格化三重校验：
+  1. 必须有非空非注释行（保留）；
+  2. 必须包含 Java 类型声明关键字 `class` / `interface` / `enum` / `record` 作为独立词（正则 `\b(?:class|interface|enum|record)\b` 词边界匹配，避免 `class` 出现在普通文本中误判）；
+  3. 必须有至少 1 对大括号且大括号匹配（调用现有 `Java.java_annotator._validate_braces`，屏蔽字符串/注释后校验，多余 `}` 或缺少 `}` 均判为无效）。
+- **验证**：13 条边界用例全部通过——`"hello class world"` / `"just some text"` / `"{}"` / `"class Foo {"` / `"// only comment"` / `"int x = 1; print(x);"` → False；`"class Foo {}"` / `"public class Foo { void bar() {} }"` / `"interface Bar { void run(); }"` / `"enum Color { RED, GREEN }"` → True。
+
+##### 2. 缺少 javac 语法验证 + 注释后无二次校验（修复）
+- **问题**：旧版 Python 注释生成后通过 `ast.parse` 隐式保证语法正确（insert 失败会抛 `SyntaxError`），但 Java 端只在 `_analyze_java` 阶段做了一次 `_validate_braces` 大括号校验，注释插入后的代码完整性没有二次验证，且从未调用 `javac` 做真实语法检查，存在"插入 Javadoc 后大括号错位但用户无感知"的风险。
+- **修复**：新增 `processor._verify_java_annotated_code(annotated_code, log)` 辅助函数，在 `_process_java` 与 `_process_java_with_progress` 写临时文件前调用：
+  1. **大括号匹配二次校验**：调用 `_validate_braces(annotated_code)`，失败时日志追加 `⚠️ 注释后大括号匹配失败: ...`（不阻断下载，让用户能看到问题）；
+  2. **可选 javac 真实语法验证**：通过 `shutil.which("javac")` 探测系统 PATH，若存在 javac 则写入临时文件后调用 `javac -Xlint:none -encoding UTF-8 <file>`（`subprocess.run` + `timeout=15s`），返回码非 0 时取 stderr 首行作为 `⚠️ javac 语法校验失败: ...` 日志警告；超时则提示 `⚠️ javac 语法校验超时（15s）`；无 javac 时优雅跳过、不影响主流程。
+- **设计原则**：失败仅日志警告、不抛异常、不阻断下载，符合"取消任务也要保留已完成结果"的产品约定；javac 可用性自动探测，零环境依赖（无 javac 的 Windows 开发机与有 javac 的 CI 环境均正常）。
+- **验证**：3 条用例通过——合法 Java 代码 → `✓ 注释后大括号匹配校验通过`；缺右括号 → `⚠️ ... 缺少 2 个 '}'`；含注释行 → `✓ ... 通过`；当前环境无 javac，第 2 步自动跳过。
+
+##### 兼容性
+- `processor.py` 顶部新增 `import re` / `import subprocess`（`shutil` 已存在），无新增第三方依赖
+- `_is_valid_java` 签名与返回类型不变，所有调用点（`process_code` / `process_code_with_progress` / `_analyze_java`）零侵入
+- `_verify_java_annotated_code` 为新增函数，仅在 Java 流程末尾调用，Python 流程不受影响
+- py_compile 全部 13 个 .py 文件（root + Py + Java）0 SyntaxError
 
 ### v2.3.3 — 2026-08-07（v2.3.0 小更新 #3）
 

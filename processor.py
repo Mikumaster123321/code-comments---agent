@@ -7,6 +7,7 @@ from __future__ import annotations
 import ast
 import os
 import io
+import re
 import sys
 import time
 import shutil
@@ -17,6 +18,7 @@ import difflib
 import html
 import threading
 import math
+import subprocess
 from typing import Optional, Iterator, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 
@@ -606,6 +608,9 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
         pass
     markdown_doc = build_java_markdown_docs(doc_entries)
 
+    # v2.3.4：注释插入后语法二次校验（大括号 + 可选 javac）
+    _verify_java_annotated_code(annotated_code, log)
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
         f.write(markdown_doc)
         md_temp_path = f.name
@@ -792,6 +797,8 @@ def _process_java_with_progress(
         pass
     markdown_doc = build_java_markdown_docs(doc_entries)
 
+    # v2.3.4：注释插入后语法二次校验（大括号 + 可选 javac），并 yield 一次进度
+    _verify_java_annotated_code(annotated_code, log)
     yield _progress_emit(log, None)
 
     # 阶段 95-100%：写临时文件
@@ -987,21 +994,94 @@ def _is_valid_python(source_code: str) -> bool:
 def _is_valid_java(source_code: str) -> bool:
     """检查 Java 代码是否包含基本的 Java 语法特征
 
+    严格化校验（v2.3.4 修复测试报告潜在问题）：
+      1. 必须有非空非注释行；
+      2. 必须包含 Java 类型声明关键字（class/interface/enum/record）作为独立词；
+      3. 大括号必须匹配（屏蔽字符串/注释后），调用 _validate_braces；
+      4. 至少有 1 个大括号对（避免纯关键字文本误判）。
+
     Args:
         source_code: Java 源代码字符串
 
     Returns:
         bool: 是否可能为有效 Java 代码
     """
-    java_keywords = ['class', 'public', 'private', 'protected', 'void', 'int', 'String',
-                     'boolean', 'new', 'return', 'import', 'package', 'interface', 'extends']
+    if not source_code or not source_code.strip():
+        return False
     lines = source_code.strip().split('\n')
     meaningful_lines = [l for l in lines if l.strip() and not l.strip().startswith('//')]
     if not meaningful_lines:
         return False
-    matched = sum(1 for kw in java_keywords if kw in source_code)
-    brace_count = source_code.count('{') + source_code.count('}')
-    return matched >= 1 or brace_count >= 2
+
+    # 1. 必须含类型声明关键字（词边界匹配，避免 "hello class world" 误判）
+    type_decl_pattern = re.compile(r'\b(?:class|interface|enum|record)\b')
+    if not type_decl_pattern.search(source_code):
+        return False
+
+    # 2. 至少有 1 对大括号
+    if source_code.count('{') < 1 or source_code.count('}') < 1:
+        return False
+
+    # 3. 大括号匹配校验（屏蔽字符串/注释后），失败则视为无效
+    try:
+        _validate_braces(source_code)
+    except SyntaxError:
+        return False
+
+    return True
+
+
+def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
+    """Java 注释插入后的语法二次校验（v2.3.4 修复测试报告潜在问题）
+
+    校验两步（失败仅日志警告，不抛异常、不阻断下载）：
+      1. _validate_braces 大括号匹配；
+      2. 若 PATH 中存在 javac，调用 `javac -d <tmpdir> <tmpfile>` 做真实语法检查
+         （超时 15s，stderr 截取首行错误信息）。
+
+    Args:
+        annotated_code: 注释插入后的 Java 源代码
+        log: 日志列表，校验结果会追加到此列表
+    """
+    # 1. 大括号匹配校验
+    try:
+        _validate_braces(annotated_code)
+        log.append("✓ 注释后大括号匹配校验通过")
+    except SyntaxError as e:
+        log.append(f"⚠️ 注释后大括号匹配失败: {e}（建议检查源码）")
+
+    # 2. javac 可选语法验证（仅在系统 PATH 中存在 javac 时调用）
+    try:
+        if not shutil.which("javac"):
+            return
+    except Exception:
+        return
+
+    tmp_dir = tempfile.mkdtemp(prefix="javac_check_")
+    tmp_java = os.path.join(tmp_dir, "_AnnotatedCheck.java")
+    try:
+        with open(tmp_java, "w", encoding="utf-8") as f:
+            f.write(annotated_code)
+        proc = subprocess.run(
+            ["javac", "-Xlint:none", "-encoding", "UTF-8", tmp_java],
+            capture_output=True,
+            timeout=15,
+        )
+        if proc.returncode == 0:
+            log.append("✓ javac 语法校验通过")
+        else:
+            err = proc.stderr.decode("utf-8", errors="replace").strip()
+            first_err = err.splitlines()[0] if err else "未知错误"
+            log.append(f"⚠️ javac 语法校验失败: {first_err}（建议检查源码）")
+    except subprocess.TimeoutExpired:
+        log.append("⚠️ javac 语法校验超时（15s），已跳过")
+    except Exception as e:
+        log.append(f"⚠️ javac 语法校验异常: {e}")
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
 
 
 def _analyze_java(source_code: str, comment_lang: str = "中文"):
