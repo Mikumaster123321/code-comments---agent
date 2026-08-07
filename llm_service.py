@@ -6,6 +6,10 @@ import time
 from typing import Optional
 import openai
 from config import client, MODEL, TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
+from config import (
+    PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M, AVG_TOKENS_PER_ITEM,
+    INPUT_RATIO, OUTPUT_RATIO,
+)
 from i18n import LANG_NAME, LANG_CODE
 
 # ================== 注释风格定义 ==================
@@ -407,3 +411,71 @@ def translate_javadoc(javadoc: str, comment_lang: str, style: Optional[str] = No
     )
     result = _call_llm_with_retry(prompt, 0.3, MAX_TOKENS)
     return _clean_javadoc(result)
+
+
+# ================== API Key 预检 + Token 成本估算 ==================
+
+def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
+    """1-token 心跳测试：检查 API Key 是否有效、模型是否可用。
+
+    注意：不会重试（因为要快速反馈），超时 6s 判定失败。
+
+    Returns:
+        (ok: bool, message: str)
+        ok=True, message="OK" / "OK (model=<model>)" 表示通过
+        ok=False, message 为友好错误描述（HTTP 401 Key 无效 / 网络异常 / 超时 / 其他）
+    """
+    try:
+        resp = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": "ping"}],
+            temperature=0.0,
+            max_tokens=1,
+            timeout=timeout,
+        )
+        # 只要能拿到一条 choices 就认为有效（即便内容为空）
+        if resp and hasattr(resp, "choices") and resp.choices:
+            return True, f"OK (model={MODEL})"
+        return True, f"OK (model={MODEL}, empty choices)"
+    except openai.AuthenticationError:
+        return False, "AuthenticationError: API Key 无效或已过期，请检查 DEEPSEEK_API_KEY"
+    except openai.PermissionDeniedError:
+        return False, "PermissionDeniedError: API Key 无权限访问该模型或该接口"
+    except openai.RateLimitError:
+        return False, "RateLimitError: 请求频率超限或账户余额不足，请稍后重试/检查账户余额"
+    except openai.NotFoundError:
+        return False, f"NotFoundError: 模型 {MODEL} 不存在或 base_url 配置错误"
+    except openai.APITimeoutError:
+        return False, f"APITimeoutError: 请求超时（{timeout}s），请检查网络或稍后重试"
+    except Exception as e:  # 其余未知异常
+        name = type(e).__name__
+        msg = str(e).strip().splitlines()[0] if str(e).strip() else name
+        return False, f"{name}: {msg}"
+
+
+def estimate_tokens_cost(
+    num_items: int,
+    avg_tokens_per_item: int | None = None,
+) -> tuple[int, int, int, float]:
+    """根据函数/方法数量估算 Token 用量与成本（人民币）。
+
+    Args:
+        num_items: AST 解析出的函数/类/方法总数量（来自 Py/get_defined_functions 或 Java/get_java_functions）
+        avg_tokens_per_item: 可选自定义，默认取 config.AVG_TOKENS_PER_ITEM（350）
+
+    Returns:
+        (total_tokens, input_tokens_est, output_tokens_est, cost_rmb)
+        - total_tokens: 总 tokens 估算（整数）
+        - input_tokens_est: 输入 tokens 估算
+        - output_tokens_est: 输出 tokens 估算
+        - cost_rmb: 人民币元（2 位小数）
+    """
+    if num_items <= 0:
+        return 0, 0, 0, 0.0
+    per = int(avg_tokens_per_item) if avg_tokens_per_item and avg_tokens_per_item > 0 else AVG_TOKENS_PER_ITEM
+    total = num_items * per
+    inp = int(total * INPUT_RATIO)
+    out = int(total * OUTPUT_RATIO)
+    # 成本 = 输入 tokens/1e6 * 输入单价 + 输出 tokens/1e6 * 输出单价
+    cost = (inp / 1_000_000.0) * PRICE_INPUT_PER_M + (out / 1_000_000.0) * PRICE_OUTPUT_PER_M
+    return total, inp, out, round(cost, 4)

@@ -25,6 +25,13 @@ from llm_service import (
     generate_docstring, generate_code_summary,
     generate_javadoc, generate_java_summary,
     translate_docstring, translate_javadoc,
+    ping_api_key, estimate_tokens_cost,
+)
+from config import (
+    PRICE_INPUT_PER_M as _PI,
+    PRICE_OUTPUT_PER_M as _PO,
+    INPUT_RATIO as _IR,
+    OUTPUT_RATIO as _OR,
 )
 from Py.annotator import insert_docstring_into_code, build_markdown_docs
 from Java.java_parser import get_defined_functions as get_java_functions
@@ -1805,4 +1812,143 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
         outline_lines.append(f"- {icon} [`{it['name']}` ({t_label})](#{slug}) — *L{line}*")
     outline_lines.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节（锚点滚动定位）\n")
     return "\n".join(outline_lines)
+
+
+# ================== API Key 预检 + Token 成本估算 ==================
+
+_I18N_PREFLIGHT = {
+    "中文": {
+        "ok": "✅ API Key 预检通过",
+        "failed": "❌ API Key 预检失败",
+        "no_code": "（暂无源代码）请先输入代码",
+        "no_items": "🔍 解析结果：未检测到函数或类定义（无需调用 LLM）",
+        "analysis": "🔍 代码分析结果",
+        "n_funcs": "🔧 函数/方法数",
+        "n_classes": "🧩 类数",
+        "n_total": "📊 合计条目总数",
+        "cost_title": "💰 Token 用量 & 成本估算（仅供参考）",
+        "tokens_total": "Tokens 估算总量",
+        "tokens_in": "输入 Tokens 估算",
+        "tokens_out": "输出 Tokens 估算",
+        "cost_rmb": "成本估算",
+        "per_item": "每条目平均 Tokens",
+        "cny_symbol": "元",
+    },
+    "English": {
+        "ok": "✅ API Key preflight passed",
+        "failed": "❌ API Key preflight failed",
+        "no_code": "(Empty. Paste code first to get estimate)",
+        "no_items": "🔍 No functions or classes detected (no LLM calls needed)",
+        "analysis": "🔍 Code analysis",
+        "n_funcs": "🔧 Functions / Methods",
+        "n_classes": "🧩 Classes",
+        "n_total": "📊 Total items",
+        "cost_title": "💰 Token usage & cost estimate (reference only)",
+        "tokens_total": "Total tokens (est.)",
+        "tokens_in": "Input tokens (est.)",
+        "tokens_out": "Output tokens (est.)",
+        "cost_rmb": "Estimated cost",
+        "per_item": "Avg tokens per item",
+        "cny_symbol": "CNY",
+    },
+    "日本語": {
+        "ok": "✅ API Key 事前検証 OK",
+        "failed": "❌ API Key 事前検証 失敗",
+        "no_code": "（コード未入力）まずソースコードを貼り付けてください",
+        "no_items": "🔍 関数・クラス定義が見つかりません（LLM 呼び出し不要）",
+        "analysis": "🔍 コード分析結果",
+        "n_funcs": "🔧 関数・メソッド数",
+        "n_classes": "🧩 クラス数",
+        "n_total": "📊 合計エントリ数",
+        "cost_title": "💰 トークン消費量・費用概算（参考値）",
+        "tokens_total": "総トークン数（概算）",
+        "tokens_in": "入力トークン（概算）",
+        "tokens_out": "出力トークン（概算）",
+        "cost_rmb": "推定費用",
+        "per_item": "1エントリあたり平均トークン",
+        "cny_symbol": "元",
+    },
+}
+
+
+def estimate_markup_cost(num_items: int, lang: str, avg_per_item: int | None = None) -> tuple[int, int, int, float]:
+    """processor 内封装：仅做 token 估算（不调用网络），供 UI 监听输入变化时实时估算使用。
+
+    返回 (total_tokens, input_tokens_est, output_tokens_est, cost_rmb)
+    """
+    return estimate_tokens_cost(num_items, avg_per_item)
+
+
+def preflight_check(
+    source_code: str,
+    language: str = "Python",
+    ui_lang: str = "中文",
+    do_ping: bool = False,
+    avg_per_item: int | None = None,
+) -> tuple[bool, str, str]:
+    """启动期 / 生成按钮前预检入口。
+
+    组合三件事：
+      1) 解析 AST，统计 函数数 / 类数 / 条目总数（供估算与展示）
+      2) 可选 do_ping=True → 发 1-token 心跳检测 API Key 是否有效
+      3) 根据条目数估算总 tokens、输入/输出 tokens 拆分、成本（人民币）
+
+    Args:
+        source_code: 源代码
+        language: "Python" / "Java"
+        ui_lang: UI 语言（用于返回 Markdown 文案 i18n）
+        do_ping: 是否真实执行 ping（网络调用，生成按钮前/主动预检时置 True；输入框 change 实时估算置 False）
+        avg_per_item: 自定义每条目平均 tokens（默认 350，config 可配置）
+
+    Returns:
+        (ok: bool, preflight_md: str, estimate_md: str)
+        - ok: 预检是否通过（do_ping=False 时视为 True）
+        - preflight_md: 预检结果 Markdown（✅ / ❌ 错误详情）
+        - estimate_md: 成本估算 + 分析结果 Markdown（空代码 / 0 条目时返回提示语）
+    """
+    ui_lang_key = ui_lang if ui_lang in _I18N_PREFLIGHT else "中文"
+    tpl = _I18N_PREFLIGHT[ui_lang_key]
+
+    # —— A. API Key 预检（do_ping=True 时才调用网络）——
+    if do_ping:
+        ok, msg = ping_api_key()
+    else:
+        ok, msg = True, ""
+    if not msg:
+        pf_md = f"**{tpl['ok']}**"
+    else:
+        if ok:
+            pf_md = f"**{tpl['ok']}** — _{msg}_"
+        else:
+            pf_md = f"**{tpl['failed']}**\n\n> {msg}"
+
+    # —— B. 代码分析 + 估算（无代码 / 语法异常 / 0 条目 → 快速返回）——
+    if not source_code:
+        est_md = f"> {tpl['no_code']}"
+        return ok, pf_md, est_md
+    try:
+        if language == "Java":
+            items = get_java_functions(source_code)
+        else:
+            items = get_defined_functions(source_code)
+    except Exception:
+        items = []
+    n_items = len(items)
+    if n_items <= 0:
+        est_md = f"> {tpl['no_items']}"
+        return ok, pf_md, est_md
+    n_funcs = sum(1 for x in items if x.get("type") != "class")
+    n_classes = sum(1 for x in items if x.get("type") == "class")
+    total_tok, in_tok, out_tok, cost = estimate_tokens_cost(n_items, avg_per_item)
+    per = (int(avg_per_item) if avg_per_item and avg_per_item > 0 else None) or 350
+    est_md = (
+        f"**{tpl['cost_title']}**\n\n"
+        f"- **{tpl['analysis']}**：{tpl['n_funcs']} = {n_funcs}、{tpl['n_classes']} = {n_classes}、**{tpl['n_total']} = {n_items}**\n"
+        f"- {tpl['tokens_total']}：**{total_tok:,}**（{tpl['per_item']} = {per}）\n"
+        f"- {tpl['tokens_in']}：{in_tok:,}　/　{tpl['tokens_out']}：{out_tok:,}\n"
+        f"- **{tpl['cost_rmb']}：≈ ¥ {cost:.4f} {tpl['cny_symbol']}**"
+        f"（入力 ¥{_PI:.2f}/1M · {_IR:.0%}；出力 ¥{_PO:.2f}/1M · {_OR:.0%}）\n"
+    )
+    return ok, pf_md, est_md
+
 

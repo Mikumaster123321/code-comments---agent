@@ -30,3 +30,15 @@ RETRY_DELAY = 1.0
 
 # 并发配置
 MAX_WORKERS = 5
+
+# Token 成本估算配置（DeepSeek 官方价格，2026 年参考值；单位：人民币 / 每 1M tokens）
+# 来源：deepseek.com/price 参考价
+PRICE_INPUT_PER_M = 0.27   # 输入单价：0.27 元 / 1,000,000 input tokens
+PRICE_OUTPUT_PER_M = 1.10  # 输出单价：1.10 元 / 1,000,000 output tokens
+# 平均每个函数/方法注释消耗 tokens 估算（输入 + 输出合计）
+# 实测经验值：prompt 约 150 tokens（含模板），产出 docstring 约 200 tokens → 合计 350 作为默认值
+AVG_TOKENS_PER_ITEM = 350
+# 输入占比 / 输出占比（用于更精准估算）
+INPUT_RATIO = 0.43   # 150 / 350
+OUTPUT_RATIO = 0.57  # 200 / 350
+

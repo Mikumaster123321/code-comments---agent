@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.2**（2026-08-07 · v2.3.0 的小更新 · 函数/类导航大纲 + 锚点跳转）
+**当前版本：v2.3.3**（2026-08-07 · v2.3.0 的小更新 · API Key 预检 + Token 用量估算）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,34 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.3 — 2026-08-07（v2.3.0 小更新 #3）
+
+#### 🧪 API Key 有效性预检（1-token 心跳）+ Token 用量 / 成本估算
+- **config 新增 5 个常量**（DeepSeek 官方参考价，2026 参考值）：`PRICE_INPUT_PER_M=0.27`（¥0.27 / 1M 输入 tokens）、`PRICE_OUTPUT_PER_M=1.10`（¥1.10 / 1M 输出 tokens）、`AVG_TOKENS_PER_ITEM=350`（每个函数/方法实测经验值：150 prompt 模板 + 200 docstring 产出）、`INPUT_RATIO=0.43` / `OUTPUT_RATIO=0.57`（更精准拆分估算）
+- **`llm_service.ping_api_key(timeout=6.0)`**：独立 1-token 心跳请求。参数：`model=deepseek-chat`、`temperature=0.0`、**`max_tokens=1`（严格要求）**、`messages=[{role:user, content:"ping"}]`、`timeout=6s`。覆盖 8 种错误：`AuthenticationError→API Key 无效`、`PermissionDeniedError→无权限`、`RateLimitError→频率超限/余额不足`、`NotFoundError→模型或 base_url 错误`、`APITimeoutError→超时`、`Exception→兜底 Name+首行消息`；返回 `(ok, msg)` 2 元组，ok=False 时 msg 为人类可读提示
+- **`llm_service.estimate_tokens_cost(num_items, avg_tokens_per_item=None)`**：4 元组数学计算 `(total_tokens, input_est, output_est, cost_rmb)`；num_items ≤ 0 直接返回 0 向量；成本公式 `(in/1e6)*0.27 + (out/1e6)*1.10`，精度 4 位小数
+- **`processor.preflight_check(source_code, language, ui_lang, do_ping, avg_per_item)`** 组合入口（3 元组 `(ok, preflight_md, estimate_md)`）：
+  - 先根据 ui_lang 从 `_I18N_PREFLIGHT` 三语模板字典（3 语种 × 12 键完整覆盖）选择对应语言
+  - do_ping=True → 调 `ping_api_key`；do_ping=False → 跳过网络（input_box.change 实时估算、最终帧补估算时使用，避免多余心跳）
+  - source 空 → 返回"暂无源代码"提示；语法异常吞掉不抛；AST 解析结果 0 条 → 返回"未检测到函数或类定义"
+  - 统计 n_funcs / n_classes / n_total，调用 `estimate_tokens_cost`，渲染 Markdown 5 行：分析计数 / 总 tokens + 每条均值 / 入出力拆分 / ¥ 成本 + 价格档位说明
+  - 额外提供 `estimate_markup_cost(num_items, lang, avg)` 无网络快速封装
+- **UI 绑定**：
+  - 操作行按钮右侧新增第 4 位 `preflight_btn = gr.Button(🔍 预检 API Key + 估算 Tokens)`（点击 do_ping=True）
+  - 按钮下方新增 2 个 Markdown：`preflight_result_md`（🛡️ 预检区域）、`cost_estimate_md`（💰 成本估算区域）
+  - ui_lang change → `_apply_ui_language` outputs 32→35：第 32 位预检按钮 value、第 33/34 位 2 个 Markdown label 翻译
+  - **btn.click 生成器 9→11 元组末 2 位**：第 10 位 `preflight_result_md`、第 11 位 `cost_estimate_md`；首帧前先 `preflight_check(do_ping=True)`，**失败则直接 yield 11 元组 + return，绝不进入主生成循环**（避免跑到一半因为 Key 无效白花 token 和时间）；中间帧 yield None 继承上一帧不闪烁；最终帧再 do_ping=False 补算一次保证最新
+  - `input_box / language / ui_lang / python_style / java_style / file_upload` 共 6 个组件 `.change` → 全部绑定 `_estimate_only`（do_ping=False，无网络）→ 粘贴代码或切语言时 100ms 级别实时刷新估算
+- **i18n 三语新增 3 键**：`preflight_btn`（🔍 预检 API Key + 估算 Tokens / Check API Key + Estimate Tokens / API Key 事前検証 + トークン概算）、`estimate_label`（💰 用量/成本（贴代码自动估算）/ 💰 Usage / Cost / 💰 使用量・費用）、`preflight_label`（🛡️ API Key 预检（生成前 1-token 心跳）/ Preflight / API Key 事前検証）
+- **新增 test_cost_preflight.py 12 条（100% 通过）**：
+  - `EstimateTokensCostTests 3/3`：0/N 向量、默认 350 × 10 = 3500 tokens + 0.43/0.57 比例 ≤ ¥0.1 粗略 + 自定义 1000/item 验证
+  - `PingAPIKeyParameterTests 2/2`：**断言传参 max_tokens=1 / temperature=0 / ping message / timeout=3.5 / model=deepseek-chat**；6 种 openai 异常 + RuntimeError 兜底全部 ok=False 且包含关键词友好错误
+  - `PreflightCheckBoundaryTests 6/6`：空代码提示 / 0 函数无类检测 / Python 代码含 ¥ 元 / Java 代码 / EN 语言出现 "Total items & Estimated cost" / JA 出现 "合計エントリ数 & 推定費用" / Deutsch 回退中文
+  - `I18nKeysTests 1/1`：3 键 × 3 语种非空
+- **全流程验证（82/82 通过）**：
+  - py_compile 全自有 .py：0 SyntaxError
+  - 5 个独立进程 unittest：`test_styles 21/21` ✅ + `test_smoke_comprehensive 24/24` ✅ + `test_progress_cancel 16/16` ✅ + `test_outline_navigation 9/9` ✅ + `test_cost_preflight 12/12` ✅ = **82 条全部通过**
 
 ### v2.3.2 — 2026-08-07（v2.3.0 小更新 #2）
 

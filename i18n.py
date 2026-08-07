@@ -87,6 +87,22 @@ TRANSLATIONS = {
         "English": "📋 Functions / Classes Outline (click to jump in API Docs tab)",
         "日本語": "📋 関数/クラス目次（クリックでAPIドキュメントへジャンプ）",
     },
+    # API Key 预检 / Token 用量估算
+    "preflight_btn": {
+        "中文": "🔍 预检 API Key + 估算 Tokens",
+        "English": "🔍 Check API Key + Estimate Tokens",
+        "日本語": "🔍 API Key 事前検証 + トークン概算",
+    },
+    "estimate_label": {
+        "中文": "💰 用量 / 成本（输入代码后自动估算）",
+        "English": "💰 Usage / Cost (auto-estimated after you paste code)",
+        "日本語": "💰 使用量・費用（コード貼り付け後に自動概算）",
+    },
+    "preflight_label": {
+        "中文": "🛡️ API Key 预检（生成前快速心跳测试）",
+        "English": "🛡️ API Key Preflight (quick 1-token ping before generation)",
+        "日本語": "🛡️ API Key 事前検証（生成前に 1-token 疎通確認）",
+    },
     # 输出 Tab
     "tab_annotated": {
         "中文": "📄 带注释的代码",

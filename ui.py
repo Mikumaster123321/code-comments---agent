@@ -447,6 +447,10 @@ def _apply_ui_language(lang: str):
         # ===== 函数/类导航大纲新增（占位：outline_md/docs_toc_md 内容在生成时动态填充，切换语言时保留）=====
         gr.update(),  # 30 outline_md
         gr.update(),  # 31 docs_toc_md
+        # ===== API Key 预检 / Token 估算新增 =====
+        gr.update(value=t("preflight_btn", lang)),  # 32 preflight_btn
+        gr.update(label=t("preflight_label", lang)),  # 33 preflight_result_md
+        gr.update(label=t("estimate_label", lang)),   # 34 cost_estimate_md
     ]
 
 
@@ -522,8 +526,21 @@ def create_ui():
                 t("cancel_btn", default_lang), variant="stop", size="lg",
                 elem_classes="action-btn",
             )
+            preflight_btn = gr.Button(
+                t("preflight_btn", default_lang), variant="secondary", size="lg",
+                elem_classes="action-btn",
+            )
         # 单文件取消标志位
         state_single_cancel = gr.State(None)
+        # ===== API Key 预检 / Token 用量估算 =====
+        preflight_result_md = gr.Markdown(
+            label=t("preflight_label", default_lang),
+            elem_classes="scrollable-md",
+        )
+        cost_estimate_md = gr.Markdown(
+            label=t("estimate_label", default_lang),
+            elem_classes="scrollable-md",
+        )
 
         # ===== 批量处理区（多文件 / ZIP） =====
         with gr.Column(elem_classes="card-section"):
@@ -661,6 +678,10 @@ def create_ui():
                 # ===== 函数/类导航大纲新增 =====
                 outline_md,        # 30
                 docs_toc_md,       # 31
+                # ===== API Key 预检 / Token 估算新增 =====
+                preflight_btn,     # 32
+                preflight_result_md,  # 33
+                cost_estimate_md,  # 34
             ],
         )
 
@@ -694,11 +715,31 @@ def create_ui():
         def _gen_real(code, plang, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
             """真实的生成器：创建 CancelToken，逐帧 yield。
 
-            outputs 结构（9 元组）：
+            outputs 结构（11 元组）：
               [output_code, output_docs, output_log, state_md_path, state_src_path,
-               state_single_cancel, diff_html, outline_md, docs_toc_md]
+               state_single_cancel, diff_html, outline_md, docs_toc_md,
+               preflight_result_md, cost_estimate_md]
             中间态除了 output_log / state_single_cancel 之外，其余可保持 None（Gradio 保留上一帧）。
             """
+            import processor as _p_mod
+            # —— 第一帧前：API Key 预检 + 用量估算（不阻塞，6s 超时），失败直接返回不进入生成主流程
+            try:
+                ok, pf_md, est_md = _p_mod.preflight_check(
+                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=True,
+                )
+            except Exception as _pf_err:
+                ok, pf_md, est_md = False, f"**❌ 预检异常（Preflight Exception）**\n\n> {type(_pf_err).__name__}: {_pf_err}", ""
+            # 失败：只输出错误（不生成，保留现有 outputs 不变 → 首 7 位 None + 大纲 + 预检 + 估算）
+            if not ok:
+                # 失败时照样给大纲和估算，让用户能看到（预检失败不代表 AST 解析失败）
+                try:
+                    _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
+                    early_outline = _p_mod.build_outline_markdown(code or "", plang, title=_title)
+                except Exception:
+                    early_outline = ""
+                yield None, None, None, None, None, None, None, early_outline, early_outline, pf_md, est_md
+                return  # 预检失败 → 提前 return，不再触发生成（避免跑到一半 Key 无效白跑）
+
             # 创建新的 CancelToken（先重置）
             token = CancelToken()
             # progress_cb 绑定到 Gradio 的 progress 对象
@@ -714,7 +755,7 @@ def create_ui():
                 early_outline = _p.build_outline_markdown(code or "", plang, title=_title)
             except Exception:
                 early_outline = ""
-            # 透传 processor 的生成器，9 元组 outputs
+            # 透传 processor 的生成器，11 元组 outputs（末 2 位是 preflight_md + estimate_md）
             first = True
             for frame in process_code_with_progress(
                 code, incremental=True, language=plang, comment_lang=ulang,
@@ -724,15 +765,23 @@ def create_ui():
                 ann, md, log_txt, md_p, src_p = frame
                 if first:
                     first = False
-                    # 第 1 帧：把 cancel_token 存入 state，大纲先渲染（第 8、9 位）
-                    yield ann, md, log_txt, md_p, src_p, token, None, early_outline, early_outline
+                    # 第 1 帧：把 cancel_token 存入 state，大纲先渲染（第 8、9 位）；预检/估算也先填入
+                    yield ann, md, log_txt, md_p, src_p, token, None, early_outline, early_outline, pf_md, est_md
                     continue
                 if ann is not None and md_p is not None and src_p is not None:
                     last_final_frame = frame
                     last_annotated = ann
-                # 中间帧：大纲保持不变（None 继承上一帧）
-                yield ann, md, log_txt, md_p, src_p, None, None, None, None
-            # 最后：构建 Diff HTML + 最终大纲（再次渲染，语言用最终 comment_lang）
+                # 中间帧：大纲/预检/估算保持不变（None 继承上一帧不闪烁）
+                yield ann, md, log_txt, md_p, src_p, None, None, None, None, None, None
+            # 最后：构建 Diff HTML + 最终大纲（再次渲染，语言用最终 comment_lang）+ 最终估算（再算一遍保持一致）
+            try:
+                _ok2, pf_md_f, est_md_f = _p_mod.preflight_check(
+                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=False,
+                )
+                pf_md_final = pf_md_f if pf_md_f else pf_md
+                est_md_final = est_md_f if est_md_f else est_md
+            except Exception:
+                pf_md_final, est_md_final = pf_md, est_md
             if last_final_frame is not None:
                 ann_code = last_final_frame[0]
                 diff = build_split_diff_html(code, ann_code, plang)
@@ -742,21 +791,64 @@ def create_ui():
                 except Exception:
                     final_outline = ""
                 ann, md, log_txt, md_p, src_p = last_final_frame
-                yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline
+                yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline, pf_md_final, est_md_final
             else:
-                # 没产生最终帧（例：空输入 / 取消），把大纲保留之前的 early_outline
-                yield None, None, None, None, None, None, None, early_outline, early_outline
+                # 没产生最终帧（例：空输入 / 取消），把大纲保留之前的 early_outline，估算保持不变
+                yield None, None, None, None, None, None, None, early_outline, early_outline, pf_md_final, est_md_final
 
-        # 把 btn.click 改成调用生成器（outputs 9 个：新增 outline_md / docs_toc_md）
+        # ===== 仅估算（不发网络请求）：输入/语言/风格变化时实时刷新 cost_estimate_md =====
+        def _estimate_only(code, plang, ulang, pyst, jvst):
+            try:
+                import processor as _pp
+                _, _, est = _pp.preflight_check(
+                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=False,
+                )
+                return est
+            except Exception as e:
+                return f"> 估算失败（Estimate Error）：{type(e).__name__}: {e}"
+
+        # ===== 手动预检按钮：主动发 1-token 心跳 =====
+        def _preflight_manual(code, plang, ulang, pyst, jvst):
+            try:
+                import processor as _pp
+                ok, pf, est = _pp.preflight_check(
+                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=True,
+                )
+                return pf, est
+            except Exception as e:
+                return (
+                    f"**❌ 预检异常（Preflight Exception）**\n\n> {type(e).__name__}: {e}",
+                    _estimate_only(code, plang, ulang, pyst, jvst),
+                )
+
+        # 把 btn.click 改成调用生成器（outputs 11 个：末 2 位 preflight_result_md / cost_estimate_md）
         btn.click(
             fn=_gen_real,
             inputs=[input_box, language, ui_lang, python_style, java_style, state_single_cancel],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path,
-                     state_single_cancel, diff_html, outline_md, docs_toc_md],
+                     state_single_cancel, diff_html, outline_md, docs_toc_md,
+                     preflight_result_md, cost_estimate_md],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],
         )
+        # 手动预检按钮绑定
+        preflight_btn.click(
+            fn=_preflight_manual,
+            inputs=[input_box, language, ui_lang, python_style, java_style],
+            outputs=[preflight_result_md, cost_estimate_md],
+        )
+        # 输入/语言/风格变化 → 自动刷新成本估算（不发网络请求）
+        for _src in (input_box, language, ui_lang, python_style, java_style, file_upload):
+            try:
+                _src.change(
+                    fn=_estimate_only,
+                    inputs=[input_box, language, ui_lang, python_style, java_style],
+                    outputs=[cost_estimate_md],
+                )
+            except Exception:
+                # 某些组件可能没有 .change 方法（安全跳过）
+                pass
         # 取消按钮：只调用 cancel，不需要返回值
         cancel_btn.click(
             fn=_cancel_single,
