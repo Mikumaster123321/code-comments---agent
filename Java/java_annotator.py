@@ -1,8 +1,27 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 """Java 注释插入模块：将 Javadoc 注释插入 Java 代码并生成 Markdown 文档"""
 import re
 
 from Java.java_parser import _mask_strings_and_comments
+
+
+def _slugify(name: str, prefix: str = "", used: set | None = None) -> str:
+    """将任意名称转成 URL 友好的 Markdown 锚点 id，并保证不重复（Java 版本）"""
+    if not name:
+        name = "item"
+    base = prefix + re.sub(r"[^A-Za-z0-9_-]+", "-", name).strip("-_").lower()
+    if not base:
+        base = (prefix or "item") + "-unknown"
+    if used is None:
+        return base
+    final = base
+    i = 2
+    while final in used:
+        final = f"{base}-{i}"
+        i += 1
+    used.add(final)
+    return final
 
 
 def _format_javadoc(docstring: str, indent: str) -> str:
@@ -109,18 +128,34 @@ def extract_existing_javadoc(lines: list, start_line: int, end_line: int) -> str
 
 
 def build_java_markdown_docs(doc_entries: list) -> str:
-    """生成 Java API Markdown 文档
+    """生成 Java API Markdown 文档（顶部带目录 TOC + 每个条目锚点）
 
     Args:
-        doc_entries: 文档条目列表，每个条目需包含 name/type/code/docstring
+        doc_entries: 文档条目列表，每个条目需包含 name/type/code/docstring/lineno
 
     Returns:
-        str: Markdown 格式的 API 文档
+        str: Markdown 格式的 Java API 文档（含 TOC 和锚点）
     """
     md = "# Java API Documentation\n\n"
+    used_ids: set[str] = set()
+    for entry in doc_entries:
+        prefix = "cls-" if entry.get("type") == "class" else "m-"
+        entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
+
+    if doc_entries:
+        md += "## 📑 Table of Contents\n\n"
+        for entry in doc_entries:
+            t = "Class" if entry["type"] == "class" else "Method"
+            icon = "🧩" if entry["type"] == "class" else "🔧"
+            line = f"  *L{entry.get('lineno', '?')}*"
+            md += f"- {icon} [`{entry['name']}` ({t})](#{entry['slug_id']}) — {line}\n"
+        md += "\n---\n\n"
+
     for entry in doc_entries:
         type_label = "Class" if entry["type"] == "class" else "Method"
-        md += f"## {entry['name']} ({type_label})\n\n"
+        icon = "🧩" if entry["type"] == "class" else "🔧"
+        line = f"L{entry.get('lineno', '?')}"
+        md += f"## {icon} {entry['name']} ({type_label}) — {line} <a id=\"{entry['slug_id']}\"></a>\n\n"
         md += f"```java\n{entry['code']}\n```\n\n"
         md += f"{entry['docstring']}\n\n"
         if entry["type"] == "class":

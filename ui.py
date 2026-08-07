@@ -444,6 +444,9 @@ def _apply_ui_language(lang: str):
         gr.update(label=t("java_style_label", lang)),   # 28 java_style
         # ===== Diff 视图新增 =====
         gr.update(label=t("tab_diff", lang)),           # 29 tab_diff
+        # ===== 函数/类导航大纲新增（占位：outline_md/docs_toc_md 内容在生成时动态填充，切换语言时保留）=====
+        gr.update(),  # 30 outline_md
+        gr.update(),  # 31 docs_toc_md
     ]
 
 
@@ -562,6 +565,8 @@ def create_ui():
             with gr.Tabs() as tabs:
                 tab_annotated = gr.Tab(t("tab_annotated", default_lang), id="annotated_code")
                 with tab_annotated:
+                    # 顶部导航大纲（点击大纲链接跳到 tab_docs API 文档对应章节锚点）
+                    outline_md = gr.Markdown(elem_classes="scrollable-md outline-sidebar")
                     output_code = gr.Code(
                         label=t("output_code_label", default_lang),
                         language=None,
@@ -587,6 +592,8 @@ def create_ui():
 
                 tab_docs = gr.Tab(t("tab_docs", default_lang), id="api_docs")
                 with tab_docs:
+                    # Tab 顶部独立目录栏（再次展示大纲，点击本 Tab 内部锚点滚动定位）
+                    docs_toc_md = gr.Markdown(elem_classes="scrollable-md docs-toc")
                     output_docs = gr.Markdown(elem_classes="scrollable-md")
 
                 tab_analysis = gr.Tab(t("tab_analysis", default_lang), id="code_analysis")
@@ -651,6 +658,9 @@ def create_ui():
                 java_style,        # 28
                 # ===== Diff 视图新增 =====
                 tab_diff,          # 29
+                # ===== 函数/类导航大纲新增 =====
+                outline_md,        # 30
+                docs_toc_md,       # 31
             ],
         )
 
@@ -684,10 +694,10 @@ def create_ui():
         def _gen_real(code, plang, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
             """真实的生成器：创建 CancelToken，逐帧 yield。
 
-            outputs 结构（7 元组）：
+            outputs 结构（9 元组）：
               [output_code, output_docs, output_log, state_md_path, state_src_path,
-               state_single_cancel, diff_html]
-            中间态除了 output_log 和 state_single_cancel 之外，其余可保持 None（Gradio 保留上一帧）。
+               state_single_cancel, diff_html, outline_md, docs_toc_md]
+            中间态除了 output_log / state_single_cancel 之外，其余可保持 None（Gradio 保留上一帧）。
             """
             # 创建新的 CancelToken（先重置）
             token = CancelToken()
@@ -697,8 +707,14 @@ def create_ui():
             # 用于最后拿到 annotated_code 给 Diff
             last_annotated = None
             last_final_frame = None
-            # 透传 processor 的生成器，这里额外加了一个 output：state_single_cancel（第 6 位）
-            # 以及 diff_html（第 7 位，最后一帧更新）
+            # 先在第 0 帧（第一帧）就把大纲渲染出来，用户一开始就能看到函数/类列表
+            try:
+                import processor as _p
+                _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
+                early_outline = _p.build_outline_markdown(code or "", plang, title=_title)
+            except Exception:
+                early_outline = ""
+            # 透传 processor 的生成器，9 元组 outputs
             first = True
             for frame in process_code_with_progress(
                 code, incremental=True, language=plang, comment_lang=ulang,
@@ -708,27 +724,35 @@ def create_ui():
                 ann, md, log_txt, md_p, src_p = frame
                 if first:
                     first = False
-                    # 第 1 帧：把 cancel_token 存入 state
-                    yield ann, md, log_txt, md_p, src_p, token, None
+                    # 第 1 帧：把 cancel_token 存入 state，大纲先渲染（第 8、9 位）
+                    yield ann, md, log_txt, md_p, src_p, token, None, early_outline, early_outline
                     continue
                 if ann is not None and md_p is not None and src_p is not None:
                     last_final_frame = frame
                     last_annotated = ann
-                yield ann, md, log_txt, md_p, src_p, None, None
-            # 最后：构建 Diff HTML（如果有最终结果）
+                # 中间帧：大纲保持不变（None 继承上一帧）
+                yield ann, md, log_txt, md_p, src_p, None, None, None, None
+            # 最后：构建 Diff HTML + 最终大纲（再次渲染，语言用最终 comment_lang）
             if last_final_frame is not None:
                 ann_code = last_final_frame[0]
                 diff = build_split_diff_html(code, ann_code, plang)
-                # 最终帧：所有输出一次性给齐
+                try:
+                    _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
+                    final_outline = _p.build_outline_markdown(code or "", plang, title=_title)
+                except Exception:
+                    final_outline = ""
                 ann, md, log_txt, md_p, src_p = last_final_frame
-                yield ann, md, log_txt, md_p, src_p, None, diff
+                yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline
+            else:
+                # 没产生最终帧（例：空输入 / 取消），把大纲保留之前的 early_outline
+                yield None, None, None, None, None, None, None, early_outline, early_outline
 
-        # 把 btn.click 改成调用生成器（outputs 7 个：新增 state_single_cancel 和 diff_html）
+        # 把 btn.click 改成调用生成器（outputs 9 个：新增 outline_md / docs_toc_md）
         btn.click(
             fn=_gen_real,
             inputs=[input_box, language, ui_lang, python_style, java_style, state_single_cancel],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path,
-                     state_single_cancel, diff_html],
+                     state_single_cancel, diff_html, outline_md, docs_toc_md],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],

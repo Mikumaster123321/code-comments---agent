@@ -81,6 +81,12 @@ TRANSLATIONS = {
         "English": "⏹️ Cancel Task",
         "日本語": "⏹️ タスクをキャンセル",
     },
+    # 函数/类导航大纲
+    "outline_title": {
+        "中文": "📋 函数/类导航大纲（点击跳转至 API 文档对应章节）",
+        "English": "📋 Functions / Classes Outline (click to jump in API Docs tab)",
+        "日本語": "📋 関数/クラス目次（クリックでAPIドキュメントへジャンプ）",
+    },
     # 输出 Tab
     "tab_annotated": {
         "中文": "📄 带注释的代码",

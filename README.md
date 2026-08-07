@@ -194,6 +194,28 @@ code-comments---agent/
 
 > 版本号规则：大版本（vX.Y.0）记录大功能更新；小更新（vX.Y.1、vX.Y.2 …）不单独增加版本号，归入最近一次大版本的"小更新"子节合并记录。本节仅按时间倒序列出。
 
+### v2.6.2 — 2026-08-07（v2.6.0 小更新）
+
+#### 函数/类导航大纲 Sidebar（一键跳转锚点）
+- **`tab_annotated` 顶部大纲栏**：在「带注释的代码」Tab 的 Code 组件上方新增 `outline_md`（`gr.Markdown` 大纲），渲染内容来自新增的 `processor.build_outline_markdown(source, language, title)`：解析 `Py.parser.get_defined_functions` / `Java.java_parser.get_defined_functions` 结果转成可点击 Markdown 列表，每项为 `- 🧩/🔧 [`name` (Class/Function/Method) ](#slug-id) — *Llineno*`，并附带提示"💡 点击条目跳转至「API 文档」Tab 对应章节"
+- **`tab_docs` 顶部目录栏**：在「API 文档」Tab 顶部再新增 `docs_toc_md`（与大纲内容一致，方便切到 Docs Tab 后也立即有目录可点）；`ui._apply_ui_language` 新增第 30、31 位 2 个占位 `gr.update()`（切换 UI 语言时大纲内容继承最新）
+- **`btn.click` outputs 7→9 元组**：新增第 8 位 `outline_md`、第 9 位 `docs_toc_md`；`_gen_real` 所有分支（首帧 / 中间帧 / 最终帧 / 无最终帧取消帧）严格 yield 9 项，**中间帧返回 None 继承上一帧不闪烁**，首帧立即先渲染 `early_outline`（保证点击生成按钮瞬间就能看到函数/类列表，不必等 LLM），最终帧再用最新 UI 语言再渲染一次
+- **API 文档内置 TOC + 锚点 Heading**：
+  - `Py.annotator.build_markdown_docs` 升级：新增 `_slugify(name, prefix, used)`（字母/数字/连字符/下划线保留，其余转 `-`，重名自动 `-2`/`-3` 去重）；先遍历分配 `cls-` / `fn-` 前缀的 `slug_id` 写入每个 doc_entry；顶部追加 `## 📑 Table of Contents` 目录段；每条详情的 `##` Heading 改为 `## 🧩/🔧 name (Type) — Llineno <a id="slug_id"></a>`
+  - `Java.java_annotator.build_java_markdown_docs` 同步升级：类前缀 `cls-`、方法前缀 `m-`（区别 Python 的 `fn-` 避免命名空间冲突）；同样的 TOC + Heading 锚点结构
+  - 两个 `annotator.py` 顶部新增 `from __future__ import annotations`，保证 Python 3.8 下 `set | None` 联合类型注解不抛 `TypeError`
+- **processor 层独立 API**：
+  - `processor._slugify_name(name, prefix, used)`：processor 内部版本 slug 器（局部 `import re`，避免在顶部 import 顺序上与 annotator 产生不一致）
+  - `processor.build_outline_markdown(source, language="Python", title="📋 函数/类导航大纲")`：独立入口（**不依赖 llm_service 运行期调用**，import 期只依赖 parser，测试无需 LLM mock 就能跑）；`language=="Java"` 自动走 `get_java_functions`；空源/语法错误异常吞掉返回空字符串
+- **锚点一致性保证（最关键）**：processor 与 annotator 各自 slug 规则完全一致——相同 name / type / 相同 used 集合插入顺序 → 相同 slug_id；`test_outline_slugs_match_annotator_slugs_python` 用真实 1 个 Class + 2 个 Method + helper/main 函数验证：`doc_entries[*].slug_id` 既出现在 `build_markdown_docs` 的 `<a id="..."></a>`，也出现在 `build_outline_markdown` 的 `#slug_id` 链接中
+- **i18n 三语**：新增 `outline_title`：中文「📋 函数/类导航大纲（点击跳转至 API 文档对应章节）」/ 英文「📋 Functions / Classes Outline (click to jump in API Docs tab)」/ 日文「📋 関数/クラス目次（クリックでAPIドキュメントへジャンプ）」
+
+#### 新增测试 + 回归（4 进程独立，合计 70/70 通过）
+- **新增 `test_outline_navigation.py` 9 条**：`SlugifyTests`（2 条：基础 slug 规则 + 重名去重）、`BuildOutlineMarkdownTests`（4 条：非空 Python 大纲含 fn-/cls- 前缀 & 行号 & 提示 / 空源空 / 语法错空不抛异常 / outline slug 与 annotator doc_entries slug 完全对齐）、`BuildMarkdownDocsTOCTests`（2 条：Python docs TOC 段存在 + 锚点 Heading & 行号 / Java docs `cls-` + `m-` 前缀 TOC + 锚点）、`I18nOutlineTitleTests`（1 条：三语翻译齐全且中文包含「大纲」）
+- **py_compile 全自有 .py（root + Py + Java）**：语法 0 错误
+- **独立进程 unittest 4 套件**：`test_styles 21/21` ✅ + `test_smoke_comprehensive 24/24` ✅ + `test_progress_cancel 16/16` ✅ + `test_outline_navigation 9/9` ✅ = **70/70 全部通过**
+- 注：同进程 `discover -p test_*.py` 下 `test_styles` 与 `test_smoke_comprehensive` 各自对 `sys.modules["openai"].OpenAI` 注入顺序不兼容，会报 `capture.prompts[0]` 空 IndexError（**v2.6.1 既有问题，与本改动无关**），生产执行请分文件或分进程跑（各自独立进程 100% 通过）
+
 ### v2.6.1 — 2026-08-07（v2.6.0 小更新）
 
 #### 实时进度条 + 可取消任务

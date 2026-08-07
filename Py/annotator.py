@@ -1,6 +1,71 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 """注释插入模块：将 docstring 插入代码并生成 Markdown 文档"""
 import ast
+import re
+
+
+def _slugify(name: str, prefix: str = "", used: set | None = None) -> str:
+    """将任意名称转成 URL 友好的 Markdown 锚点 id，并保证不重复
+
+    规则：只保留字母/数字/连字符/下划线；其余字符用 '-' 替换；保证小写开头
+    """
+    if not name:
+        name = "item"
+    base = prefix + re.sub(r"[^A-Za-z0-9_-]+", "-", name).strip("-_").lower()
+    if not base:
+        base = (prefix or "item") + "-unknown"
+    if used is None:
+        return base
+    # 去重：如果重复，自动加 -2 / -3 后缀
+    final = base
+    i = 2
+    while final in used:
+        final = f"{base}-{i}"
+        i += 1
+    used.add(final)
+    return final
+
+
+def build_markdown_docs(doc_entries: list) -> str:
+    """生成 Markdown API 文档（顶部带目录 TOC，每个条目有锚点）
+
+    Args:
+        doc_entries: 文档条目列表，每个条目需包含 name/type/code/docstring/lineno
+
+    Returns:
+        str: Markdown 格式的 API 文档（含 TOC 和锚点）
+    """
+    md = "# API Documentation\n\n"
+    used_ids: set[str] = set()
+    # 1. 先遍历一遍，给每个条目分配唯一 slug_id
+    for entry in doc_entries:
+        prefix = "cls-" if entry.get("type") == "class" else "fn-"
+        entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
+
+    # 2. 顶部 Table of Contents 目录
+    has_entries = bool(doc_entries)
+    if has_entries:
+        md += "## 📑 Table of Contents\n\n"
+        for entry in doc_entries:
+            t = "Class" if entry["type"] == "class" else "Function"
+            icon = "🧩" if entry["type"] == "class" else "🔧"
+            line = f"  *L{entry.get('lineno', '?')}*"
+            md += f"- {icon} [`{entry['name']}` ({t})](#{entry['slug_id']}) — {line}\n"
+        md += "\n---\n\n"
+
+    # 3. 各条目详情（每个 heading 后追加 <a id="..."></a> 锚点）
+    for entry in doc_entries:
+        type_label = "Class" if entry["type"] == "class" else "Function"
+        icon = "🧩" if entry["type"] == "class" else "🔧"
+        line = f"L{entry.get('lineno', '?')}"
+        md += f"## {icon} {entry['name']} ({type_label}) — {line} <a id=\"{entry['slug_id']}\"></a>\n\n"
+        md += f"```python\n{entry['code']}\n```\n\n"
+        md += f"{entry['docstring']}\n\n"
+        if entry["type"] == "class":
+            md += "*(Class-level documentation; method-level details are in source code)*\n\n"
+        md += "---\n\n"
+    return md
 
 
 def _format_docstring(docstring: str, inner_indent: str) -> str:
@@ -75,22 +140,3 @@ def insert_docstring_into_code(source: str, item: dict, docstring: str) -> str:
     return result
 
 
-def build_markdown_docs(doc_entries: list) -> str:
-    """生成 Markdown API 文档
-
-    Args:
-        doc_entries: 文档条目列表，每个条目需包含 name/type/code/docstring
-
-    Returns:
-        str: Markdown 格式的 API 文档
-    """
-    md = "# API Documentation\n\n"
-    for entry in doc_entries:
-        type_label = "Class" if entry["type"] == "class" else "Function"
-        md += f"## {entry['name']} ({type_label})\n\n"
-        md += f"```python\n{entry['code']}\n```\n\n"
-        md += f"{entry['docstring']}\n\n"
-        if entry["type"] == "class":
-            md += "*(Class-level documentation; method-level details are in source code)*\n\n"
-        md += "---\n\n"
-    return md

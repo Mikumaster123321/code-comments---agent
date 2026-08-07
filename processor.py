@@ -1745,3 +1745,64 @@ def build_split_diff_html(original_code: str, annotated_code: str, language: str
   </div>
 </div>
 """
+
+
+def _slugify_name(name: str, prefix: str = "", used: Optional[set] = None) -> str:
+    """将任意名称转成 URL 友好的 Markdown 锚点 id，并保证不重复（processor 内部版本，避免循环依赖）"""
+    import re
+    if not name:
+        name = "item"
+    base = prefix + re.sub(r"[^A-Za-z0-9_-]+", "-", name).strip("-_").lower()
+    if not base:
+        base = (prefix or "item") + "-unknown"
+    if used is None:
+        return base
+    final = base
+    i = 2
+    while final in used:
+        final = f"{base}-{i}"
+        i += 1
+    used.add(final)
+    return final
+
+
+def build_outline_markdown(source_code: str, language: str = "Python", title: str = "📋 函数/类导航大纲") -> str:
+    """根据源代码解析出的函数/类结构，生成可点击跳转的大纲 Markdown
+
+    每个条目链接锚点与 build_markdown_docs / build_java_markdown_docs 中生成的 slug_id 完全一致，
+    可在 tab_docs（API 文档 Tab）点击大纲链接一键滚动到对应章节。
+
+    Args:
+        source_code: 源代码字符串
+        language: "Python" 或 "Java"，默认 Python
+        title: 大纲标题文本（可国际化）
+
+    Returns:
+        str: Markdown 格式的大纲（空时返回空字符串）
+    """
+    if not source_code:
+        return ""
+    try:
+        if language == "Java":
+            items = get_java_functions(source_code)
+        else:
+            items = get_defined_functions(source_code)
+    except Exception:
+        return ""
+    if not items:
+        return ""
+
+    # 构建与 annotator build_markdown_docs 一致的 slug 映射
+    used_ids: set[str] = set()
+    outline_lines = [f"**{title}**\n"]
+    for it in items:
+        prefix = "cls-" if it.get("type") == "class" else ("fn-" if language == "Python" else "m-")
+        slug = _slugify_name(it["name"], prefix=prefix, used=used_ids)
+        icon = "🧩" if it.get("type") == "class" else "🔧"
+        t_label = "Class" if it.get("type") == "class" else ("Function" if language == "Python" else "Method")
+        line = it.get("lineno", "?")
+        # 加斜体说明：跳转到 API 文档对应锚点
+        outline_lines.append(f"- {icon} [`{it['name']}` ({t_label})](#{slug}) — *L{line}*")
+    outline_lines.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节（锚点滚动定位）\n")
+    return "\n".join(outline_lines)
+
