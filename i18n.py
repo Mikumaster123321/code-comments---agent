@@ -76,6 +76,11 @@ TRANSLATIONS = {
         "English": "🔍 Analyze Code",
         "日本語": "🔍 コードを分析",
     },
+    "cancel_btn": {
+        "中文": "⏹️ 取消任务",
+        "English": "⏹️ Cancel Task",
+        "日本語": "⏹️ タスクをキャンセル",
+    },
     # 输出 Tab
     "tab_annotated": {
         "中文": "📄 带注释的代码",
@@ -172,6 +177,11 @@ TRANSLATIONS = {
         "中文": "📥 下载批量处理结果 (ZIP)",
         "English": "📥 Download Batch Result (ZIP)",
         "日本語": "📥 一括処理結果をダウンロード (ZIP)",
+    },
+    "batch_cancel_btn": {
+        "中文": "⏹️ 取消批量任务",
+        "English": "⏹️ Cancel Batch",
+        "日本語": "⏹️ 一括処理をキャンセル",
     },
     "batch_log_label": {
         "中文": "批量处理日志",

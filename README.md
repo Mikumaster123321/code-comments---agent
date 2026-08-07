@@ -13,6 +13,9 @@
 - **批量文件处理**：支持一次上传多个 `.py`/`.java` 文件或整个 ZIP 压缩包（含递归子目录），批量生成注释后打包 ZIP 下载
 - **文件下载**：支持下载注释后的源码文件和 Markdown API 文档；批量处理额外提供聚合文档 `API_DOCS_ALL.md`
 - **实时日志**：处理过程可视化，显示每个函数/类/方法的注释与翻译状态
+- **实时进度条 & 可取消任务**：`gr.Progress` 内置进度条实时显示百分比 + 阶段描述（解析 / 翻译 / 调用 LLM / 插入 / 构建 / 打包）；随时点击"取消任务"按钮立即停止，取消后仍保留并打包已完成部分，不丢已处理结果
+  - 单文件 & 批量任务均支持进度条 + 取消按钮（variant=stop）
+  - 取消时立即对所有未完成的 LLM 调用调用 `future.cancel()` + `shutdown(wait=False)`，避免浪费 token
 
 ### 性能优化
 - **并发调用**：使用线程池并发调用 LLM，10 个节点处理时间从 30 秒缩短至 7 秒
@@ -188,6 +191,26 @@ code-comments---agent/
 ```
 
 ## 更新日志
+
+### v2.7.0 — 2026-08-07
+
+#### 实时进度条 + 可取消任务
+- **单文件生成**：`btn.click` 改用生成器函数 `_gen_real(progress=gr.Progress())`，每一步更新 UI 内置进度条的百分比（0.05 ~ 1.00）和阶段描述（"解析代码结构" / "翻译已有注释" / "调用 LLM 生成注释..." / "插入注释到源码" / "构建 API 文档" / "完成"）
+- **批量处理**：`batch_gen_btn.click` 改用生成器函数 `_batch_gen_progress(progress=gr.Progress())`，每个文件处理完成后更新 `x/N 处理 xxx.py` 描述，0%~5% 展开 ZIP，5%~95% 按文件数线性推进，95% 后打包 ZIP
+- **取消按钮**：在"生成注释"和"批量生成"右侧新增红色停止样式按钮（`variant="stop"`）：
+  - `cancel_btn` 单文件取消：`CancelToken.cancel()` 立即置位，核心 processor 循环中每步检测 `is_canceled()`，检测到后立即对所有排队中/运行中的 LLM future 调用 `.cancel()` + `executor.shutdown(wait=False)`，节省 API token
+  - `batch_cancel_btn` 批量取消：处理完当前文件后不再推进后续，已成功处理的文件照常打包 ZIP 返回，不浪费已产生的结果
+- **取消不丢结果**：取消流程不提前 return，继续执行到"构建 Markdown + 写临时文件"阶段，md_path / src_path / zip_path 均为有效路径，用户仍能下载取消前已完成部分
+- **processor 层 API（核心生成器，保持原同步函数兼容）**：
+  - `processor.CancelToken`：线程安全取消标志位（`cancel()` / `reset()` / `is_canceled()`）
+  - `_process_python_with_progress` / `_process_java_with_progress`：双语生成器版，每步 yield 5 元组中间态
+  - `process_code_with_progress(source, incremental, language, ..., cancel_token, progress_cb)`：入口生成器，统一边界处理 + 路由
+  - `process_batch_with_progress(files, ..., cancel_token, progress_cb)`：批量生成器，每次 yield `(log_text, zip_path | None)`
+  - **保持向后兼容**：原有同步函数 `process_code` / `process_batch_files` 签名和行为完全未变，测试套件、老调用方零侵入
+- **Python 3.8 兼容**：新增 `_shutdown_executor_safe(executor, futures_map)`，try/except 捕获 `TypeError`（`cancel_futures` 参数仅 Python 3.9+），降级为"先手动 cancel 每个 future 再 `shutdown(wait=False)`"，Windows 自带 Python 3.8 下正常运行
+- **i18n 三语新增**：`cancel_btn`（⏹️ 取消任务 / Cancel Task / タスクをキャンセル）、`batch_cancel_btn`（⏹️ 取消批量任务 / Cancel Batch / 一括処理をキャンセル）
+- **新增 16 条测试 `test_progress_cancel.py`**：CancelToken 线程安全（4 线程×10000 次并发 cancel/reset）、边界单 yield、有效代码多帧 yield+最终帧非空路径、progress_cb 最终 ratio=1.0、取消场景 md_p/src_p 仍为文件路径、批量空输入/非法路径、两个新增 i18n key 三语齐全 — 全部 16/16 通过
+- **回归测试**：原 21+24=45 条老用例一次通过，无破坏性改动
 
 ### v2.6.0 — 2026-08-07
 

@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-"""主处理模块：协调解析、LLM 调用、注释插入，提供 process_code / analyze_code / 批量处理"""
+"""主处理模块：协调解析、LLM 调用、注释插入，提供 process_code / analyze_code / 批量处理
+
+同时提供 *_with_progress 生成器版本，用于 Gradio 实时进度条 + 取消任务。
+"""
 import ast
 import os
 import io
+import sys
 import time
 import shutil
 import zipfile
@@ -11,8 +15,10 @@ import datetime
 import tempfile
 import difflib
 import html
-from typing import Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+import math
+from typing import Optional, Iterator, Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 
 from Py.parser import get_defined_functions
 from llm_service import (
@@ -37,6 +43,67 @@ ALLOWED_SRC_EXTS = {".py", ".java"}
 ALLOWED_ZIP_EXTS = {".zip"}
 # 批量处理时忽略的目录名（大小写敏感粗略过滤）
 SKIP_DIR_NAMES = {"__pycache__", ".git", ".idea", ".venv", "venv", "node_modules"}
+
+
+# ==================================================================
+# 进度条 + 取消任务 基础设施
+# ==================================================================
+
+class CancelToken:
+    """取消标志位封装：线程安全，可在任意线程调用 cancel() 让生成器安全退出"""
+
+    __slots__ = ("_evt",)
+
+    def __init__(self):
+        self._evt = threading.Event()
+
+    def cancel(self) -> None:
+        self._evt.set()
+
+    def reset(self) -> None:
+        self._evt.clear()
+
+    def is_canceled(self) -> bool:
+        return self._evt.is_set()
+
+
+def _progress_emit(log_lines: list[str], final_5tuple: Optional[tuple]) -> tuple:
+    """生成器统一 yield 结构：(annotated_code, markdown_doc, log_text, md_path, src_path)
+
+    Args:
+        log_lines: 当前日志行列表
+        final_5tuple: 若为 None 表示中间状态；否则为最终 5 元组结果
+    """
+    log_text = "\n".join(log_lines)
+    if final_5tuple is None:
+        # 中间态：保持前一帧的其他输出不变（UI 只更新 log_text）
+        # 这里用特殊占位：annotated/md/md_path/src_path 都不覆盖，由 UI 保留最近值
+        return None, None, log_text, None, None
+    return final_5tuple
+
+
+def _shutdown_executor_safe(executor: ThreadPoolExecutor, futures_map: Optional[dict[Future, object]] = None) -> None:
+    """兼容 Python 3.8 的线程池安全关闭：
+      - Python 3.9+ 可直接用 shutdown(cancel_futures=True)
+      - Python 3.8 无 cancel_futures 参数，改为先手动 cancel 每个 future 再 shutdown
+
+    Args:
+        executor: 待关闭的 ThreadPoolExecutor
+        futures_map: dict[Future, *]，用于对所有仍在排队/运行中的 future 执行 .cancel()
+    """
+    if futures_map:
+        for f in list(futures_map.keys()):
+            try:
+                if not f.done():
+                    f.cancel()
+            except Exception:
+                pass
+    # 兼容所有 Python 版本的参数
+    try:
+        executor.shutdown(wait=False, cancel_futures=True)
+    except TypeError:
+        # Python 3.8：cancel_futures 参数不存在，走 fallback
+        executor.shutdown(wait=False)
 
 
 def handle_file_upload(uploaded_file):
@@ -205,6 +272,202 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path
 
 
+def _process_python_with_progress(
+    source_code: str,
+    incremental: bool,
+    comment_lang: str = "中文",
+    python_style: Optional[str] = None,
+    cancel_token: Optional[CancelToken] = None,
+) -> Iterator[tuple]:
+    """Python 代码处理流程（生成器版，带实时进度 & 取消）
+
+    阶段进度（非空代码时）：
+      0% - 5%  : 解析
+      5% - 20% : 翻译已有注释
+      20% - 70%: 并发生成 docstring
+      70% - 85%: 插入注释
+      85% - 95%: 构建 Markdown & 刷新 code
+      95% - 100%: 写临时文件 & 最终结果
+
+    Yields:
+        tuple: (annotated_code, markdown_doc, log_text, md_path, src_path) — 中间态返回 None 占位，
+               最终 yield 完整 5 元组。
+    """
+    lang_code = LANG_CODE.get(comment_lang, "zh")
+    cancel_token = cancel_token or CancelToken()
+
+    # 阶段 0-5%：解析
+    items = get_defined_functions(source_code)
+    log: list[str] = []
+    if not items:
+        msg = "未检测到函数或类"
+        log.append(f"日志：{msg}")
+        yield source_code, msg, "\n".join(log), None, None
+        return
+    yield _progress_emit(log, None)
+    # 取消但未提前退出：继续走到构建 Markdown 阶段（保留已解析/已翻译结果，并写入临时文件方便下载）
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消（保留已解析和已翻译的部分）")
+
+    annotated_code = source_code
+    doc_entries: list[dict] = []
+
+    to_process: list[dict] = []
+    to_translate: list[dict] = []
+    skipped = 0
+    for item in items:
+        if incremental and item["has_docstring"]:
+            existing = ast.get_docstring(item["node"])
+            if existing and needs_translation(existing, lang_code):
+                to_translate.append(item)
+            else:
+                skipped += 1
+                log.append(f"⊘ {item['name']} 已有 docstring，跳过")
+                if existing:
+                    item["docstring"] = existing
+                    doc_entries.append(item)
+        else:
+            to_process.append(item)
+
+    if skipped > 0:
+        log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
+
+    total_work = max(1, len(to_translate) + len(to_process))
+    # 阶段 5-20%：翻译（若有）
+    if to_translate and not cancel_token.is_canceled():
+        log.append(f"=== 翻译已有注释为 {comment_lang}（{len(to_translate)} 个节点）===")
+        yield _progress_emit(log, None)
+        to_translate_sorted = sorted(to_translate, key=lambda x: x["lineno"], reverse=True)
+        for idx, item in enumerate(to_translate_sorted, 1):
+            if cancel_token.is_canceled():
+                break
+            try:
+                existing = ast.get_docstring(item["node"])
+                translated = translate_docstring(existing, comment_lang, python_style)
+                item["docstring"] = translated
+                doc_entries.append(item)
+                annotated_code = insert_docstring_into_code(annotated_code, item, translated)
+                log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
+            except Exception as e:
+                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                if existing:
+                    item["docstring"] = existing
+                    doc_entries.append(item)
+            yield _progress_emit(log, None)
+
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消，已翻译部分已保留")
+        # 仍然打包已有的结果返回
+    else:
+        # 阶段 20-70%：并发生成 docstring（支持取消已排队的 future）
+        if not to_process:
+            log.append("所有节点均已有注释，无需调用 LLM。")
+            yield _progress_emit(log, None)
+        else:
+            log.append(f"=== 并发生成 docstring（{len(to_process)} 个节点，{MAX_WORKERS} 并发）===")
+            yield _progress_emit(log, None)
+            t0 = time.time()
+
+            results: dict[str, str] = {}
+            errors: dict[str, Exception] = {}
+
+            def _gen(item: dict) -> tuple[str, Optional[str], Optional[Exception]]:
+                try:
+                    doc = generate_docstring(item, comment_lang, python_style)
+                    return item["name"], doc, None
+                except Exception as e:
+                    return item["name"], None, e
+
+            # 非 with：取消时可以主动 shutdown(cancel_futures=True)
+            executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+            try:
+                futures: dict[Future, dict] = {}
+                for item in to_process:
+                    fut = executor.submit(_gen, item)
+                    futures[fut] = item
+
+                done_count = 0
+                for future in as_completed(futures):
+                    if cancel_token.is_canceled():
+                        # 取消尚未完成的 future
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
+                    try:
+                        name, doc, err = future.result()
+                    except Exception as e:
+                        name = futures[future]["name"]
+                        doc, err = None, e
+                    done_count += 1
+                    if err:
+                        errors[name] = err
+                        log.append(f"✗ {name} 生成失败: {err}")
+                    else:
+                        results[name] = doc
+                        log.append(f"✓ {name} 生成完成")
+                    yield _progress_emit(log, None)
+            finally:
+                _shutdown_executor_safe(executor, futures)
+
+            elapsed = time.time() - t0
+            log.append(f"=== LLM 并发阶段完成，耗时 {elapsed:.1f} 秒 ===")
+            yield _progress_emit(log, None)
+
+            # 阶段 70-85%：插入注释
+            sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
+            for item in sorted_items:
+                if cancel_token.is_canceled():
+                    break
+                if item["name"] not in results:
+                    continue
+                try:
+                    doc = results[item["name"]]
+                    item["docstring"] = doc
+                    doc_entries.append(item)
+                    annotated_code = insert_docstring_into_code(annotated_code, item, doc)
+                    log.append(f"↳ {item['name']} 注释已插入")
+                except SyntaxError as e:
+                    log.append(f"✗ {item['name']} 插入失败: {e}")
+                yield _progress_emit(log, None)
+
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消")
+
+    # 阶段 85-95%：构建 Markdown + 刷新 code
+    doc_entries.sort(key=lambda x: x["lineno"])
+    try:
+        new_items_map = {it["name"]: it for it in get_defined_functions(annotated_code)}
+        ann_lines = annotated_code.splitlines()
+        for entry in doc_entries:
+            it = new_items_map.get(entry["name"])
+            if it is None:
+                continue
+            start = it["lineno"] - 1
+            end = it["node"].end_lineno
+            entry["code"] = "\n".join(ann_lines[start:end])
+    except Exception:
+        pass
+    markdown_doc = build_markdown_docs(doc_entries)
+
+    if annotated_code and not annotated_code.startswith('# -*- coding:'):
+        annotated_code = '# -*- coding: utf-8 -*-\n' + annotated_code
+
+    yield _progress_emit(log, None)
+
+    # 阶段 95-100%：写临时文件 & 最终结果
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+        f.write(markdown_doc)
+        md_temp_path = f.name
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        f.write(annotated_code)
+        py_temp_path = f.name
+
+    final = (annotated_code, markdown_doc, "\n".join(log), md_temp_path, py_temp_path)
+    yield _progress_emit(log, final)
+
+
 def _process_java(source_code: str, incremental: bool, comment_lang: str = "中文", java_style: Optional[str] = None):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
@@ -347,6 +610,196 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
     return annotated_code, markdown_doc, "\n".join(log), md_temp_path, java_temp_path
 
 
+def _process_java_with_progress(
+    source_code: str,
+    incremental: bool,
+    comment_lang: str = "中文",
+    java_style: Optional[str] = None,
+    cancel_token: Optional[CancelToken] = None,
+) -> Iterator[tuple]:
+    """Java 代码处理流程（生成器版，带实时进度 & 取消）
+
+    阶段进度（非空代码时）：
+      0% - 5%  : 解析
+      5% - 20% : 翻译已有 Javadoc
+      20% - 70%: 并发生成 Javadoc
+      70% - 85%: 插入注释
+      85% - 95%: 构建 Markdown & 刷新 code
+      95% - 100%: 写临时文件 & 最终结果
+    """
+    lang_code = LANG_CODE.get(comment_lang, "zh")
+    cancel_token = cancel_token or CancelToken()
+
+    items = get_java_functions(source_code)
+    log: list[str] = []
+    if not items:
+        msg = "未检测到类或方法"
+        log.append(f"日志：{msg}")
+        yield source_code, msg, "\n".join(log), None, None
+        return
+    yield _progress_emit(log, None)
+    # 取消但不提前退出：继续走到构建 Markdown 阶段（保留已解析/已翻译结果，并写入临时文件方便下载）
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消（保留已解析和已翻译的部分）")
+
+    annotated_code = source_code
+    doc_entries: list[dict] = []
+    source_lines = source_code.splitlines()
+
+    to_process: list[dict] = []
+    to_translate: list[dict] = []
+    skipped = 0
+    for item in items:
+        if incremental and item["has_docstring"]:
+            existing_range = item.get("existing_javadoc")
+            existing_text = None
+            if existing_range:
+                existing_text = extract_existing_javadoc(
+                    source_lines, existing_range[0], existing_range[1]
+                )
+            if existing_text and needs_translation(existing_text, lang_code):
+                to_translate.append(item)
+            else:
+                skipped += 1
+                log.append(f"⊘ {item['name']} 已有 Javadoc，跳过")
+                if existing_text:
+                    item["docstring"] = existing_text
+                    doc_entries.append(item)
+        else:
+            to_process.append(item)
+
+    if skipped > 0:
+        log.append(f"--- 增量模式：跳过 {skipped} 个已有注释的节点 ---")
+
+    # 阶段 5-20%：翻译
+    if to_translate and not cancel_token.is_canceled():
+        log.append(f"=== 翻译已有注释为 {comment_lang}（{len(to_translate)} 个节点）===")
+        yield _progress_emit(log, None)
+        to_translate_sorted = sorted(to_translate, key=lambda x: x["lineno"], reverse=True)
+        for item in to_translate_sorted:
+            if cancel_token.is_canceled():
+                break
+            try:
+                existing_range = item.get("existing_javadoc")
+                existing_text = extract_existing_javadoc(
+                    source_lines, existing_range[0], existing_range[1]
+                )
+                translated = translate_javadoc(existing_text, comment_lang, java_style)
+                item["docstring"] = translated
+                doc_entries.append(item)
+                annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
+                log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
+            except Exception as e:
+                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                if existing_text:
+                    item["docstring"] = existing_text
+                    doc_entries.append(item)
+            yield _progress_emit(log, None)
+
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消，已翻译部分已保留")
+    else:
+        # 阶段 20-70%：并发生成 Javadoc
+        if not to_process:
+            log.append("所有节点均已有注释，无需调用 LLM。")
+            yield _progress_emit(log, None)
+        else:
+            log.append(f"=== 并发生成 Javadoc（{len(to_process)} 个节点，{MAX_WORKERS} 并发）===")
+            yield _progress_emit(log, None)
+            t0 = time.time()
+
+            results: dict[str, str] = {}
+            errors: dict[str, Exception] = {}
+
+            def _gen(item: dict) -> tuple[str, Optional[str], Optional[Exception]]:
+                try:
+                    doc = generate_javadoc(item, comment_lang, java_style)
+                    return item["name"], doc, None
+                except Exception as e:
+                    return item["name"], None, e
+
+            executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+            try:
+                futures: dict[Future, dict] = {}
+                for item in to_process:
+                    fut = executor.submit(_gen, item)
+                    futures[fut] = item
+                for future in as_completed(futures):
+                    if cancel_token.is_canceled():
+                        for f in futures:
+                            if not f.done():
+                                f.cancel()
+                        break
+                    try:
+                        name, doc, err = future.result()
+                    except Exception as e:
+                        name = futures[future]["name"]
+                        doc, err = None, e
+                    if err:
+                        errors[name] = err
+                        log.append(f"✗ {name} 生成失败: {err}")
+                    else:
+                        results[name] = doc
+                        log.append(f"✓ {name} 生成完成")
+                    yield _progress_emit(log, None)
+            finally:
+                _shutdown_executor_safe(executor, futures)
+
+            elapsed = time.time() - t0
+            log.append(f"=== LLM 并发阶段完成，耗时 {elapsed:.1f} 秒 ===")
+            yield _progress_emit(log, None)
+
+            # 阶段 70-85%：插入注释
+            sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
+            for item in sorted_items:
+                if cancel_token.is_canceled():
+                    break
+                if item["name"] not in results:
+                    continue
+                try:
+                    doc = results[item["name"]]
+                    item["docstring"] = doc
+                    doc_entries.append(item)
+                    annotated_code = insert_javadoc_into_code(annotated_code, item, doc)
+                    log.append(f"↳ {item['name']} Javadoc 已插入")
+                except SyntaxError as e:
+                    log.append(f"✗ {item['name']} 插入失败: {e}")
+                yield _progress_emit(log, None)
+
+    if cancel_token.is_canceled():
+        log.append("⚠️ 任务已取消")
+
+    # 阶段 85-95%：构建 Markdown
+    doc_entries.sort(key=lambda x: x["lineno"])
+    try:
+        new_items_map = {it["name"]: it for it in get_java_functions(annotated_code)}
+        ann_lines = annotated_code.splitlines()
+        for entry in doc_entries:
+            it = new_items_map.get(entry["name"])
+            if it is None:
+                continue
+            start = it["lineno"] - 1
+            end = it.get("end_lineno", len(ann_lines))
+            entry["code"] = "\n".join(ann_lines[start:end])
+    except Exception:
+        pass
+    markdown_doc = build_java_markdown_docs(doc_entries)
+
+    yield _progress_emit(log, None)
+
+    # 阶段 95-100%：写临时文件
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+        f.write(markdown_doc)
+        md_temp_path = f.name
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.java', delete=False, encoding='utf-8') as f:
+        f.write(annotated_code)
+        java_temp_path = f.name
+
+    final = (annotated_code, markdown_doc, "\n".join(log), md_temp_path, java_temp_path)
+    yield _progress_emit(log, final)
+
+
 def process_code(source_code: str, incremental: bool = False, language: str = "Python",
                  comment_lang: str = "中文", python_style: Optional[str] = None, java_style: Optional[str] = None):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
@@ -374,6 +827,116 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
     if language == "Java":
         return _process_java(source_code, incremental, comment_lang, java_style)
     return _process_python(source_code, incremental, comment_lang, python_style)
+
+
+def process_code_with_progress(
+    source_code: str,
+    incremental: bool = False,
+    language: str = "Python",
+    comment_lang: str = "中文",
+    python_style: Optional[str] = None,
+    java_style: Optional[str] = None,
+    cancel_token: Optional[CancelToken] = None,
+    progress_cb: Optional[Callable[[float, str], None]] = None,
+) -> Iterator[tuple]:
+    """主处理函数（生成器版，带实时进度 + gr.Progress）
+
+    功能与 process_code 相同，但：
+      1. 作为生成器多次 yield，每一步都会更新 output_log 内容；
+      2. 支持 CancelToken 让 UI 端取消任务；
+      3. 支持 progress_cb(ratio: 0~1, desc: str) 回调（可选），用于 gr.Progress 百分比更新。
+
+    Yields:
+        tuple: (annotated_code | None, markdown_doc | None, log_text, md_path | None, src_path | None)
+               中间态前 2 项与后 2 项为 None，仅更新 log_text；最终 yield 完整 5 元组。
+    """
+    cancel_token = cancel_token or CancelToken()
+
+    # 1. 边界：空代码 / 无效代码直接返回（快速路径，不 yield 中间态）
+    if not source_code or not source_code.strip():
+        yield "", "未输入代码", "日志：无处理对象。", None, None
+        return
+
+    if language == "Python" and not _is_valid_python(source_code):
+        yield (
+            source_code,
+            "代码无效，无法生成注释。",
+            "日志：代码无效（语法解析失败），请检查输入。",
+            None, None,
+        )
+        return
+    if language == "Java" and not _is_valid_java(source_code):
+        yield (
+            source_code,
+            "代码无效，无法生成注释。",
+            "日志：代码无效（非有效 Java 代码），请检查输入。",
+            None, None,
+        )
+        return
+
+    if progress_cb is not None:
+        try:
+            progress_cb(0.02, "解析代码结构")
+        except Exception:
+            pass
+
+    # 2. 路由到对应语言的生成器，逐次透传 yield
+    inner = (
+        _process_java_with_progress(source_code, incremental, comment_lang, java_style, cancel_token)
+        if language == "Java"
+        else _process_python_with_progress(source_code, incremental, comment_lang, python_style, cancel_token)
+    )
+
+    final_5tuple: Optional[tuple] = None
+    last_log: Optional[str] = None
+    # 统计中间步骤数量（粗略估算进度比例）
+    for idx, frame in enumerate(inner):
+        if cancel_token.is_canceled() and progress_cb is not None:
+            try:
+                progress_cb(progress_cb if isinstance(progress_cb, float) else 1.0, "已取消")
+            except Exception:
+                pass
+        # frame: (annotated, md_doc, log_text, md_path, src_path)
+        ann, md, log_txt, md_p, src_p = frame
+        last_log = log_txt
+        if ann is not None and md_p is not None and src_p is not None:
+            final_5tuple = frame
+            if progress_cb is not None:
+                try:
+                    progress_cb(1.0, "完成")
+                except Exception:
+                    pass
+            yield final_5tuple
+            return
+        # 中间态：通过 progress_cb 按索引估算 0.02 ~ 0.97 的比例
+        if progress_cb is not None:
+            # 粗略估算：每一步平均推进一点点
+            try:
+                step = idx
+                est_ratio = min(0.97, 0.05 + 0.92 * (step / max(step + 8, 10)))
+                desc = "处理中..."
+                if "并发生成" in log_txt or "生成 docstring" in log_txt or "生成 Javadoc" in log_txt:
+                    desc = "调用 LLM 生成注释..."
+                elif "翻译" in log_txt:
+                    desc = "翻译已有注释..."
+                elif "插入" in log_txt:
+                    desc = "插入注释到源码..."
+                elif "Markdown" in log_txt or "构建" in log_txt:
+                    desc = "构建 API 文档..."
+                elif "检测" in log_txt:
+                    desc = "解析代码结构..."
+                progress_cb(est_ratio, desc)
+            except Exception:
+                pass
+        # 只更新 log_text，其他保持 None
+        yield None, None, log_txt, None, None
+
+    # 兜底（正常情况不会到这里）
+    if final_5tuple is not None:
+        yield final_5tuple
+    else:
+        log_txt = last_log or "日志：处理未完成。"
+        yield source_code, "", log_txt, None, None
 
 
 def _is_valid_python(source_code: str) -> bool:
@@ -802,6 +1365,190 @@ def process_batch_files(
         return "\n".join(log), zip_path
     finally:
         # 清理临时目录（注意：返回的 zip 文件在 tmp_root 之外的 tempfile 命名区，不会被删）
+        try:
+            shutil.rmtree(tmp_root, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def process_batch_with_progress(
+    uploaded_files: list,
+    comment_lang: str = "中文",
+    incremental: bool = True,
+    python_style: Optional[str] = None,
+    java_style: Optional[str] = None,
+    cancel_token: Optional[CancelToken] = None,
+    progress_cb: Optional[Callable[[float, str], None]] = None,
+) -> Iterator[tuple[str, Optional[str]]]:
+    """批量处理（生成器版，带实时进度 + 取消 + gr.Progress）
+
+    与 process_batch_files 功能相同，但：
+      1. 每处理完 1 个文件 yield 一次 (log_text, None) 让 UI 更新日志；
+      2. 最终 yield 一次 (log_text, zip_path) 含打包结果路径；
+      3. 支持 CancelToken 取消（取消后立即返回已处理成功的部分打包结果）。
+
+    Yields:
+        (log_text: str, zip_path: str | None)
+    """
+    cancel_token = cancel_token or CancelToken()
+
+    log: list[str] = []
+    if not uploaded_files:
+        yield "[错误] 未上传任何文件。", None
+        return
+
+    raw_list = uploaded_files if isinstance(uploaded_files, (list, tuple)) else [uploaded_files]
+    file_records: list[tuple[str, str]] = []
+    tmp_root = tempfile.mkdtemp(prefix="batch_annot_")
+    try:
+        extract_stage = os.path.join(tmp_root, "in")
+        os.makedirs(extract_stage, exist_ok=True)
+        idx = 0
+        if progress_cb is not None:
+            try:
+                progress_cb(0.0, "展开上传文件...")
+            except Exception:
+                pass
+        for item in raw_list:
+            src_path = _resolve_upload_path(item)
+            if not src_path or not os.path.isfile(src_path):
+                log.append(f"[跳过] 无法解析文件路径: {item!r}")
+                continue
+            name = os.path.basename(src_path)
+            ext = os.path.splitext(name)[1].lower()
+            if ext in ALLOWED_ZIP_EXTS:
+                idx += 1
+                zip_out = os.path.join(extract_stage, f"zip_{idx:02d}_{name}")
+                os.makedirs(zip_out, exist_ok=True)
+                try:
+                    _extract_zip_safe(src_path, zip_out)
+                    base_rel = os.path.splitext(name)[0]
+                    collected = _collect_source_files(zip_out, base_rel)
+                    log.append(f"[ZIP] 解压 {name}: 发现 {len(collected)} 个源文件")
+                    file_records.extend(collected)
+                except zipfile.BadZipFile:
+                    log.append(f"[错误] {name} 不是有效的 zip 文件")
+                except Exception as e:
+                    log.append(f"[错误] 解压 {name} 失败: {e}")
+            elif ext in ALLOWED_SRC_EXTS:
+                staged = os.path.join(extract_stage, f"file_{idx:02d}_{name}")
+                idx += 1
+                shutil.copyfile(src_path, staged)
+                rel_p = name.replace(os.sep, "/")
+                file_records.append((staged, rel_p))
+                log.append(f"[文件] 加入待处理: {name}")
+            else:
+                log.append(f"[跳过] 不支持的文件类型: {name} ({ext})")
+            yield "\n".join(log), None
+            if cancel_token.is_canceled():
+                log.append("⚠️ 批量任务已取消（解压阶段）")
+                yield "\n".join(log), None
+                return
+
+        if not file_records:
+            log.append("[错误] 没有发现可处理的 .py/.java 源文件")
+            yield "\n".join(log), None
+            return
+
+        output_stage = os.path.join(tmp_root, "out")
+        os.makedirs(output_stage, exist_ok=True)
+        total = len(file_records)
+        success = 0
+        fail = 0
+        aggregate_docs: list[str] = []
+        log.append("")
+        log.append(f"=== 批量处理开始：共 {total} 个文件，注释语言: {comment_lang}，增量: {incremental} ===")
+        yield "\n".join(log), None
+
+        for i, (abs_path, rel_path) in enumerate(file_records, 1):
+            if cancel_token.is_canceled():
+                log.append("⚠️ 批量任务已取消（处理阶段），已处理文件将保留并打包")
+                break
+            log.append("-" * 60)
+            log.append(f"  [处理中 {i}/{total}] {rel_path}")
+            if progress_cb is not None:
+                try:
+                    progress_cb(0.05 + 0.90 * ((i - 1) / max(total, 1)), f"处理 {rel_path}")
+                except Exception:
+                    pass
+            try:
+                with open(abs_path, "r", encoding="utf-8") as f:
+                    code = f.read()
+            except UnicodeDecodeError:
+                try:
+                    with open(abs_path, "r", encoding="gbk") as f:
+                        code = f.read()
+                except Exception as e:
+                    log.append(f"  ✗ 读取失败: {e}")
+                    fail += 1
+                    yield "\n".join(log), None
+                    continue
+            except Exception as e:
+                log.append(f"  ✗ 读取失败: {e}")
+                fail += 1
+                yield "\n".join(log), None
+                continue
+            language = "Java" if abs_path.lower().endswith(".java") else "Python"
+            try:
+                annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
+                    code, incremental=incremental, language=language, comment_lang=comment_lang,
+                    python_style=python_style, java_style=java_style,
+                )
+            except Exception as e:
+                log.append(f"  ✗ process_code 异常: {e}")
+                fail += 1
+                yield "\n".join(log), None
+                continue
+            out_file = os.path.join(output_stage, rel_path.replace("/", os.sep))
+            try:
+                os.makedirs(os.path.dirname(out_file), exist_ok=True)
+                with open(out_file, "w", encoding="utf-8") as f:
+                    f.write(annotated)
+            except Exception as e:
+                log.append(f"  ✗ 写出失败: {e}")
+                fail += 1
+                yield "\n".join(log), None
+                continue
+            if markdown_doc and markdown_doc.strip():
+                aggregate_docs.append(f"# {rel_path}\n\n{markdown_doc}\n")
+            for ln in per_log.splitlines()[:6]:
+                if ln.strip():
+                    log.append(f"      | {ln}")
+            log.append(f"  ✓ 完成: {rel_path}")
+            success += 1
+            yield "\n".join(log), None
+
+        log.append("-" * 60)
+        log.append(f"=== 批量处理完成: 成功 {success}, 失败 {fail}, 总计 {total} ===")
+        if cancel_token.is_canceled():
+            log.append("⚠️ （用户主动取消，仅返回已处理成功的部分）")
+        yield "\n".join(log), None
+
+        if success == 0:
+            log.append("[错误] 没有成功处理的文件，跳过打包")
+            yield "\n".join(log), None
+            return
+
+        if progress_cb is not None:
+            try:
+                progress_cb(0.96, "打包 ZIP 结果...")
+            except Exception:
+                pass
+        aggregate_md = "\n\n".join(aggregate_docs) if aggregate_docs else None
+        try:
+            zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md)
+        except Exception as e:
+            log.append(f"[错误] 打包 zip 失败: {e}")
+            yield "\n".join(log), None
+            return
+        log.append(f"[完成] 结果已打包: {os.path.basename(zip_path)}")
+        if progress_cb is not None:
+            try:
+                progress_cb(1.0, "完成")
+            except Exception:
+                pass
+        yield "\n".join(log), zip_path
+    finally:
         try:
             shutil.rmtree(tmp_root, ignore_errors=True)
         except Exception:

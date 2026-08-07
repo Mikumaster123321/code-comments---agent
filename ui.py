@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """Gradio 界面模块：构建美观的 Web 交互界面"""
 import gradio as gr
-from processor import process_code, analyze_code, handle_file_upload, process_batch_files, build_split_diff_html
+from processor import (
+    process_code, analyze_code, handle_file_upload,
+    process_batch_files, build_split_diff_html,
+    process_code_with_progress, process_batch_with_progress,
+    CancelToken,
+)
 from i18n import LANGUAGES, t
 
 # ==================== 自定义 CSS ====================
@@ -510,6 +515,12 @@ def create_ui():
                 t("analyze_btn", default_lang), variant="secondary", size="lg",
                 elem_classes="action-btn",
             )
+            cancel_btn = gr.Button(
+                t("cancel_btn", default_lang), variant="stop", size="lg",
+                elem_classes="action-btn",
+            )
+        # 单文件取消标志位
+        state_single_cancel = gr.State(None)
 
         # ===== 批量处理区（多文件 / ZIP） =====
         with gr.Column(elem_classes="card-section"):
@@ -532,11 +543,19 @@ def create_ui():
                     size="lg",
                     elem_classes="dl-download-btn",
                 )
+                batch_cancel_btn = gr.Button(
+                    t("batch_cancel_btn", default_lang),
+                    variant="stop",
+                    size="lg",
+                    elem_classes="action-btn",
+                )
             batch_zip_state = gr.State(None)
             batch_log = gr.Textbox(
                 label=t("batch_log_label", default_lang),
                 lines=10,
             )
+            # 批量取消标志位
+            state_batch_cancel = gr.State(None)
 
         # ===== 输出区 =====
         with gr.Column(elem_classes="card-section"):
@@ -635,21 +654,92 @@ def create_ui():
             ],
         )
 
-        # 生成注释（传入 UI 语言作为注释语言，以及注释风格）
+        # ===== 取消任务处理函数 =====
+        def _cancel_single(cancel_token):
+            if cancel_token is not None and isinstance(cancel_token, CancelToken):
+                cancel_token.cancel()
+            return None
+
+        def _cancel_batch(cancel_token):
+            if cancel_token is not None and isinstance(cancel_token, CancelToken):
+                cancel_token.cancel()
+            return None
+
+        # 生成注释（生成器版：实时进度 + gr.Progress 进度条 + 支持取消）
+        def _gen_with_progress(code, plang, ulang, pyst, jvst, progress=gr.Progress()):
+            """单文件注释生成（生成器），每一步 yield 5 元组保持 outputs 结构一致。
+
+            结构：[output_code, output_docs, output_log, state_md_path, state_src_path]
+            """
+            cancel_token = CancelToken()
+            # 第一帧：先返回 cancel_token 给 state（但不影响 UI 渲染）——通过闭包不占 outputs
+            # 注：CancelToken 通过 gr.State 在按钮之间共享，这里先记录一个局部变量
+            # 我们通过闭包 + 生成器在 yield 前先更新全局 state。为了简单，
+            # state_single_cancel 通过 btn.click 的额外 inputs/outputs 绑定（见下）
+            pass  # CancelToken 通过 state_single_cancel 单独传递（见 inputs/outputs 绑定）
+
+        # 改为：直接把 CancelToken 放在闭包，通过 cancel_btn 的点击回调操作它
+        # 使用一个更稳妥的方案：把 state_single_cancel 作为 btn.click 的额外 output
+        # 在第一次 yield 时返回新的 CancelToken，后续每次 yield None（保持最新 token）
+        def _gen_real(code, plang, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
+            """真实的生成器：创建 CancelToken，逐帧 yield。
+
+            outputs 结构（7 元组）：
+              [output_code, output_docs, output_log, state_md_path, state_src_path,
+               state_single_cancel, diff_html]
+            中间态除了 output_log 和 state_single_cancel 之外，其余可保持 None（Gradio 保留上一帧）。
+            """
+            # 创建新的 CancelToken（先重置）
+            token = CancelToken()
+            # progress_cb 绑定到 Gradio 的 progress 对象
+            def _cb(ratio, desc):
+                progress(ratio, desc=desc)
+            # 用于最后拿到 annotated_code 给 Diff
+            last_annotated = None
+            last_final_frame = None
+            # 透传 processor 的生成器，这里额外加了一个 output：state_single_cancel（第 6 位）
+            # 以及 diff_html（第 7 位，最后一帧更新）
+            first = True
+            for frame in process_code_with_progress(
+                code, incremental=True, language=plang, comment_lang=ulang,
+                python_style=pyst, java_style=jvst,
+                cancel_token=token, progress_cb=_cb,
+            ):
+                ann, md, log_txt, md_p, src_p = frame
+                if first:
+                    first = False
+                    # 第 1 帧：把 cancel_token 存入 state
+                    yield ann, md, log_txt, md_p, src_p, token, None
+                    continue
+                if ann is not None and md_p is not None and src_p is not None:
+                    last_final_frame = frame
+                    last_annotated = ann
+                yield ann, md, log_txt, md_p, src_p, None, None
+            # 最后：构建 Diff HTML（如果有最终结果）
+            if last_final_frame is not None:
+                ann_code = last_final_frame[0]
+                diff = build_split_diff_html(code, ann_code, plang)
+                # 最终帧：所有输出一次性给齐
+                ann, md, log_txt, md_p, src_p = last_final_frame
+                yield ann, md, log_txt, md_p, src_p, None, diff
+
+        # 把 btn.click 改成调用生成器（outputs 7 个：新增 state_single_cancel 和 diff_html）
         btn.click(
-            fn=lambda code, plang, ulang, pyst, jvst: process_code(
-                code, True, plang, ulang, python_style=pyst, java_style=jvst
-            ),
-            inputs=[input_box, language, ui_lang, python_style, java_style],
-            outputs=[output_code, output_docs, output_log, state_md_path, state_src_path],
-        ).then(
-            fn=build_split_diff_html,
-            inputs=[input_box, output_code, language],
-            outputs=[diff_html],
+            fn=_gen_real,
+            inputs=[input_box, language, ui_lang, python_style, java_style, state_single_cancel],
+            outputs=[output_code, output_docs, output_log, state_md_path, state_src_path,
+                     state_single_cancel, diff_html],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],
         )
+        # 取消按钮：只调用 cancel，不需要返回值
+        cancel_btn.click(
+            fn=_cancel_single,
+            inputs=[state_single_cancel],
+            outputs=[],
+        )
+
         dl_src_btn.click(
             fn=_download_src,
             inputs=[state_src_path],
@@ -670,15 +760,27 @@ def create_ui():
             outputs=[tabs],
         )
 
-        # ===== 批量处理事件绑定 =====
-        def _batch_gen(files, ulang, pyst, jvst):
-            """批量生成包装：返回 (日志, zip_state, zip_download_update)"""
-            log, zip_path = process_batch_files(
+        # ===== 批量处理事件绑定（生成器版） =====
+        def _batch_gen_progress(files, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
+            """批量生成（生成器），outputs 结构：
+            [batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel]
+            """
+            token = CancelToken()
+            def _cb(ratio, desc):
+                progress(ratio, desc=desc)
+            first = True
+            for log_text, zip_path in process_batch_with_progress(
                 files, comment_lang=ulang, incremental=True,
                 python_style=pyst, java_style=jvst,
-            )
-            dl_update = gr.update(value=zip_path) if zip_path else gr.update()
-            return log, zip_path, dl_update
+                cancel_token=token, progress_cb=_cb,
+            ):
+                if first:
+                    first = False
+                    dl_upd = gr.update() if not zip_path else gr.update(value=zip_path)
+                    yield log_text, zip_path, dl_upd, token
+                    continue
+                dl_upd = gr.update(value=zip_path) if zip_path else gr.update()
+                yield log_text, zip_path, dl_upd, None
 
         def _batch_dl(state_zip):
             """下载批量 zip"""
@@ -687,9 +789,14 @@ def create_ui():
             return gr.update()
 
         batch_gen_btn.click(
-            fn=_batch_gen,
-            inputs=[batch_file_upload, ui_lang, python_style, java_style],
-            outputs=[batch_log, batch_zip_state, batch_dl_btn],
+            fn=_batch_gen_progress,
+            inputs=[batch_file_upload, ui_lang, python_style, java_style, state_batch_cancel],
+            outputs=[batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel],
+        )
+        batch_cancel_btn.click(
+            fn=_cancel_batch,
+            inputs=[state_batch_cancel],
+            outputs=[],
         )
         batch_dl_btn.click(
             fn=_batch_dl,
