@@ -285,6 +285,12 @@ TRANSLATIONS = {
         "English": "⚠️ API Key is NOT saved (only code, language, comment style)",
         "日本語": "⚠️ API Key は保存されません（コード・言語・コメントスタイルのみ）",
     },
+    # ===== v2.3.8 代码风格检查 =====
+    "style_title": {
+        "中文": "🛑 代码风格检查（PEP8 / Google Java Style）",
+        "English": "🛑 Code Style Check (PEP8 / Google Java Style)",
+        "日本語": "🛑 コードスタイルチェック（PEP8 / Google Java Style）",
+    },
 }
 
 

@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.7**（2026-08-10 · v2.3.0 的小更新 · 工作区保存/加载 + 会话持久化）
+**当前版本：v2.3.8**（2026-08-10 · v2.3.0 的小更新 · 代码风格检查 PEP8 / Google Java Style）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,63 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.8 — 2026-08-10（v2.3.0 小更新 #8）
+
+#### 🛑 代码风格检查（PEP8 / Google Java Style）
+在「代码分析」Tab 新增「代码风格」区块，分析代码时自动检测风格问题并以 Markdown 表格展示。
+
+##### Python 侧（PEP8）
+- **优先使用 `pycodestyle`**（如已安装）：专业 PEP8 检查器，覆盖 E1xx/E2xx/E3xx/E5xx/W1xx/W2xx 等全部规则
+- **降级方案**（pycodestyle 不可用时）：`_lint_python_basic` 正则近似检查：
+  - `E501` 行过长（>100 字符）
+  - `W291` 尾随空格
+  - `W292` 文件末尾无换行符
+  - `W191` Tab 缩进（应使用 4 空格）
+  - `E221` 多余空格（连续 2+ 空格）
+  - `E303` 空行过多（>2 连续空行）
+- 报告中标注实际使用的工具名（`pycodestyle (PEP8)` 或 `PEP8 basic (regex fallback)`）
+
+##### Java 侧（Google Java Style 正则近似，无 JDK 依赖）
+`_lint_java_regex` 检查 7 类规则：
+
+| 规则 | 描述 |
+| --- | --- |
+| GJL001 | 行过长（>100 字符） |
+| GJL002 | 尾随空格 |
+| GJL003 | Tab 缩进（Google Style 要求 2 空格） |
+| GJL004 | 逗号/分号后缺少空格 |
+| GJL005 | 大括号前缺少空格（如 `if(){` → `if () {`） |
+| GJL006 | 空行过多（>2 连续空行） |
+| GJL007 | 文件末尾无换行符 |
+
+##### 集成方式
+- `analyze_code` 返回值从 **4 元组 → 5 元组**：`(quality_report, annotation_report, summary, style_report, log_text)`
+- 风格检查在质量分析和类型注解检查之后、LLM 摘要生成之前执行（非 LLM 调用，零延迟）
+- `_analyze_java` 同步改造，Java 代码无效时 style_report 返回「跳过风格检查」占位
+- UI 分析 Tab 在 `annotation_output` 与 `summary_output` 之间新增 `style_title_md` + `style_output`
+- `analyze_btn.click` outputs 从 4 → 5（追加 `style_output`）
+- `_apply_ui_language` 和 `ui_lang.change` outputs 同步追加 `style_title_md`（index 16），后续所有索引 +1
+
+##### i18n
+- 新增 `style_title` key 三语文案
+
+##### 兼容性
+- `pycodestyle` 为可选依赖（`pip install pycodestyle`），不可用时自动降级，不报错
+- 零新增必需第三方依赖
+- `analyze_code` 返回值从 4→5 元组：所有调用方需适配（UI 已同步更新）
+
+##### 测试覆盖（`test_style_lint.py` 共 31 用例，全通过）
+| 类 | 用例数 | 覆盖 |
+| --- | --- | --- |
+| T1_PythonStyleLint | 10 | 行过长 / 尾随空格 / Tab 缩进 / 缺换行 / 空行过多 / 标题 / 工具名 / 空源码 / English / 日本語 |
+| T2_JavaStyleLint | 8 | Tab 缩进 / 逗号缺空格 / 大括号缺空格 / 行过长 / 缺换行 / 工具名 / 直接测 _lint_java_regex 结构 / 空行过多 |
+| T3_CleanCode | 2 | Python 干净代码 0 issues / Java 干净代码 0 issues |
+| T4_AnalyzeCodeReturn5 | 6 | Python/Java/空代码/无效 Python/无效 Java 均返回 5 元组 + 风格报告内容正确 |
+| T5_I18n | 1 | style_title 三语存在非空 |
+| T6_UiComponents | 4 | ui.py 声明组件 / analyze_btn 5 outputs / _apply_ui_language 引用 / ui_lang.change 引用 |
+
+**回归测试**：`test_style_lint (31) + test_workspace_persistence (25) + test_outline_collapsible (15) + test_batch_naming (16)` = 87 条全通过，0 Failing。
 
 ### v2.3.7 — 2026-08-10（v2.3.0 小更新 #7）
 

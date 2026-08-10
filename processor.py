@@ -1100,15 +1100,222 @@ def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
             pass
 
 
+# ================== v2.3.8 代码风格检查 ==================
+
+_STYLE_MAX_LINE_LEN = 100  # Google Java Style / PEP8 建议 79-99
+
+
+def _lint_python_basic(source: str) -> list[tuple[str, int, str]]:
+    """Python 基础风格检查（pycodestyle 不可用时的降级方案）
+
+    返回 [(规则名, 行号, 描述)] 列表，行号从 1 开始。
+    """
+    issues: list[tuple[str, int, str]] = []
+    lines = source.splitlines()
+    for i, line in enumerate(lines, 1):
+        # E501 行过长
+        if len(line.rstrip("\n")) > _STYLE_MAX_LINE_LEN:
+            issues.append(("E501", i, f"行过长 ({len(line)} > {_STYLE_MAX_LINE_LEN} 字符)"))
+        # W291 尾随空格
+        if line.rstrip("\n") != line.rstrip() and line.strip():
+            issues.append(("W291", i, "尾随空格"))
+        # W292 文件末尾无空行（仅最后一行）
+        if i == len(lines) and not line.endswith("\n"):
+            # source 末尾是否以换行结尾
+            if not source.endswith("\n"):
+                issues.append(("W292", i, "文件末尾无换行符"))
+        # W191 / W391 制表符缩进
+        stripped = line.lstrip()
+        if stripped and "\t" in line[:len(line) - len(stripped)]:
+            issues.append(("W191", i, "使用 Tab 缩进（应使用 4 空格）"))
+        # E2 多个连续空格（排除注释和字符串场景的简单近似）
+        if stripped and not stripped.startswith("#") and not stripped.startswith('"'):
+            # 行内连续 2+ 空格（排除行首缩进和冒号后空格）
+            content = line.lstrip()
+            if re.search(r'[^:\s]\s{2,}[^#\s]', content):
+                issues.append(("E221", i, "多余空格（连续 2+ 空格）"))
+        # E303 空行过多（>2 连续空行）
+        if not stripped and i >= 3 and not lines[i - 2].strip() and not lines[i - 3].strip():
+            issues.append(("E303", i, "空行过多（>2 连续空行）"))
+
+    # 顶层导入后应有 2 个空行（E302 近似）
+    return issues
+
+
+def _lint_python_pycodestyle(source: str) -> list[tuple[str, int, str]]:
+    """使用 pycodestyle 进行专业 PEP8 检查（可用时）"""
+    try:
+        import pycodestyle as _pcs  # type: ignore
+    except ImportError:
+        return []
+
+    issues: list[tuple[str, int, str]] = []
+    try:
+        style_guide = _pcs.StyleGuide(max_line_length=_STYLE_MAX_LINE_LEN, quiet=True)
+        # pycodestyle 需要文件路径，用临时文件
+        import tempfile as _tf
+        with _tf.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
+            f.write(source)
+            tmp_path = f.name
+        try:
+            result = style_guide.check_files([tmp_path])
+            # pycodestyle 的 check_files 不会直接返回 issue 列表，
+            # 我们用 SimpleChecker 模式手动收集
+            checker = _pcs.Checker(filename=tmp_path, show_pep8=False, report=_StyleReport)
+            checker.check_all()
+            for code, line, _col, text in checker.report.errors:
+                issues.append((code, line, text))
+        finally:
+            os.unlink(tmp_path)
+    except Exception:
+        pass
+    return issues
+
+
+class _StyleReport:  # pycodestyle 自定义 report（最小实现）
+    errors: list = []
+    def __init__(self, options):
+        self.errors = []
+    def error(self, line_number, offset, text, check):
+        code = text[:4].strip()
+        self.__class__.errors.append((code, line_number, offset, text[5:] if len(text) > 5 else text))
+        return code
+    def init_file(self, *args, **kwargs):
+        self.__class__.errors = []
+    def print_error(self, *args, **kwargs):
+        pass
+
+
+def _lint_java_regex(source: str) -> list[tuple[str, int, str]]:
+    """Java 代码风格检查（正则近似 Google Java Style，无 JDK 依赖）
+
+    返回 [(规则名, 行号, 描述)] 列表。
+    """
+    issues: list[tuple[str, int, str]] = []
+    lines = source.splitlines()
+    for i, line in enumerate(lines, 1):
+        raw = line.rstrip("\n")
+        stripped = line.strip()
+
+        # 行过长
+        if len(raw) > _STYLE_MAX_LINE_LEN:
+            issues.append(("GJL001", i, f"行过长 ({len(raw)} > {_STYLE_MAX_LINE_LEN} 字符)"))
+
+        # 尾随空格
+        if raw != line.rstrip() and stripped:
+            issues.append(("GJL002", i, "尾随空格"))
+
+        # Tab 缩进（Google Style 要求 2 空格）
+        if stripped and "\t" in line[:len(line) - len(line.lstrip())]:
+            issues.append(("GJL003", i, "使用 Tab 缩进（Google Style 要求 2 空格）"))
+
+        # 逗号/分号后缺空格
+        if re.search(r'[;,]\S', stripped) and not stripped.startswith("//"):
+            issues.append(("GJL004", i, "逗号/分号后缺少空格"))
+
+        # 大括号前缺空格（如 if(){  →  if () {  ）
+        if re.search(r'[)\w]\{', stripped) and not stripped.startswith("//") and not stripped.startswith("*"):
+            # 排除字符串中的情况（简单近似）
+            if not re.match(r'^["\']', stripped):
+                issues.append(("GJL005", i, "大括号前缺少空格（应为 ` {`）"))
+
+        # 空行过多
+        if not stripped and i >= 3 and not lines[i - 2].strip() and not lines[i - 3].strip():
+            issues.append(("GJL006", i, "空行过多（>2 连续空行）"))
+
+    # 文件末尾无换行
+    if source and not source.endswith("\n"):
+        issues.append(("GJL007", len(lines), "文件末尾无换行符"))
+
+    return issues
+
+
+def style_lint(source_code: str, language: str = "Python", comment_lang: str = "中文") -> str:
+    """代码风格检查（v2.3.8）
+
+    Python 侧：优先用 pycodestyle（PEP8），不可用时降级到基础正则检查
+    Java 侧：正则近似 Google Java Style（无 JDK 依赖）
+
+    Args:
+        source_code: 源代码字符串
+        language: "Python" 或 "Java"
+        comment_lang: 报告文案语言（"中文" / "English" / "日本語"）
+
+    Returns:
+        str: Markdown 格式的风格检查报告
+    """
+    # i18n 文案
+    tpl = {
+        "中文": {
+            "title": "### 🛑 代码风格检查",
+            "no_issues": "✅ 未发现风格问题，代码整洁！",
+            "summary": f"共发现 **{{count}}** 个风格问题：",
+            "by_tool": "（检查工具：{tool}）",
+            "line": "行",
+        },
+        "English": {
+            "title": "### 🛑 Code Style Check",
+            "no_issues": "✅ No style issues found, code is clean!",
+            "summary": f"Found **{{count}}** style issue(s):",
+            "by_tool": "(Tool: {tool})",
+            "line": "Line",
+        },
+        "日本語": {
+            "title": "### 🛑 コードスタイルチェック",
+            "no_issues": "✅ スタイル問題なし、コードは綺麗です！",
+            "summary": f"**{{count}}** 件のスタイル問題を発見：",
+            "by_tool": "（ツール: {tool}）",
+            "line": "行",
+        },
+    }
+    L = tpl.get(comment_lang, tpl["中文"])
+
+    if not source_code or not source_code.strip():
+        return f'{L["title"]}\n\nℹ️ 无代码可检查'
+
+    if language == "Java":
+        issues = _lint_java_regex(source_code)
+        tool_name = "Google Java Style (regex approximation)"
+    else:
+        # Python: 优先 pycodestyle
+        issues = _lint_python_pycodestyle(source_code)
+        if issues:
+            tool_name = "pycodestyle (PEP8)"
+        else:
+            # pycodestyle 不可用或没查到 → 降级到基础检查
+            issues = _lint_python_basic(source_code)
+            tool_name = "PEP8 basic (regex fallback)"
+
+    if not issues:
+        return f'{L["title"]}\n\n{L["no_issues"]}{L["by_tool"].format(tool=tool_name)}'
+
+    # 构建报告
+    lines_out = [L["title"], ""]
+    lines_out.append(L["summary"].format(count=len(issues)) + L["by_tool"].format(tool=tool_name))
+    lines_out.append("")
+    lines_out.append("| 规则 | " + L["line"] + " | 描述 | Rule | Line | Description |")
+    lines_out.append("|------|------|------|------|------|-------------|")
+
+    # 限制最多 50 条避免过长
+    shown = issues[:50]
+    for code, lineno, desc in shown:
+        lines_out.append(f"| `{code}` | {lineno} | {desc} | `{code}` | {lineno} | {desc} |")
+
+    if len(issues) > 50:
+        lines_out.append(f"\n*... 还有 {len(issues) - 50} 条未显示*")
+
+    return "\n".join(lines_out)
+
+
 def _analyze_java(source_code: str, comment_lang: str = "中文"):
-    """Java 代码分析：大括号校验 + 代码摘要
+    """Java 代码分析：大括号校验 + 代码摘要 + 风格检查
 
     Args:
         source_code: Java 源代码字符串
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
-        tuple: (quality_report, annotation_report, summary, log_text)
+        tuple: (quality_report, annotation_report, summary, style_report, log_text)
     """
     log = []
 
@@ -1118,6 +1325,7 @@ def _analyze_java(source_code: str, comment_lang: str = "中文"):
             "### ❌ 代码无效\n\n输入的内容不是有效的 Java 代码，无法进行分析。",
             "### ❌ 代码无效\n\n请输入有效的 Java 代码。",
             "代码无效，跳过摘要生成。",
+            "### 🛑 代码风格检查\n\nℹ️ 代码无效，跳过风格检查",
             "日志：代码无效，分析前验证未通过。"
         )
 
@@ -1134,6 +1342,15 @@ def _analyze_java(source_code: str, comment_lang: str = "中文"):
 
     annotation_report = "### 🏷️ 类型注解检查\n\nJava 是静态类型语言，类型声明在编译期检查，无需额外分析。"
 
+    # v2.3.8 代码风格检查
+    log.append("=== 代码风格检查 ===")
+    try:
+        style_report = style_lint(source_code, language="Java", comment_lang=comment_lang)
+        log.append("✓ 代码风格检查完成")
+    except Exception as e:
+        style_report = f"### 🛑 代码风格检查\n\n检查失败: {e}"
+        log.append(f"✗ 代码风格检查失败: {e}")
+
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
         summary = generate_java_summary(source_code, comment_lang)
@@ -1142,11 +1359,11 @@ def _analyze_java(source_code: str, comment_lang: str = "中文"):
         summary = f"摘要生成失败: {e}"
         log.append(f"✗ 摘要生成失败: {e}")
 
-    return quality_report, annotation_report, summary, "\n".join(log)
+    return quality_report, annotation_report, summary, style_report, "\n".join(log)
 
 
 def analyze_code(source_code: str, language: str = "Python", comment_lang: str = "中文"):
-    """主分析函数，返回质量报告、类型注解报告、摘要、日志
+    """主分析函数，返回质量报告、类型注解报告、摘要、风格报告、日志
 
     Args:
         source_code: 源代码字符串
@@ -1154,10 +1371,10 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
         comment_lang: 注释语言（"中文" / "English" / "日本語"）
 
     Returns:
-        tuple: (quality_report, annotation_report, summary, log_text)
+        tuple: (quality_report, annotation_report, summary, style_report, log_text)
     """
     if not source_code or not source_code.strip():
-        return "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
+        return "未输入代码", "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
 
     if language == "Java":
         return _analyze_java(source_code, comment_lang)
@@ -1168,6 +1385,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
             "### ❌ 代码无效\n\n输入的内容不是有效的 Python 代码，无法进行分析。\n\n请检查语法或粘贴正确的 Python 代码。",
             "### ❌ 代码无效\n\n请输入有效的 Python 代码。",
             "代码无效，跳过摘要生成。",
+            "### 🛑 代码风格检查\n\nℹ️ 代码无效，跳过风格检查",
             "日志：代码无效（语法解析失败），分析前验证未通过。"
         )
 
@@ -1188,6 +1406,15 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
         annotation_report = f"检查失败: {e}"
         log.append(f"✗ 类型注解检查失败: {e}")
 
+    # v2.3.8 代码风格检查
+    log.append("=== 代码风格检查 ===")
+    try:
+        style_report = style_lint(source_code, language="Python", comment_lang=comment_lang)
+        log.append("✓ 代码风格检查完成")
+    except Exception as e:
+        style_report = f"### 🛑 代码风格检查\n\n检查失败: {e}"
+        log.append(f"✗ 代码风格检查失败: {e}")
+
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
         summary = generate_code_summary(source_code, comment_lang)
@@ -1196,7 +1423,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
         summary = f"摘要生成失败: {e}"
         log.append(f"✗ 摘要生成失败: {e}")
 
-    return quality_report, annotation_report, summary, "\n".join(log)
+    return quality_report, annotation_report, summary, style_report, "\n".join(log)
 
 
 # ==================================================================

@@ -570,39 +570,41 @@ def _apply_ui_language(lang: str):
         gr.update(label=t("tab_analysis", lang)),       # 13 tab_analysis
         gr.update(value=t("quality_title", lang)),      # 14 quality_title_md
         gr.update(value=t("annotation_title", lang)),   # 15 annotation_title_md
-        gr.update(value=t("summary_title", lang)),      # 16 summary_title_md
-        gr.update(label=t("analyze_log_label", lang)),  # 17 analyze_log
-        gr.update(label=t("tab_log", lang)),            # 18 tab_log
-        gr.update(label=t("process_log_label", lang)),  # 19 output_log
-        gr.update(value=t("footer", lang)),             # 20 footer_md
+        # v2.3.8 代码风格检查标题（插在 annotation 和 summary 之间）
+        gr.update(value=t("style_title", lang)),        # 16 style_title_md
+        gr.update(value=t("summary_title", lang)),      # 17 summary_title_md
+        gr.update(label=t("analyze_log_label", lang)),  # 18 analyze_log
+        gr.update(label=t("tab_log", lang)),            # 19 tab_log
+        gr.update(label=t("process_log_label", lang)),  # 20 output_log
+        gr.update(value=t("footer", lang)),             # 21 footer_md
         # ===== 批量处理新增 =====
-        gr.update(value=t("batch_section", lang)),      # 21 batch_section_md
-        gr.update(label=t("batch_upload_label", lang)), # 22 batch_file_upload
-        gr.update(value=t("batch_gen_btn", lang)),      # 23 batch_gen_btn
-        gr.update(label=t("batch_dl_btn", lang)),       # 24 batch_dl_btn
-        gr.update(label=t("batch_log_label", lang)),    # 25 batch_log
+        gr.update(value=t("batch_section", lang)),      # 22 batch_section_md
+        gr.update(label=t("batch_upload_label", lang)), # 23 batch_file_upload
+        gr.update(value=t("batch_gen_btn", lang)),      # 24 batch_gen_btn
+        gr.update(label=t("batch_dl_btn", lang)),       # 25 batch_dl_btn
+        gr.update(label=t("batch_log_label", lang)),    # 26 batch_log
         # ===== 注释风格新增 =====
-        gr.update(value=t("style_section", lang)),      # 26 style_section_md
-        gr.update(label=t("python_style_label", lang)), # 27 python_style
-        gr.update(label=t("java_style_label", lang)),   # 28 java_style
+        gr.update(value=t("style_section", lang)),      # 27 style_section_md
+        gr.update(label=t("python_style_label", lang)), # 28 python_style
+        gr.update(label=t("java_style_label", lang)),   # 29 java_style
         # ===== Diff 视图新增 =====
-        gr.update(label=t("tab_diff", lang)),           # 29 tab_diff
+        gr.update(label=t("tab_diff", lang)),           # 30 tab_diff
         # ===== 函数/类导航大纲新增（占位：outline_md/docs_toc_md 内容在生成时动态填充，切换语言时保留）=====
-        gr.update(),  # 30 outline_md
-        gr.update(),  # 31 docs_toc_md
+        gr.update(),  # 31 outline_md
+        gr.update(),  # 32 docs_toc_md
         # ===== API Key 预检 / Token 估算新增 =====
-        gr.update(value=t("preflight_btn", lang)),  # 32 preflight_btn
-        gr.update(label=t("preflight_label", lang)),  # 33 preflight_result_md
-        gr.update(label=t("estimate_label", lang)),   # 34 cost_estimate_md
+        gr.update(value=t("preflight_btn", lang)),  # 33 preflight_btn
+        gr.update(label=t("preflight_label", lang)),  # 34 preflight_result_md
+        gr.update(label=t("estimate_label", lang)),   # 35 cost_estimate_md
         # ===== v2.3.5 ZIP 输出命名策略新增 =====
-        gr.update(value=t("naming_section", lang)),   # 35 naming_section_md
-        gr.update(label=t("naming_label", lang)),     # 36 naming_strategy
+        gr.update(value=t("naming_section", lang)),   # 36 naming_section_md
+        gr.update(label=t("naming_label", lang)),     # 37 naming_strategy
         # ===== v2.3.7 会话持久化新增 =====
-        gr.update(value=t("workspace_title", lang)),    # 37 workspace_title_md
-        gr.update(value=t("workspace_save_btn", lang)), # 38 ws_save_btn
-        gr.update(value=t("workspace_restore_btn", lang)),# 39 ws_restore_btn
-        gr.update(value=t("workspace_clear_btn", lang)),# 40 ws_clear_btn
-        gr.update(value=t("workspace_tip", lang)),      # 41 ws_tip_md
+        gr.update(value=t("workspace_title", lang)),    # 38 workspace_title_md
+        gr.update(value=t("workspace_save_btn", lang)), # 39 ws_save_btn
+        gr.update(value=t("workspace_restore_btn", lang)),# 40 ws_restore_btn
+        gr.update(value=t("workspace_clear_btn", lang)),# 41 ws_clear_btn
+        gr.update(value=t("workspace_tip", lang)),      # 42 ws_tip_md
     ]
 
 
@@ -801,6 +803,9 @@ def create_ui():
                     quality_output = gr.Markdown(elem_classes="scrollable-md")
                     annotation_title_md = gr.Markdown(t("annotation_title", default_lang))
                     annotation_output = gr.Markdown(elem_classes="scrollable-md")
+                    # v2.3.8 代码风格检查区块
+                    style_title_md = gr.Markdown(t("style_title", default_lang))
+                    style_output = gr.Markdown(elem_classes="scrollable-md")
                     summary_title_md = gr.Markdown(t("summary_title", default_lang))
                     summary_output = gr.Markdown(elem_classes="scrollable-md")
                     analyze_log = gr.Textbox(label=t("analyze_log_label", default_lang))
@@ -840,39 +845,41 @@ def create_ui():
                 tab_analysis,       # 13
                 quality_title_md,   # 14
                 annotation_title_md,# 15
-                summary_title_md,   # 16
-                analyze_log,        # 17
-                tab_log,            # 18
-                output_log,         # 19
-                footer_md,          # 20
+                # v2.3.8 代码风格检查标题
+                style_title_md,     # 16
+                summary_title_md,   # 17
+                analyze_log,        # 18
+                tab_log,            # 19
+                output_log,         # 20
+                footer_md,          # 21
                 # ===== 批量处理新增 =====
-                batch_section_md,   # 21
-                batch_file_upload, # 22
-                batch_gen_btn,     # 23
-                batch_dl_btn,      # 24
-                batch_log,         # 25
+                batch_section_md,   # 22
+                batch_file_upload, # 23
+                batch_gen_btn,     # 24
+                batch_dl_btn,      # 25
+                batch_log,         # 26
                 # ===== 注释风格新增 =====
-                style_section_md,  # 26
-                python_style,      # 27
-                java_style,        # 28
+                style_section_md,  # 27
+                python_style,      # 28
+                java_style,        # 29
                 # ===== Diff 视图新增 =====
-                tab_diff,          # 29
+                tab_diff,          # 30
                 # ===== 函数/类导航大纲新增 =====
-                outline_md,        # 30
-                docs_toc_md,       # 31
+                outline_md,        # 31
+                docs_toc_md,       # 32
                 # ===== API Key 预检 / Token 估算新增 =====
-                preflight_btn,     # 32
-                preflight_result_md,  # 33
-                cost_estimate_md,  # 34
+                preflight_btn,     # 33
+                preflight_result_md,  # 34
+                cost_estimate_md,  # 35
                 # ===== v2.3.5 ZIP 输出命名策略新增 =====
-                naming_section_md,   # 35
-                naming_strategy,     # 36
+                naming_section_md,   # 36
+                naming_strategy,     # 37
                 # ===== v2.3.7 会话持久化新增 =====
-                workspace_title_md,    # 37
-                ws_save_btn,           # 38
-                ws_restore_btn,        # 39
-                ws_clear_btn,          # 40
-                ws_tip_md,             # 41
+                workspace_title_md,    # 38
+                ws_save_btn,           # 39
+                ws_restore_btn,        # 40
+                ws_clear_btn,          # 41
+                ws_tip_md,             # 42
             ],
         )
 
@@ -1061,7 +1068,7 @@ def create_ui():
         analyze_btn.click(
             fn=lambda code, plang, ulang: analyze_code(code, plang, ulang),
             inputs=[input_box, language, ui_lang],
-            outputs=[quality_output, annotation_output, summary_output, analyze_log],
+            outputs=[quality_output, annotation_output, summary_output, style_output, analyze_log],
         ).then(
             fn=lambda: gr.update(selected="code_analysis"),
             outputs=[tabs],
