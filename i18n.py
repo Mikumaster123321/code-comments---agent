@@ -259,6 +259,32 @@ TRANSLATIONS = {
         "English": "💡 Ctrl+F to search / replace code",
         "日本語": "💡 Ctrl+F でコード検索・置換",
     },
+    # ===== v2.3.7 会话持久化 =====
+    "workspace_title": {
+        "中文": "💾 会话持久化（保存 / 恢复工作区）",
+        "English": "💾 Session Persistence (Save / Restore Workspace)",
+        "日本語": "💾 セッション保存（ワークスペースの保存/復元）",
+    },
+    "workspace_save_btn": {
+        "中文": "💾 保存会话",
+        "English": "💾 Save Session",
+        "日本語": "💾 セッションを保存",
+    },
+    "workspace_restore_btn": {
+        "中文": "🔄 恢复上次会话",
+        "English": "🔄 Restore Last Session",
+        "日本語": "🔄 前回のセッションを復元",
+    },
+    "workspace_clear_btn": {
+        "中文": "🗑️ 清除已保存会话",
+        "English": "🗑️ Clear Saved Session",
+        "日本語": "🗑️ 保存セッションを消去",
+    },
+    "workspace_tip": {
+        "中文": "⚠️ API Key 不会被保存（仅保存代码、语言、注释风格）",
+        "English": "⚠️ API Key is NOT saved (only code, language, comment style)",
+        "日本語": "⚠️ API Key は保存されません（コード・言語・コメントスタイルのみ）",
+    },
 }
 
 

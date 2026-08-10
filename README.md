@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.6**（2026-08-10 · v2.3.0 的小更新 · 代码编辑器搜索面板 + 大纲折叠结构）
+**当前版本：v2.3.7**（2026-08-10 · v2.3.0 的小更新 · 工作区保存/加载 + 会话持久化）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,62 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.7 — 2026-08-10（v2.3.0 小更新 #7）
+
+#### 💾 保存/加载用户工作区（会话持久化）
+用户做到一半关浏览器不用重来；下次打开点「恢复上次会话」即可恢复代码、注释风格、语言选择、批量命名策略等完整工作区状态。
+
+##### 持久化方案
+- **主存储：服务端 tempfile JSON**（跨浏览器通用）
+  - 路径：`<tempdir>/<8位用户名MD5>_code_comments_agent_workspace.json`
+  - 多用户共享 temp 目录场景：前 8 位用户名 hash 分离各 workspace，避免互相覆盖
+  - 原子写入：`write tmp + os.replace()`，中途断电/崩掉也不会把原文件写坏
+- **可选兜底：浏览器 localStorage**（UI 层可扩展；当前主方案已满足通用要求）
+
+##### 白名单字段 + 安全保护
+- `WS_ALLOWED_FIELDS` 为 `frozenset`（不可变），只允许 6 个字段持久化：
+  `source_code` / `language` / `ui_lang` / `python_style` / `java_style` / `naming_strategy`
+- **API Key、api_base_url、password 等敏感字段绝不会被写入**（`save_workspace` 白名单过滤 + `load_workspace` 白名单二次过滤）
+- `None` 值字段跳过，保持 JSON 精简
+- 即使磁盘上的文件被人工注入脏字段，`load_workspace` 仍按白名单过滤（`{}` 默认安全），不会回传任意内容
+
+##### 容错设计（`load_workspace` 所有异常都不抛，统一返回 False + 空 dict）
+- 文件不存在 → 返回「未找到上次保存的会话」
+- 空文件 → `UnicodeDecodeError` 分支 → 格式错误
+- 非法 JSON → `JSONDecodeError` → 「文件已损坏」提示
+- 顶层为 list / 缺少 `data` key / `data` 非 dict → 格式异常
+- 非 UTF-8 编码 → 「编码错误」
+
+##### UI 与 i18n
+- **批量区新增「会话持久化」小节**（命名策略正下方、`batch_log` 正上方）：
+  - `workspace_title_md` 标题
+  - Row 放三按钮：`💾 保存会话` / `🔄 恢复上次会话` / `🗑️ 清除已保存会话`
+  - `ws_tip_md` 安全提示：`⚠️ API Key 不会被保存`
+- **事件链路闭环**：
+  - `ws_save_btn.click`：收集 `[input_box, language, ui_lang, python_style, java_style, naming_strategy]` → 调用 `save_workspace` → 更新 `output_log` 显示成功/失败
+  - `ws_restore_btn.click`：`load_workspace` → 输出 6 个组件 value + log 消息（7 outputs，顺序严格对应）
+  - `ws_clear_btn.click` → `clear_workspace` → 更新 log
+- **ui_lang 切换时同步更新 5 个组件文案**（`_apply_ui_language` 追加 37-41 号返回；`ui_lang.change outputs` 追加 workspace_title_md/ws_save_btn/ws_restore_btn/ws_clear_btn/ws_tip_md）
+- **i18n 5 个 key**：`workspace_title` / `workspace_save_btn` / `workspace_restore_btn` / `workspace_clear_btn` / `workspace_tip`，中文 / English / 日本語 三语
+
+##### 兼容性
+- 零新增第三方依赖；纯 Python 标准库（json / tempfile / getpass / hashlib / os.replace）
+- 旧版 processor 调用不受影响；三个 API 函数加 `path` 可选参数，单元测试与生产解耦
+- UI 新增组件位于独立 card-section，不影响原有批量区/输出区布局与顺序
+
+##### 测试覆盖（`test_workspace_persistence.py` 共 25 用例，全通过）
+| 类 | 用例数 | 覆盖 |
+| --- | --- | --- |
+| T1_SaveLoadRoundTrip | 4 | 全字段往返 / 部分字段 / 多轮覆盖 / 元数据 (_version, _saved_at) |
+| T2_WhitelistSecurity | 4 | save 时 api_key/password 过滤 / None 跳过 / load 时脏注入二次过滤 / WS_ALLOWED_FIELDS 是 frozenset 且不可变 |
+| T3_FileFormatTolerance | 7 | 不存在 / 空文件 / 非法 JSON / list 顶层 / 缺 data / 非 UTF-8 / data=None 不崩 |
+| T4_ClearAndNonexistent | 3 | clear 存在 / clear 不存在 / clear→load False |
+| T5_DefaultPathStable | 3 | 在 tempdir 下 / 多次调用一致 / 文件名 8 位 hex hash 前缀 |
+| T6_I18nKeys | 1 | 5 个 workspace_* key × 3 lang 存在非空 |
+| T7_UiComponents | 3 | ui.py 声明 5 组件 / 3 按钮 .click 事件 / 引用 processor 3 个函数 |
+
+**回归测试**：`test_workspace_persistence (25) + test_outline_collapsible (15) + test_batch_naming (16)` = 56 条全通过，0 Failing。
 
 ### v2.3.6 — 2026-08-10（v2.3.0 小更新 #6）
 

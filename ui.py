@@ -7,6 +7,7 @@ from processor import (
     process_code_with_progress, process_batch_with_progress,
     CancelToken,
     NAMING_SAME, NAMING_SUFFIX, NAMING_SUBDIR,
+    save_workspace, load_workspace, clear_workspace,
 )
 from i18n import LANGUAGES, t
 
@@ -596,6 +597,12 @@ def _apply_ui_language(lang: str):
         # ===== v2.3.5 ZIP 输出命名策略新增 =====
         gr.update(value=t("naming_section", lang)),   # 35 naming_section_md
         gr.update(label=t("naming_label", lang)),     # 36 naming_strategy
+        # ===== v2.3.7 会话持久化新增 =====
+        gr.update(value=t("workspace_title", lang)),    # 37 workspace_title_md
+        gr.update(value=t("workspace_save_btn", lang)), # 38 ws_save_btn
+        gr.update(value=t("workspace_restore_btn", lang)),# 39 ws_restore_btn
+        gr.update(value=t("workspace_clear_btn", lang)),# 40 ws_clear_btn
+        gr.update(value=t("workspace_tip", lang)),      # 41 ws_tip_md
     ]
 
 
@@ -727,6 +734,23 @@ def create_ui():
                 allow_custom_value=False,
             )
 
+            # ===== v2.3.7 会话持久化（保存 / 恢复工作区）=====
+            workspace_title_md = gr.Markdown(t("workspace_title", default_lang))
+            with gr.Row():
+                ws_save_btn = gr.Button(
+                    t("workspace_save_btn", default_lang),
+                    variant="secondary", size="lg",
+                )
+                ws_restore_btn = gr.Button(
+                    t("workspace_restore_btn", default_lang),
+                    variant="secondary", size="lg",
+                )
+                ws_clear_btn = gr.Button(
+                    t("workspace_clear_btn", default_lang),
+                    variant="secondary", size="lg",
+                )
+            ws_tip_md = gr.Markdown(t("workspace_tip", default_lang))
+
             batch_zip_state = gr.State(None)
             batch_log = gr.Textbox(
                 label=t("batch_log_label", default_lang),
@@ -843,6 +867,12 @@ def create_ui():
                 # ===== v2.3.5 ZIP 输出命名策略新增 =====
                 naming_section_md,   # 35
                 naming_strategy,     # 36
+                # ===== v2.3.7 会话持久化新增 =====
+                workspace_title_md,    # 37
+                ws_save_btn,           # 38
+                ws_restore_btn,        # 39
+                ws_clear_btn,          # 40
+                ws_tip_md,             # 41
             ],
         )
 
@@ -1082,6 +1112,57 @@ def create_ui():
             fn=_batch_dl,
             inputs=[batch_zip_state],
             outputs=[batch_dl_btn],
+        )
+
+        # ===== v2.3.7 会话持久化：保存 / 恢复 / 清除 =====
+        def _ws_save(src, lang, ulang, pyst, jvst, naming):
+            data = {
+                "source_code": src,
+                "language": lang,
+                "ui_lang": ulang,
+                "python_style": pyst,
+                "java_style": jvst,
+                "naming_strategy": naming,
+            }
+            ok, msg = save_workspace(data)
+            return (
+                gr.update(
+                    value=f"\n{msg}\n",
+                ),
+            )
+
+        def _ws_restore():
+            ok, msg, data = load_workspace()
+            return (
+                data.get("source_code", ""),
+                data.get("language", "Python"),
+                data.get("ui_lang", "中文"),
+                data.get("python_style", "默认"),
+                data.get("java_style", "默认"),
+                data.get("naming_strategy", NAMING_SUFFIX),
+                f"\n{msg}\n",
+            )
+
+        def _ws_clear():
+            ok, msg = clear_workspace()
+            return (
+                gr.update(value=f"\n{msg}\n"),
+            )
+
+        ws_save_btn.click(
+            fn=_ws_save,
+            inputs=[input_box, language, ui_lang, python_style, java_style, naming_strategy],
+            outputs=[output_log],
+        )
+        ws_restore_btn.click(
+            fn=_ws_restore,
+            inputs=[],
+            outputs=[input_box, language, ui_lang, python_style, java_style, naming_strategy, output_log],
+        )
+        ws_clear_btn.click(
+            fn=_ws_clear,
+            inputs=[],
+            outputs=[output_log],
         )
 
     return demo
