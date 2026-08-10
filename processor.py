@@ -1992,19 +1992,29 @@ def _slugify_name(name: str, prefix: str = "", used: Optional[set] = None) -> st
     return final
 
 
-def build_outline_markdown(source_code: str, language: str = "Python", title: str = "📋 函数/类导航大纲") -> str:
+def build_outline_markdown(source_code: str, language: str = "Python", title: str = "📋 函数/类导航大纲", collapsible: bool = True) -> str:
     """根据源代码解析出的函数/类结构，生成可点击跳转的大纲 Markdown
 
     每个条目链接锚点与 build_markdown_docs / build_java_markdown_docs 中生成的 slug_id 完全一致，
     可在 tab_docs（API 文档 Tab）点击大纲链接一键滚动到对应章节。
 
+    v2.3.6 新增 ``collapsible`` 参数：
+      - ``True``（默认）：输出 ``<details>`` 折叠结构，class 的方法嵌套在 class 条目内，
+        顶级函数/类各自折叠；默认展开（``open``），用户可点击 summary 折叠/展开。
+      - ``False``：保持旧版平铺 Markdown 无序列表格式（向后兼容）。
+
+    .. important::
+        **slug 分配顺序**始终按 items 的原始顺序（lineno 排序），与 annotator 的
+        ``build_markdown_docs`` / ``build_java_markdown_docs`` 完全一致，保证锚点跳转有效。
+
     Args:
         source_code: 源代码字符串
         language: "Python" 或 "Java"，默认 Python
         title: 大纲标题文本（可国际化）
+        collapsible: 是否输出 ``<details>`` 折叠结构（默认 True）
 
     Returns:
-        str: Markdown 格式的大纲（空时返回空字符串）
+        str: Markdown/HTML 混合格式的大纲（空时返回空字符串）
     """
     if not source_code:
         return ""
@@ -2018,19 +2028,92 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
     if not items:
         return ""
 
-    # 构建与 annotator build_markdown_docs 一致的 slug 映射
+    # 1. 先按 items 原始顺序分配 slug（与 annotator 一致，保证锚点跳转有效）
     used_ids: set[str] = set()
-    outline_lines = [f"**{title}**\n"]
+    slug_map: dict[int, str] = {}  # id(item) → slug
     for it in items:
         prefix = "cls-" if it.get("type") == "class" else ("fn-" if language == "Python" else "m-")
-        slug = _slugify_name(it["name"], prefix=prefix, used=used_ids)
-        icon = "🧩" if it.get("type") == "class" else "🔧"
-        t_label = "Class" if it.get("type") == "class" else ("Function" if language == "Python" else "Method")
+        slug_map[id(it)] = _slugify_name(it["name"], prefix=prefix, used=used_ids)
+
+    def _icon(it):
+        return "🧩" if it.get("type") == "class" else "🔧"
+
+    def _t_label(it):
+        if it.get("type") == "class":
+            return "Class"
+        return "Function" if language == "Python" else "Method"
+
+    # ---- 旧版平铺格式（collapsible=False）----
+    if not collapsible:
+        outline_lines = [f"**{title}**\n"]
+        for it in items:
+            slug = slug_map[id(it)]
+            line = it.get("lineno", "?")
+            outline_lines.append(f"- {_icon(it)} [`{it['name']}` ({_t_label(it)})](#{slug}) — *L{line}*")
+        outline_lines.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节（锚点滚动定位）\n")
+        return "\n".join(outline_lines)
+
+    # ---- 新版折叠格式（collapsible=True，默认）----
+    # 2. 推断 class → method 层级关系（基于 lineno/end_lineno 范围包含）
+    classes = [it for it in items if it.get("type") == "class"]
+
+    def _find_parent_cls(item):
+        for cls in classes:
+            cls_start = cls.get("lineno", 0)
+            cls_end = cls.get("end_lineno", 0) or 0
+            if cls_end and cls_start < item.get("lineno", 0) <= cls_end:
+                return cls
+        return None
+
+    # 3. 构建顶级条目列表（class + 顶级 function/method），按 lineno 排序
+    top_items = []
+    for it in items:
+        if it.get("type") == "class" or _find_parent_cls(it) is None:
+            top_items.append(it)
+    top_items.sort(key=lambda x: x.get("lineno", 0))
+
+    # 4. 输出 <details> 折叠结构
+    parts = [f"**{title}**\n"]
+    for it in top_items:
+        slug = slug_map[id(it)]
         line = it.get("lineno", "?")
-        # 加斜体说明：跳转到 API 文档对应锚点
-        outline_lines.append(f"- {icon} [`{it['name']}` ({t_label})](#{slug}) — *L{line}*")
-    outline_lines.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节（锚点滚动定位）\n")
-    return "\n".join(outline_lines)
+        icon = _icon(it)
+        t_lbl = _t_label(it)
+        if it.get("type") == "class":
+            # class：开启 details，内嵌子方法列表
+            parts.append(f'<details open>')
+            parts.append(
+                f'<summary>{icon} <a href="#{slug}"><code>{it["name"]}</code></a>'
+                f' <small>({t_lbl}) — L{line}</small></summary>'
+            )
+            # 找属于该 class 的子条目
+            children = [
+                sub for sub in items
+                if sub is not it
+                and _find_parent_cls(sub) is it
+            ]
+            if children:
+                parts.append("<ul>")
+                for child in children:
+                    c_slug = slug_map[id(child)]
+                    c_line = child.get("lineno", "?")
+                    parts.append(
+                        f'<li>{_icon(child)} <a href="#{c_slug}"><code>{child["name"]}</code></a>'
+                        f' <small>({_t_label(child)}) — L{c_line}</small></li>'
+                    )
+                parts.append("</ul>")
+            parts.append("</details>")
+        else:
+            # 顶级 function/method：独立折叠（默认折叠）
+            parts.append(f"<details>")
+            parts.append(
+                f'<summary>{icon} <a href="#{slug}"><code>{it["name"]}</code></a>'
+                f' <small>({t_lbl}) — L{line}</small></summary>'
+            )
+            parts.append("</details>")
+
+    parts.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节；点击 ▶/▼ 折叠/展开\n")
+    return "\n".join(parts)
 
 
 # ================== API Key 预检 + Token 成本估算 ==================

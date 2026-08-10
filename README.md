@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.5**（2026-08-07 · v2.3.0 的小更新 · 批量 ZIP 输出命名策略可配置 + 源目录结构保留）
+**当前版本：v2.3.6**（2026-08-10 · v2.3.0 的小更新 · 代码编辑器搜索面板 + 大纲折叠结构）
 
 基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
 
@@ -195,6 +195,46 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+
+### v2.3.6 — 2026-08-10（v2.3.0 小更新 #6）
+
+#### 🔍 代码编辑器搜索替换 + 大纲折叠
+处理大文件（>500 行）时，用户需要直接在输出代码框里搜函数名 + 折叠大纲，而不是在大文件里来回滚动。Gradio 6.x Code 组件底层是 CodeMirror 6，已内置 `@codemirror/search` 扩展（Ctrl+F / Cmd+F 触发），只需 CSS 注入确保面板可见并美化；函数大纲已有 `build_outline_markdown`，改造为 `<details>` 折叠结构即可。
+
+##### 1. CodeMirror 搜索面板 CSS 注入（`ui.py` custom_css）
+- **`.cm-panels`** 容器：`display: flex`、`order: -1`（搜索面板显示在编辑器顶部，而非默认底部）、灰底圆角
+- **`.cm-textfield`** 输入框：圆角 + focus 时 indigo 高亮边框 + `box-shadow` 光环
+- **`.cm-button`** 按钮：圆角 + hover 浅灰背景
+- **`.cm-searchMatch`** 匹配高亮：黄色半透明背景；`.cm-searchMatch-selected`（当前选中匹配）：橙色高亮 + 白字
+- **`.cm-panel label`** 标签：灰色小字
+- **隐藏按钮选择器安全**：`.cm-editor-header button` 与 `.cm-panels button` 是平级独立容器，不会误伤搜索面板按钮
+
+##### 2. 大纲折叠结构（`processor.build_outline_markdown` 加 `collapsible` 参数）
+- **`collapsible=True`（新默认）**：输出 `<details>` + `<summary>` HTML 折叠结构
+  - **class 条目**：`<details open>`（默认展开），方法作为 `<ul><li>` 嵌套在 class 的 details 内
+  - **顶级 function/method**：`<details>`（默认折叠），各自独立
+  - 折叠箭头：CSS `summary::before` 伪元素 `▶` → 展开 `rotate(90deg)` → indigo 色
+  - 层级推断：基于 `lineno` / `end_lineno` 范围包含判断 method 属于哪个 class
+- **`collapsible=False`（向后兼容）**：保持旧版平铺 Markdown 无序列表格式
+- **slug 分配顺序不变**：始终按 items 原始顺序（lineno 排序）分配 slug，与 annotator `build_markdown_docs` / `build_java_markdown_docs` 的 `<a id="...">` 完全一致 → 锚点跳转有效
+
+##### 3. i18n 搜索提示（`i18n.py`）
+- 新增 `search_hint` key 三语文案，附加到 `output_code` 组件 label 后缀（`·  💡 Ctrl+F 搜索 / 替换代码`）
+
+##### 兼容性
+- `build_outline_markdown` 签名加 `collapsible: bool = True`，旧调用者不传此参数自动获得折叠版（行为更优）；显式传 `False` 恢复旧格式
+- 锚点 slug 一致性由 `T3_SlugConsistency` 3 条用例保证（Python / Java / collapsible vs flat 三方对比）
+- CSS 纯注入，无 JS、无新增第三方依赖
+- py_compile（processor / ui / i18n / test_outline_collapsible）0 SyntaxError
+
+##### 测试覆盖（`test_outline_collapsible.py` 共 15 用例，全通过）
+| 类 | 用例数 | 覆盖 |
+| --- | --- | --- |
+| T1_CollapsibleStructure | 7 | Python class+method+顶级函数 / Java class+method / 无 class 纯函数 / 空源码 / 语法错误 / 无定义 / class children 嵌套在 details 内 |
+| T2_BackwardCompatFlatFormat | 2 | collapsible=False 输出旧版平铺格式（Python + Java） |
+| T3_SlugConsistency | 3 | Python slug 匹配 annotator / Java slug 匹配 annotator / collapsible 与 flat 锚点集合完全相同 |
+| T4_I18nSearchHint | 1 | search_hint 三语存在非空 + 含 Ctrl+F |
+| T5_CSSInjection | 2 | CSS 含搜索面板选择器（.cm-panels/.cm-textfield/.cm-button/.cm-searchMatch） + 折叠选择器（.outline-sidebar details/summary/details[open]/summary::before/details>ul） |
 
 ### v2.3.5 — 2026-08-07（v2.3.0 小更新 #5）
 

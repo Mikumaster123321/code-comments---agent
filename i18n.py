@@ -253,6 +253,12 @@ TRANSLATIONS = {
         "English": "Move to annotated/ subdirectory (keep tree)",
         "日本語": "annotated/ サブフォルダに格納（元ツリー保持）",
     },
+    # ===== v2.3.6 搜索 + 折叠提示 =====
+    "search_hint": {
+        "中文": "💡 Ctrl+F 搜索 / 替换代码",
+        "English": "💡 Ctrl+F to search / replace code",
+        "日本語": "💡 Ctrl+F でコード検索・置換",
+    },
 }
 
 

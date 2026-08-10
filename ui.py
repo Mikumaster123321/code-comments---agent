@@ -378,6 +378,147 @@ CUSTOM_CSS = """
         font-size: 20px !important;
     }
 }
+
+/* ===== v2.3.6 CodeMirror 搜索面板美化（Ctrl+F / Cmd+F 触发）===== */
+/* 确保搜索面板容器可见、不被隐藏按钮规则误伤 */
+.code-container .cm-panels {
+    display: flex !important;
+    flex-direction: column !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    background: #f9fafb !important;
+    order: -1 !important;  /* 搜索面板显示在编辑器顶部 */
+}
+/* 搜索面板输入框 */
+.code-container .cm-panels .cm-textfield {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    background: #fff !important;
+    color: #1f2937 !important;
+    outline: none !important;
+}
+.code-container .cm-panels .cm-textfield:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+}
+/* 搜索面板按钮 */
+.code-container .cm-panels .cm-button {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 3px 10px !important;
+    font-size: 12px !important;
+    color: #374151 !important;
+    background: #fff !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+.code-container .cm-panels .cm-button:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+}
+/* 搜索匹配高亮 */
+.code-container .cm-searchMatch {
+    background: rgba(250, 204, 21, 0.4) !important;
+    border-radius: 2px !important;
+}
+.code-container .cm-searchMatch-selected {
+    background: rgba(249, 115, 22, 0.5) !important;
+    color: #fff !important;
+}
+/* 搜索面板标签 */
+.code-container .cm-panels .cm-panel label {
+    font-size: 12px !important;
+    color: #6b7280 !important;
+}
+.code-container .cm-panels .cm-panel .cm-panel-collapser {
+    color: #9ca3af !important;
+}
+
+/* ===== v2.3.6 大纲折叠 details/summary 美化 ===== */
+.outline-sidebar details {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    margin: 4px 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+    transition: border-color 0.15s ease !important;
+}
+.outline-sidebar details:hover {
+    border-color: #c7d2fe !important;
+}
+.outline-sidebar details[open] {
+    border-color: #6366f1 !important;
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.08) !important;
+}
+.outline-sidebar summary {
+    cursor: pointer !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    color: #1f2937 !important;
+    list-style: none !important;  /* 移除原生三角 */
+    user-select: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    transition: background 0.15s ease !important;
+}
+.outline-sidebar summary:hover {
+    background: #f9fafb !important;
+}
+/* 自定义折叠箭头 */
+.outline-sidebar summary::before {
+    content: '▶' !important;
+    font-size: 10px !important;
+    color: #9ca3af !important;
+    transition: transform 0.2s ease !important;
+    display: inline-block !important;
+    width: 14px !important;
+    flex-shrink: 0 !important;
+}
+.outline-sidebar details[open] > summary::before {
+    transform: rotate(90deg) !important;
+    color: #6366f1 !important;
+}
+/* 折叠内嵌子列表 */
+.outline-sidebar details > ul {
+    margin: 0 !important;
+    padding: 4px 0 8px 28px !important;
+    list-style: none !important;
+}
+.outline-sidebar details > ul > li {
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    border-radius: 4px !important;
+    transition: background 0.15s ease !important;
+}
+.outline-sidebar details > ul > li:hover {
+    background: #f3f4f6 !important;
+}
+/* 大纲内链接样式 */
+.outline-sidebar summary a,
+.outline-sidebar details > ul > li a {
+    color: #4f46e5 !important;
+    text-decoration: none !important;
+}
+.outline-sidebar summary a:hover,
+.outline-sidebar details > ul > li a:hover {
+    text-decoration: underline !important;
+}
+.outline-sidebar summary code,
+.outline-sidebar details > ul > li code {
+    background: #eef2ff !important;
+    padding: 1px 5px !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    color: #3730a3 !important;
+    font-family: 'JetBrains Mono', 'Consolas', monospace !important;
+}
+.outline-sidebar summary small,
+.outline-sidebar details > ul > li small {
+    color: #9ca3af !important;
+    font-size: 11px !important;
+}
 """
 
 
@@ -421,7 +562,7 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("gen_btn", lang)),            # 6  btn
         gr.update(value=t("analyze_btn", lang)),        # 7  analyze_btn
         gr.update(label=t("tab_annotated", lang)),      # 8  tab_annotated
-        gr.update(label=t("output_code_label", lang)), # 9  output_code
+        gr.update(label=f'{t("output_code_label", lang)}  ·  {t("search_hint", lang)}'), # 9  output_code
         gr.update(label=t("dl_src_btn", lang)),         # 10 dl_src_btn
         gr.update(label=t("dl_md_btn", lang)),          # 11 dl_md_btn
         gr.update(label=t("tab_docs", lang)),           # 12 tab_docs
@@ -602,7 +743,7 @@ def create_ui():
                     # 顶部导航大纲（点击大纲链接跳到 tab_docs API 文档对应章节锚点）
                     outline_md = gr.Markdown(elem_classes="scrollable-md outline-sidebar")
                     output_code = gr.Code(
-                        label=t("output_code_label", default_lang),
+                        label=f'{t("output_code_label", default_lang)}  ·  {t("search_hint", default_lang)}',
                         language=None,
                         elem_classes="code-container output-code-light",
                     )
