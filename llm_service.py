@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-"""LLM 调用模块：生成 docstring/Javadoc（支持 Google/NumPy/reST/Javadoc/极简 多种风格），内置重试机制"""
+"""LLM 调用模块：生成 docstring/Javadoc（支持 Google/NumPy/reST/Javadoc/极简 多种风格），内置重试机制
+v2.4.0 大更新：client/MODEL/PRICE_* 不再是 config 常量导入，而是通过 getter 每次动态获取，
+保证 UI 切换 Provider/Model 后下一次请求立即生效。
+"""
 import re
 import time
 from typing import Optional
 import openai
-from config import client, MODEL, TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
-from config import (
-    PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M, AVG_TOKENS_PER_ITEM,
-    INPUT_RATIO, OUTPUT_RATIO,
-)
+# v2.4.0 不再 import 常量 client, MODEL, PRICE_*；改为运行时 getter
+import config as _cfg
+# 无 Provider 无关的常量仍可直接 import
+from config import TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
+from config import AVG_TOKENS_PER_ITEM, INPUT_RATIO, OUTPUT_RATIO
 from i18n import LANG_NAME, LANG_CODE
 
 # ================== 注释风格定义 ==================
@@ -170,8 +173,8 @@ def _call_llm_with_retry(prompt: str, temperature: float, max_tokens: int) -> st
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.chat.completions.create(
-                model=MODEL,
+            response = _cfg.get_active_client().chat.completions.create(
+                model=_cfg.get_active_model(),
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens
@@ -416,7 +419,7 @@ def translate_javadoc(javadoc: str, comment_lang: str, style: Optional[str] = No
 # ================== API Key 预检 + Token 成本估算 ==================
 
 def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
-    """1-token 心跳测试：检查 API Key 是否有效、模型是否可用。
+    """1-token 心跳测试：检查 API Key 是否有效、模型是否可用（v2.4.0 动态获取 client/model）。
 
     注意：不会重试（因为要快速反馈），超时 6s 判定失败。
 
@@ -425,29 +428,29 @@ def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
         ok=True, message="OK" / "OK (model=<model>)" 表示通过
         ok=False, message 为友好错误描述（HTTP 401 Key 无效 / 网络异常 / 超时 / 其他）
     """
+    cur_model = _cfg.get_active_model()
     try:
-        resp = client.chat.completions.create(
-            model=MODEL,
+        resp = _cfg.get_active_client().chat.completions.create(
+            model=cur_model,
             messages=[{"role": "user", "content": "ping"}],
             temperature=0.0,
             max_tokens=1,
             timeout=timeout,
         )
-        # 只要能拿到一条 choices 就认为有效（即便内容为空）
         if resp and hasattr(resp, "choices") and resp.choices:
-            return True, f"OK (model={MODEL})"
-        return True, f"OK (model={MODEL}, empty choices)"
+            return True, f"OK (model={cur_model})"
+        return True, f"OK (model={cur_model}, empty choices)"
     except openai.AuthenticationError:
-        return False, "AuthenticationError: API Key 无效或已过期，请检查 DEEPSEEK_API_KEY"
+        return False, "AuthenticationError: API Key 无效或已过期，请检查对应 Provider 的 API Key 环境变量"
     except openai.PermissionDeniedError:
         return False, "PermissionDeniedError: API Key 无权限访问该模型或该接口"
     except openai.RateLimitError:
         return False, "RateLimitError: 请求频率超限或账户余额不足，请稍后重试/检查账户余额"
     except openai.NotFoundError:
-        return False, f"NotFoundError: 模型 {MODEL} 不存在或 base_url 配置错误"
+        return False, f"NotFoundError: 模型 {cur_model} 不存在或 base_url 配置错误"
     except openai.APITimeoutError:
         return False, f"APITimeoutError: 请求超时（{timeout}s），请检查网络或稍后重试"
-    except Exception as e:  # 其余未知异常
+    except Exception as e:
         name = type(e).__name__
         msg = str(e).strip().splitlines()[0] if str(e).strip() else name
         return False, f"{name}: {msg}"
@@ -476,6 +479,6 @@ def estimate_tokens_cost(
     total = num_items * per
     inp = int(total * INPUT_RATIO)
     out = int(total * OUTPUT_RATIO)
-    # 成本 = 输入 tokens/1e6 * 输入单价 + 输出 tokens/1e6 * 输出单价
-    cost = (inp / 1_000_000.0) * PRICE_INPUT_PER_M + (out / 1_000_000.0) * PRICE_OUTPUT_PER_M
+    # 成本 = 输入 tokens/1e6 * 输入单价 + 输出 tokens/1e6 * 输出单价（v2.4.0 按当前 Provider 动态计算）
+    cost = (inp / 1_000_000.0) * _cfg.get_price_input_per_m() + (out / 1_000_000.0) * _cfg.get_price_output_per_m()
     return total, inp, out, round(cost, 4)

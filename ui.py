@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Gradio 界面模块：构建美观的 Web 交互界面"""
+"""Gradio 界面模块：构建美观的 Web 交互界面
+v2.4.0 大更新：新增 Provider / 模型切换区（6 个组件）
+"""
 import gradio as gr
 from processor import (
     process_code, analyze_code, handle_file_upload,
@@ -10,6 +12,7 @@ from processor import (
     save_workspace, load_workspace, clear_workspace,
 )
 from i18n import LANGUAGES, t
+import config as _cfg
 
 # ==================== 自定义 CSS ====================
 CUSTOM_CSS = """
@@ -605,6 +608,17 @@ def _apply_ui_language(lang: str):
         gr.update(value=t("workspace_restore_btn", lang)),# 40 ws_restore_btn
         gr.update(value=t("workspace_clear_btn", lang)),# 41 ws_clear_btn
         gr.update(value=t("workspace_tip", lang)),      # 42 ws_tip_md
+        # ===== v2.4.0 多 Provider / 多模型切换新增 =====
+        gr.update(value=t("provider_section", lang)),      # 43 provider_section_md
+        gr.update(label=t("provider_label", lang)),        # 44 provider_dd
+        gr.update(label=t("model_label", lang)),           # 45 model_dd
+        gr.update(label=t("api_key_label", lang), placeholder=t("api_key_placeholder", lang)),  # 46 api_key_tb
+        gr.update(label=t("base_url_label", lang), placeholder=t("base_url_placeholder", lang)),# 47 base_url_tb
+        gr.update(label=t("custom_model_label", lang)),    # 48 custom_model_tb
+        gr.update(value=t("apply_provider_btn", lang)),    # 49 apply_provider_btn
+        # provider_status_md / provider_info_md 内容是动态的，语言切换时保持 gr.update() 占位
+        gr.update(),  # 50 provider_status_md
+        gr.update(),  # 51 provider_info_md
     ]
 
 
@@ -649,6 +663,69 @@ def create_ui():
                         label=t("java_style_label", default_lang),
                         allow_custom_value=False,
                     )
+
+        # ===== v2.4.0 Provider / 模型切换区 =====
+        with gr.Column(elem_classes="card-section"):
+            provider_section_md = gr.Markdown(t("provider_section", default_lang))
+            with gr.Row():
+                # Provider 下拉框
+                provider_dd = gr.Dropdown(
+                    choices=_cfg.get_providers(default_lang),
+                    value=_cfg.get_active_provider(),
+                    label=t("provider_label", default_lang),
+                    allow_custom_value=False,
+                    scale=1,
+                )
+                # Model 下拉框（根据当前 Provider 动态刷新）
+                model_dd = gr.Dropdown(
+                    choices=_cfg.get_models_for_provider(_cfg.get_active_provider(), default_lang),
+                    value=_cfg.get_active_model(),
+                    label=t("model_label", default_lang),
+                    allow_custom_value=True,
+                    scale=1,
+                )
+            with gr.Row():
+                # API Key 输入（运行时覆盖，不保存）
+                api_key_tb = gr.Textbox(
+                    label=t("api_key_label", default_lang),
+                    placeholder=t("api_key_placeholder", default_lang),
+                    type="password",
+                    lines=1,
+                    scale=1,
+                )
+                # Base URL（仅 Azure / Custom 可编辑）
+                base_url_tb = gr.Textbox(
+                    label=t("base_url_label", default_lang),
+                    placeholder=t("base_url_placeholder", default_lang),
+                    value=_cfg.get_active_base_url(),
+                    lines=1,
+                    scale=1,
+                    interactive=_cfg.is_active_provider_customizable(),
+                )
+            # Custom Provider 自定义模型名
+            custom_model_tb = gr.Textbox(
+                label=t("custom_model_label", default_lang),
+                placeholder="例如：qwen2.5-72b-instruct 或 my-local-model",
+                lines=1,
+                interactive=(_cfg.get_active_provider() == "custom"),
+            )
+            with gr.Row():
+                apply_provider_btn = gr.Button(
+                    t("apply_provider_btn", default_lang),
+                    variant="primary",
+                    size="lg",
+                    elem_classes="action-btn",
+                )
+            # 状态 / 当前信息显示
+            provider_status_md = gr.Markdown(elem_classes="scrollable-md")
+            provider_info_md = gr.Markdown(
+                value=t("current_provider_info", default_lang).format(
+                    p=_cfg.get_active_provider(),
+                    m=_cfg.get_active_model(),
+                    u=_cfg.get_active_base_url(),
+                ),
+                elem_classes="scrollable-md",
+            )
 
         # ===== 输入区 =====
         with gr.Column(elem_classes="card-section"):
@@ -880,6 +957,16 @@ def create_ui():
                 ws_restore_btn,        # 40
                 ws_clear_btn,          # 41
                 ws_tip_md,             # 42
+                # ===== v2.4.0 多 Provider / 多模型切换新增 =====
+                provider_section_md,   # 43
+                provider_dd,           # 44
+                model_dd,              # 45
+                api_key_tb,            # 46
+                base_url_tb,           # 47
+                custom_model_tb,       # 48
+                apply_provider_btn,    # 49
+                provider_status_md,    # 50
+                provider_info_md,      # 51
             ],
         )
 
@@ -1170,6 +1257,83 @@ def create_ui():
             fn=_ws_clear,
             inputs=[],
             outputs=[output_log],
+        )
+
+        # ===== v2.4.0 Provider / 模型切换事件绑定 =====
+        def _on_provider_change(pkey: str, ulang: str):
+            """切换 Provider 下拉框：刷新 Model 列表 + 解锁/锁定 Base URL 和自定义模型名
+
+            Args:
+                pkey: 新的 Provider key
+                ulang: 当前 UI 语言
+
+            Returns:
+                (model_choices_update, base_url_interactive, base_url_value,
+                 custom_model_interactive, info_md_update)
+            """
+            models = _cfg.get_models_for_provider(pkey, ulang)
+            first_model = models[0][1] if models else ""
+            customizable = _cfg.PROVIDERS[pkey]["customizable_base_url"]
+            default_base = _cfg.PROVIDERS[pkey]["base_url"]
+            is_custom = (pkey == "custom")
+            info = t("current_provider_info", ulang).format(
+                p=pkey,
+                m=first_model,
+                u=default_base,
+            )
+            return (
+                gr.update(choices=models, value=first_model),  # model_dd
+                gr.update(interactive=customizable, value=default_base),  # base_url_tb
+                gr.update(interactive=is_custom),  # custom_model_tb
+                gr.update(value=f"\n{info}\n"),    # provider_info_md
+            )
+
+        provider_dd.change(
+            fn=_on_provider_change,
+            inputs=[provider_dd, ui_lang],
+            outputs=[model_dd, base_url_tb, custom_model_tb, provider_info_md],
+        )
+
+        def _apply_provider_settings(
+            pkey: str, mkey: str, api_key: str, base_url: str,
+            custom_model: str, ulang: str,
+        ):
+            """点击"应用设置"按钮：调用 config.switch_provider 切换 Provider / Model
+
+            Returns:
+                (status_md, info_md, base_url_tb_update, custom_model_tb_update, model_dd_update)
+            """
+            ok, msg = _cfg.switch_provider(
+                provider_key=pkey,
+                model_key=mkey,
+                api_key=api_key if api_key else None,
+                base_url=base_url if base_url else None,
+                custom_model_name=custom_model if custom_model else None,
+            )
+            if ok:
+                status = t("provider_status_ok", ulang).format(msg=msg)
+            else:
+                status = t("provider_status_err", ulang).format(msg=msg)
+            cur_p = _cfg.get_active_provider()
+            cur_m = _cfg.get_active_model()
+            cur_u = _cfg.get_active_base_url()
+            info = t("current_provider_info", ulang).format(p=cur_p, m=cur_m, u=cur_u)
+            # 同步 model_dd 的 value（如果 custom provider 下用了自定义模型名）
+            new_models = _cfg.get_models_for_provider(cur_p, ulang)
+            customizable = _cfg.PROVIDERS[cur_p]["customizable_base_url"]
+            is_custom = (cur_p == "custom")
+            return (
+                gr.update(value=f"\n{status}\n"),                  # provider_status_md
+                gr.update(value=f"\n{info}\n"),                    # provider_info_md
+                gr.update(value=cur_u, interactive=customizable),  # base_url_tb
+                gr.update(interactive=is_custom),                  # custom_model_tb
+                gr.update(choices=new_models, value=cur_m),        # model_dd
+            )
+
+        apply_provider_btn.click(
+            fn=_apply_provider_settings,
+            inputs=[provider_dd, model_dd, api_key_tb, base_url_tb, custom_model_tb, ui_lang],
+            outputs=[provider_status_md, provider_info_md, base_url_tb, custom_model_tb, model_dd],
         )
 
     return demo

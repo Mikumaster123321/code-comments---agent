@@ -291,6 +291,77 @@ TRANSLATIONS = {
         "English": "🛑 Code Style Check (PEP8 / Google Java Style)",
         "日本語": "🛑 コードスタイルチェック（PEP8 / Google Java Style）",
     },
+    # ===== v2.4.0 多 Provider / 多模型切换 =====
+    "provider_section": {
+        "中文": "### 🔐 大模型 Provider / 模型切换",
+        "English": "### 🔐 LLM Provider / Model Switch",
+        "日本語": "### 🔐 LLM プロバイダー・モデル切替",
+    },
+    "provider_label": {
+        "中文": "🏢 Provider（API 服务商）",
+        "English": "🏢 Provider (API Vendor)",
+        "日本語": "🏢 プロバイダー（API ベンダー）",
+    },
+    "model_label": {
+        "中文": "🤖 模型名称",
+        "English": "🤖 Model Name",
+        "日本語": "🤖 モデル名",
+    },
+    "api_key_label": {
+        "中文": "🔑 API Key（运行时覆盖，不写入磁盘）",
+        "English": "🔑 API Key (runtime override, not saved)",
+        "日本語": "🔑 API Key（実行時上書き、保存されません）",
+    },
+    "api_key_placeholder": {
+        "中文": "留空则使用 .env 中对应的环境变量",
+        "English": "Leave empty to use env vars from .env",
+        "日本語": "空欄のままだと .env の環境変数を使用",
+    },
+    "base_url_label": {
+        "中文": "🌐 Base URL（仅 Azure / Custom 可自定义）",
+        "English": "🌐 Base URL (Azure / Custom only)",
+        "日本語": "🌐 Base URL（Azure / カスタムのみ変更可）",
+    },
+    "base_url_placeholder": {
+        "中文": "非 Azure/Custom Provider 时该字段被锁定，使用默认值",
+        "English": "Locked for non-Azure/Custom providers; uses default",
+        "日本語": "Azure/カスタム以外はロックされ、既定値を使用",
+    },
+    "custom_model_label": {
+        "中文": "✏️ 自定义模型名（仅 Custom Provider）",
+        "English": "✏️ Custom Model Name (Custom Provider only)",
+        "日本語": "✏️ カスタムモデル名（カスタムプロバイダーのみ）",
+    },
+    "apply_provider_btn": {
+        "中文": "✅ 应用 Provider / 模型设置",
+        "English": "✅ Apply Provider / Model Settings",
+        "日本語": "✅ プロバイダー・モデル設定を適用",
+    },
+    "provider_status_ok": {
+        "中文": "✅ Provider 切换成功：{msg}",
+        "English": "✅ Provider switched: {msg}",
+        "日本語": "✅ プロバイダー切替成功：{msg}",
+    },
+    "provider_status_err": {
+        "中文": "❌ Provider 设置失败：{msg}",
+        "English": "❌ Provider setup failed: {msg}",
+        "日本語": "❌ プロバイダー設定失敗：{msg}",
+    },
+    "current_provider_info": {
+        "中文": "📌 当前：Provider=`{p}` · Model=`{m}` · Endpoint=`{u}`",
+        "English": "📌 Current: Provider=`{p}` · Model=`{m}` · Endpoint=`{u}`",
+        "日本語": "📌 現在：Provider=`{p}` · Model=`{m}` · Endpoint=`{u}`",
+    },
+    "api_key_status_ok": {
+        "中文": "✅ API Key 更新成功：{msg}",
+        "English": "✅ API Key updated: {msg}",
+        "日本語": "✅ API Key 更新成功：{msg}",
+    },
+    "api_key_status_err": {
+        "中文": "❌ API Key 更新失败：{msg}",
+        "English": "❌ API Key update failed: {msg}",
+        "日本語": "❌ API Key 更新失敗：{msg}",
+    },
 }
 
 

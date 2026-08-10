@@ -1,8 +1,8 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.3.8**（2026-08-10 · v2.3.0 的小更新 · 代码风格检查 PEP8 / Google Java Style）
+**当前版本：v2.4.0**（2026-08-11 · 大版本更新 · 多 Provider / 多模型切换 + 运行时 API Key 管理）
 
-基于 DeepSeek 大模型 + Gradio 构建的 Python 代码自动注释工具。通过 AST 解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的中文文档字符串（docstring），并自动生成 Markdown API 文档。
+基于 **多 LLM Provider（DeepSeek / OpenAI / Azure / 阿里百炼 / 月之暗面 / 自定义 OpenAI 兼容网关）** + Gradio 构建的 Python & Java 代码自动注释工具。通过 AST/正则解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的文档字符串（docstring/Javadoc），并自动生成 Markdown API 文档。
 
 ## 功能特性
 
@@ -33,9 +33,9 @@
 
 | 组件 | 技术 |
 |------|------|
-| LLM | DeepSeek Chat API |
+| LLM Provider | DeepSeek / OpenAI / Azure / 阿里百炼（DashScope） / 月之暗面（Moonshot Kimi） / **自定义 OpenAI 兼容网关**（Ollama / vLLM / OneAPI / LM Studio 等） |
 | Web 框架 | Gradio |
-| 代码解析 | Python AST 模块 |
+| 代码解析 | Python AST 模块 / Java 正则解析 |
 | 并发处理 | ThreadPoolExecutor |
 | 环境管理 | python-dotenv |
 
@@ -63,19 +63,35 @@ source .venv/bin/activate
 pip install openai gradio python-dotenv
 ```
 
-### 2. 配置 API Key
+### 2. 配置 Provider / Model / API Key
 
-复制 `.env.example` 为 `.env`，并填入你的 DeepSeek API Key：
+复制 `.env.example` 为 `.env`，选择你使用的 Provider 并填入对应 API Key（也可在 UI 中运行时切换，不写入文件）：
 
 ```bash
 cp .env.example .env
 ```
 
+#### 启动默认 Provider / Model（.env 全局默认，启动后 UI 可随时切换）
+
 ```env
-DEEPSEEK_API_KEY=your-deepseek-api-key-here
+# 可选：deepseek | openai | azure | dashscope | moonshot | custom
+PROVIDER=deepseek
+# 模型名可留空（取对应 Provider 的第一个默认）；UI 切换覆盖此值
+MODEL=deepseek-chat
 ```
 
-> API Key 申请地址：https://platform.deepseek.com/
+#### 各 Provider 的 API Key（按优先级，第一个非空生效）
+
+| Provider | 环境变量名（优先级从高到低） | 官网 / 获取地址 |
+| --- | --- | --- |
+| **DeepSeek**（默认推荐） | `DEEPSEEK_API_KEY` → `OPENAI_API_KEY` | https://platform.deepseek.com |
+| **OpenAI 官方** | `OPENAI_API_KEY` | https://platform.openai.com |
+| **Azure OpenAI** | `AZURE_OPENAI_API_KEY` → `OPENAI_API_KEY` | https://portal.azure.com → Azure OpenAI → Keys and Endpoint<br/>**必须配置 `BASE_URL`**：`https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT` |
+| **阿里百炼 / Qwen** | `DASHSCOPE_API_KEY` → `ALIBABA_API_KEY` → `OPENAI_API_KEY` | https://bailian.console.aliyun.com |
+| **月之暗面 / Kimi** | `MOONSHOT_API_KEY` → `KIMI_API_KEY` → `OPENAI_API_KEY` | https://platform.moonshot.cn |
+| **Custom（本地/自建网关）** | `OPENAI_API_KEY` | Ollama / vLLM / LM Studio / OneAPI 等本地/内网 OpenAI 兼容网关<br/>**必须配置** `BASE_URL=http://localhost:8000/v1` + `CUSTOM_MODEL_NAME=qwen2.5-72b-instruct` |
+
+> 🔐 **安全提示**：UI 中「🔑 API Key」输入框仅运行时内存覆盖，**绝不会写入 .env 或 tempfile 工作区**（会话持久化保存白名单也排除了 api_key 字段）。
 
 ### 3. 启动程序
 
@@ -194,7 +210,102 @@ code-comments---agent/
 
 ## 更新日志
 
-> **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）。
+> **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）→ **v2.4.0（多 Provider / 多模型切换底层能力）**。
+
+### v2.4.0 — 2026-08-11（大版本：多 Provider / 多模型切换 + 运行时 API Key 管理）
+
+> 用户不止一个 API Key，或想在 DeepSeek / GPT / Qwen / Kimi 之间切换测试不同注释质量；之前 `config.py` 硬编码只有 DeepSeek，扩展性受限。
+
+#### 1. config.py 底层重构：`PROVIDERS` 统一字典 + 动态 client 工厂
+
+集中定义 **6 种 OpenAI 兼容协议 Provider**（DeepSeek / OpenAI / Azure / 阿里百炼 DashScope / 月之暗面 Moonshot Kimi / Custom），每项包含完整元数据：
+
+| 字段 | 说明 |
+| --- | --- |
+| `label_zh / label_en / label_ja` | 三语显示名，UI 下拉框本地化 |
+| `api_key_env` | list[str]，按优先级查找环境变量；第一个非空生效 |
+| `base_url` | 默认 API Endpoint；Azure/Custom 支持用户自定义 |
+| `models` | dict[model_name→显示名]，UI 联动刷新 |
+| `price_input_per_m / price_output_per_m` | 输入/输出单价（元 / 1M tokens）；Token 成本估算按当前 Provider 动态取值 |
+| `customizable_base_url` | bool；仅 Azure / Custom 允许改 base_url，其余强制走官方 Endpoint |
+
+**线程安全的运行时状态**：`_lock = threading.RLock()` 保护 `_active_provider / _active_model / _active_api_key / _active_base_url / _custom_model_name`；切换时调用 `_rebuild_client()` 重建 `openai.OpenAI` client 实例。
+
+**公开 API（UI 与 llm_service 只调这里，禁止直接改模块全局）**：
+
+| 函数 | 用途 |
+| --- | --- |
+| `get_providers(lang)` | 返回 [(label, key)] 下拉框数据（按 lang 本地化 label） |
+| `get_models_for_provider(pkey, lang)` | 指定 Provider 的模型列表；Custom 下带 ✏️ 用户自定义模型首项 |
+| `switch_provider(pkey, model_key, api_key, base_url, custom_model_name)` | 原子切换；返回 `(ok, msg)` |
+| `set_api_key(key)` / `set_custom_base_url(url)` | 单独更新 API Key / Base URL |
+| `get_active_provider/model/client/base_url()` | 活动 getter；`get_active_client()` 每次调用都拿最新实例，保证 UI 切换后下一次请求立即生效 |
+| `get_price_input_per_m()` / `get_price_output_per_m()` | 当前 Provider 单价（成本估算用） |
+| `is_active_provider_customizable()` | 判断当前 Provider 是否允许改 base_url（UI 锁定/解锁 `base_url_tb` + `custom_model_tb`） |
+
+**启动期 .env 初始化**：读 `PROVIDER`（非法值回退 deepseek 不报错）→ 读 `MODEL`（不在列表回退默认第一个）→ 读 `BASE_URL`（仅 customizable Provider 生效）→ 读 `CUSTOM_MODEL_NAME`（仅 custom）。
+
+**向后兼容 `__getattr__`**：仍暴露 `client` / `MODEL` / `PRICE_INPUT_PER_M` / `PRICE_OUTPUT_PER_M` 等顶层名字（模块级 getattr 动态计算），保证 `from config import client, MODEL` 的旧代码零修改运行。
+
+#### 2. llm_service 去常量：全部动态 getter
+
+`llm_service.py` 不再 `from config import client, MODEL, PRICE_*`，改为：
+- `client` → `_cfg.get_active_client()`
+- `MODEL` → `_cfg.get_active_model()`
+- `PRICE_INPUT_PER_M / PRICE_OUTPUT_PER_M` → `_cfg.get_price_input_per_m() / get_price_output_per_m()`
+- 结果：**UI 切换 Provider/Model/单价 → 下一次 LLM 请求立即生效，无需重启进程**
+- `ping_api_key` 错误提示从「请检查 DEEPSEEK_API_KEY」升级为更通用的「请检查对应 Provider 的 API Key 环境变量」
+
+#### 3. UI 新增「🔐 Provider / 模型切换」独立区块
+
+在「注释风格选择」card 正下方、「代码输入」card 正上方新增 6 个组件（三语 i18n + 联动事件）：
+
+| 组件 | 类型 | 说明 |
+| --- | --- | --- |
+| `provider_section_md` | Markdown | 小节标题 |
+| `provider_dd` | Dropdown（6 选 1，不可自定义值） | Provider 切换；.change 联动刷新 model_dd + base_url_tb（interactive + 默认值） + custom_model_tb（interactive） + provider_info_md |
+| `model_dd` | Dropdown（可自定义值） | 模型名；跟随 provider_dd 自动刷新 choices；Custom 下若填入自定义名后通过 apply 会成为下拉首项 |
+| `api_key_tb` | Textbox（password 类型） | 留空 → 使用 .env 环境变量；非空 → 仅运行时内存覆盖（**不写文件**） |
+| `base_url_tb` | Textbox | 仅 Azure / Custom 可编辑；其余 Provider 灰掉并显示官方默认 Endpoint |
+| `custom_model_tb` | Textbox | 仅 Custom Provider 可编辑；填写后 apply 成为模型名 |
+| `apply_provider_btn` | Button（primary） | 点击调用 `config.switch_provider(...)`，返回结果写 `provider_status_md`；成功后同步 model_dd.choices/value 和 base_url/custom_model 锁定状态 |
+| `provider_status_md` | Markdown | ✅ 成功 / ❌ 失败消息 |
+| `provider_info_md` | Markdown | 实时显示「Provider=`x` · Model=`y` · Endpoint=`z`」 |
+
+**ui_lang 切换同步**：`_apply_ui_language` 返回列表追加 43-51 号（共 9 项），`ui_lang.change(outputs=...)` 同步追加 9 个组件引用。
+
+#### 4. .env.example 大更新 + Provider 文档表
+
+`.env.example` 从单行 `DEEPSEEK_API_KEY=` 扩展为 5 大部分：
+1. `PROVIDER` / `MODEL` / `BASE_URL` / `CUSTOM_MODEL_NAME` 全局默认变量说明 + 每个 Provider 的可选模型名列表
+2. 按 Provider 分段的 API Key 环境变量（DEEPSEEK/OPENAI/AZURE/DASHSCOPE/MOONSHOT），每个变量注明官网获取地址
+
+#### 5. i18n 三语 16 个新增 key
+
+`provider_section` / `provider_label` / `model_label` / `api_key_label` / `api_key_placeholder` / `base_url_label` / `base_url_placeholder` / `custom_model_label` / `apply_provider_btn` / `provider_status_ok` / `provider_status_err` / `current_provider_info` / `api_key_status_ok` / `api_key_status_err` — 中文 / English / 日本語 全覆盖。
+
+#### 兼容性
+
+- **零破坏性改动**：所有旧 API 保持签名不变；`__getattr__` 兼容层保证旧 import 语句正常工作
+- `analyze_code` 返回 5 元组、processor 批量命名策略、会话持久化等 v2.3.x 功能零侵入
+- py_compile（config / llm_service / i18n / ui / processor）0 SyntaxError
+- 87 条已有测试全部通过（test_workspace_persistence + test_style_lint + test_batch_naming + test_outline_collapsible）
+
+#### 测试覆盖（`test_provider_model.py` 共 **52** 用例，全通过）
+
+| 类（9 个） | 用例数 | 覆盖范围 |
+| --- | --- | --- |
+| TestProvidersDict | 6 | 6 个 Provider key 存在 / 每个 9 字段齐全 / 单价非负 / models 非空 / customizable 只有 azure+custom / api_key_env list 非空 |
+| TestProviderLabelLocalization | 4 | 中/英/日三语 label / 未知 Provider 回退 key 本身 |
+| TestPublicGetters | 10 | get_providers 结构 / EN 标签 / 各 Provider 模型 / 未知 Provider 空 / 默认 provider / 默认 model / 默认 base_url / customizable false / 单价匹配 |
+| TestSwitchProvider | 9 | 切 openai 成功 / 指定 model / 非法 Provider 失败不变更 / 切 azure 更新 base_url / custom + base_url + 自定义模型名 / api_key='' 重置 env / 非 customizable 传 base_url 被忽略 / moonshot 单价 / dashscope 单价 |
+| TestSetApiKeyAndBaseUrl | 6 | 正常 set_api_key / 空串重置 / deepseek 改 base_url 拒绝 / azure 改 base_url 成功 / None 回退默认 / 末尾斜杠去除 |
+| TestCompatGetAttr | 7 | client 是 openai.OpenAI 实例 / MODEL 与 getter 一致 / 切换后 MODEL 变化 / PRICE_INPUT / PRICE_OUTPUT / 切 moonshot 单价同步 / 未知属性抛 AttributeError |
+| TestLLMServiceDynamic | 5 | 切换 Provider 后 estimate 成本变化（Moonshot < DeepSeek） / 0 items 零向量 / -10 items 零向量 / Custom 零单价 / 自定义 avg_tokens |
+| TestCustomProviderModels | 2 | 默认无自定义模型首项 / 切换后首项带 ✏️ 前缀 |
+| TestProviderMeta | 3 | get_active_client 同一实例缓存 / _lock 是 RLock 实例 / 切换后 client 实例不同 |
+
+**回归测试**：`test_provider_model (52) + test_style_lint (31) + test_workspace_persistence (25) + test_outline_collapsible (15) + test_batch_naming (16)` = **139 条全通过，0 Failing**。
 
 ### v2.3.8 — 2026-08-10（v2.3.0 小更新 #8）
 
