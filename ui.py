@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Gradio 界面模块：构建美观的 Web 交互界面
-v2.4.0 大更新：新增 Provider / 模型切换区（6 个组件）
+v2.4.1 小更新：macOS + 手机端响应式自适应
 """
 import gradio as gr
 from processor import (
@@ -18,7 +18,7 @@ import config as _cfg
 CUSTOM_CSS = """
 /* ===== 全局基础 ===== */
 .gradio-container {
-    font-family: 'Inter', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif !important;
     max-width: 1280px !important;
     padding: 24px 20px !important;
     background: #f5f7fb !important;
@@ -130,7 +130,7 @@ CUSTOM_CSS = """
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0,0,0,0.04) !important;
 }
 .code-container .cm-scroller {
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Menlo', monospace !important;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', 'Fira Code', 'Consolas', monospace !important;
     line-height: 1.6 !important;
     background: #ffffff !important;
     overflow: auto !important;
@@ -369,17 +369,252 @@ CUSTOM_CSS = """
     border-top: 1px solid #e5e7eb !important;
 }
 
-/* ===== 响应式微调 ===== */
+/* ===== v2.4.1 macOS 滚动条适配（overlay 风格）===== */
+/* macOS 默认使用 overlay 滚动条，宽 10px 在 macOS 上偏粗，细化为 8px */
+@media (-webkit-min-device-pixel-ratio: 1) and (pointer: fine) {
+    .code-container .cm-scroller::-webkit-scrollbar,
+    .scrollable-md::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+    }
+}
+/* macOS 触控板/鼠标悬停时滚动条才显示，非悬停时半透明 */
+.code-container .cm-scroller::-webkit-scrollbar:vertical {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+/* ===== v2.4.1 响应式自适应（平板 768px / 手机 480px / 小手机 360px 三档断点）===== */
+
+/* --- 平板（iPad 768px ~ 1024px）：适度缩小 --- */
+@media (max-width: 1024px) {
+    .gradio-container {
+        max-width: 100% !important;
+        padding: 16px 12px !important;
+    }
+    .app-header {
+        padding: 20px 24px !important;
+    }
+    .app-header h1 {
+        font-size: 22px !important;
+    }
+    .header-lang-switcher {
+        min-width: 140px !important;
+    }
+    .code-container {
+        height: 500px !important;
+        min-height: 300px !important;
+    }
+    .code-container > div,
+    .code-container .cm-editor,
+    .code-container .cm-scroller,
+    .code-container .cm-content {
+        min-height: 300px !important;
+        max-height: 500px !important;
+    }
+}
+
+/* --- 手机（≤768px）：垂直堆叠 + 全宽 --- */
 @media (max-width: 768px) {
     .gradio-container {
         max-width: 100% !important;
-        padding: 12px !important;
+        padding: 10px 8px !important;
+    }
+    /* 顶部标题 + 语言切换器垂直排列 */
+    .header-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .header-lang-switcher {
+        min-width: 100% !important;
+        max-width: 100% !important;
     }
     .app-header {
-        padding: 18px 20px !important;
+        padding: 16px 18px !important;
+        border-radius: 12px !important;
     }
     .app-header h1 {
-        font-size: 20px !important;
+        font-size: 19px !important;
+    }
+    .app-header h2, .app-header p {
+        font-size: 12px !important;
+    }
+    /* 卡片减小内边距 */
+    .card-section {
+        padding: 14px 12px !important;
+        margin-bottom: 12px !important;
+        border-radius: 10px !important;
+    }
+    /* 等宽列在手机上垂直堆叠 */
+    .equal-width {
+        flex-direction: column !important;
+    }
+    .equal-width > div {
+        flex: none !important;
+        width: 100% !important;
+    }
+    /* 代码编辑器高度适配手机屏幕 */
+    .code-container {
+        height: 380px !important;
+        min-height: 250px !important;
+    }
+    .code-container > div,
+    .code-container .cm-editor,
+    .code-container .cm-scroller,
+    .code-container .cm-content {
+        min-height: 250px !important;
+        max-height: 380px !important;
+    }
+    .code-container .cm-editor {
+        font-size: 13px !important;
+        border-radius: 8px !important;
+    }
+    /* 滚动容器 */
+    .scrollable-md {
+        max-height: 400px !important;
+        min-height: 150px !important;
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+    }
+    /* 操作按钮：全宽 + 缩小内边距 */
+    .action-btn {
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+    }
+    /* 按钮行垂直排列 */
+    .gradio-container .form > div:has(.action-btn) {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    /* Tab 导航可水平滚动 + 字号缩小 */
+    .gradio-container .tab-nav {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .gradio-container .tab-nav button {
+        padding: 8px 12px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+    /* Tab 内容区 */
+    .gradio-container .tabitem {
+        min-height: 250px !important;
+        padding-top: 12px !important;
+    }
+    /* 下载按钮行垂直排列 */
+    .dl-btn-row {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    .dl-btn-row > div {
+        flex: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    .dl-download-btn {
+        height: 42px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    /* 文件上传区 */
+    .gradio-container .gr-file,
+    .gradio-container .upload-container {
+        min-height: 120px !important;
+    }
+    /* 页脚 */
+    .app-footer {
+        font-size: 11px !important;
+        padding: 14px 8px !important;
+    }
+    /* 大纲折叠区更紧凑 */
+    .outline-sidebar summary {
+        padding: 6px 8px !important;
+        font-size: 13px !important;
+    }
+    .outline-sidebar details > ul {
+        padding: 4px 0 6px 20px !important;
+    }
+}
+
+/* --- 小手机（≤480px：iPhone SE / Android compact）进一步压缩 --- */
+@media (max-width: 480px) {
+    .gradio-container {
+        padding: 6px 4px !important;
+    }
+    .app-header {
+        padding: 12px 14px !important;
+        border-radius: 10px !important;
+    }
+    .app-header h1 {
+        font-size: 17px !important;
+    }
+    .app-header h2, .app-header p {
+        font-size: 11px !important;
+    }
+    .card-section {
+        padding: 10px 8px !important;
+        margin-bottom: 10px !important;
+        border-radius: 8px !important;
+    }
+    .code-container {
+        height: 300px !important;
+        min-height: 200px !important;
+    }
+    .code-container > div,
+    .code-container .cm-editor,
+    .code-container .cm-scroller,
+    .code-container .cm-content {
+        min-height: 200px !important;
+        max-height: 300px !important;
+    }
+    .code-container .cm-editor {
+        font-size: 12px !important;
+    }
+    .scrollable-md {
+        max-height: 300px !important;
+        min-height: 100px !important;
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+    }
+    .action-btn {
+        padding: 9px 12px !important;
+        font-size: 13px !important;
+    }
+    .gradio-container .tab-nav button {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
+    .gradio-container label {
+        font-size: 12px !important;
+        margin-bottom: 4px !important;
+    }
+    .dl-download-btn {
+        height: 38px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* --- 触控设备（无 hover）：禁用悬浮动效，减少误触 --- */
+@media (hover: none) and (pointer: coarse) {
+    .card-section:hover {
+        transform: none !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03) !important;
+    }
+    .action-btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .dl-download-btn:hover {
+        transform: none !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+    }
+    .outline-sidebar summary:hover {
+        background: transparent !important;
     }
 }
 
@@ -516,7 +751,7 @@ CUSTOM_CSS = """
     border-radius: 4px !important;
     font-size: 13px !important;
     color: #3730a3 !important;
-    font-family: 'JetBrains Mono', 'Consolas', monospace !important;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace !important;
 }
 .outline-sidebar summary small,
 .outline-sidebar details > ul > li small {

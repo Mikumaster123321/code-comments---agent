@@ -1,6 +1,6 @@
 # 代码注释与 API 文档自动生成 Agent
 
-**当前版本：v2.4.0**（2026-08-11 · 大版本更新 · 多 Provider / 多模型切换 + 运行时 API Key 管理）
+**当前版本：v2.4.1**（2026-08-12 · v2.4.0 的小更新 · macOS + 手机端响应式自适应）
 
 基于 **多 LLM Provider（DeepSeek / OpenAI / Azure / 阿里百炼 / 月之暗面 / 自定义 OpenAI 兼容网关）** + Gradio 构建的 Python & Java 代码自动注释工具。通过 AST/正则解析提取函数和类定义，调用 LLM 生成多种风格（Python：Google/NumPy/reStructuredText；Java：标准 Javadoc/极简行内注释）的文档字符串（docstring/Javadoc），并自动生成 Markdown API 文档。
 
@@ -211,6 +211,43 @@ code-comments---agent/
 ## 更新日志
 
 > **版本号规则**：大版本 `vX.Y.0` 仅记录"技术含量极强/新增底层架构能力"的重要更新；小更新 `vX.Y.1`、`vX.Y.2` … 不单独占据"大版本位"，归入最近一次大版本的"小更新"子节按时间倒序排列。大版本列表：v1.0.0（初始）→ v2.0.0（架构重构+并发+质量分析）→ v2.1.0（Java 支持+目录结构分语言）→ v2.2.0（i18n 三语+注释翻译）→ v2.3.0（Diff Split 视图）→ **v2.4.0（多 Provider / 多模型切换底层能力）**。
+
+### v2.4.1 — 2026-08-12（v2.4.0 小更新 #1）
+
+#### 📱 macOS + 手机端响应式自适应
+旧版 CSS 仅针对桌面端 Windows 高分屏设计，在 macOS 和手机浏览器上字体回退不美观、滚动条偏粗、布局元素溢出。本次更新为 CSS 纯注入，零新增依赖、零组件结构变更。
+
+##### 1. macOS 字体栈优化
+- **全局字体**：`-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Hiragino Sans GB'` 优先于 `'Segoe UI', 'Microsoft YaHei'`，macOS 上自动使用 San Francisco / 苹方，Windows 回退 Segoe UI / 雅黑
+- **代码等宽字体**：`'SF Mono', 'Monaco', 'Menlo'` 优先于 `'Fira Code', 'Consolas'`，macOS 上使用 SF Mono，Windows 回退 Consolas
+- **大纲折叠区 code 标签**：同步更新等宽字体栈
+
+##### 2. macOS 滚动条适配
+- `@media (-webkit-min-device-pixel-ratio: 1) and (pointer: fine)` 媒体查询下，滚动条宽度从 10px 细化为 8px
+- `.cm-scroller::-webkit-scrollbar:vertical` 添加 `-webkit-appearance: none`，让 macOS overlay 滚动条不与自定义样式冲突
+
+##### 3. 三档断点响应式布局
+
+| 断点 | 适用设备 | 主要调整 |
+| --- | --- | --- |
+| `max-width: 1024px` | iPad / 平板 | 容器全宽 / header 内边距缩小 / 代码编辑器 500px / 语言切换器 140px |
+| `max-width: 768px` | 手机横屏 / 大手机竖屏 | header 垂直堆叠 / 等宽列垂直排列 / 编辑器 380px / 按钮全宽垂直 / Tab 水平滚动 / 下载按钮垂直 / 卡片圆角缩小 |
+| `max-width: 480px` | iPhone SE / Android compact | 进一步压缩：header 17px / 编辑器 300px 12px 字号 / 卡片 8px 圆角 / Tab 12px 字号 |
+
+##### 4. 触控设备优化
+`@media (hover: none) and (pointer: coarse)` 媒体查询下（触控手机/平板）：
+- 禁用 `.card-section:hover` 的 transform 和阴影增强（避免误触闪烁）
+- 禁用 `.action-btn:hover` / `.dl-download-btn:hover` 的悬浮位移
+- 禁用 `.outline-sidebar summary:hover` 的背景色变化
+
+##### 兼容性
+- **纯 CSS 注入**，零 Python 代码变更、零新增第三方依赖
+- 所有 Gradio 组件 id / class / 事件绑定零修改，已有测试零侵入
+- py_compile（ui.py）0 SyntaxError
+- 139 条测试全部通过，0 Failing
+
+##### 测试覆盖
+回归测试：`test_provider_model (52) + test_style_lint (31) + test_workspace_persistence (25) + test_outline_collapsible (15) + test_batch_naming (16)` = **139 条全通过，0 Failing**。
 
 ### v2.4.0 — 2026-08-11（大版本：多 Provider / 多模型切换 + 运行时 API Key 管理）
 
