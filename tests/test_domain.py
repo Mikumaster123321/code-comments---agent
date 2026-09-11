@@ -30,6 +30,15 @@ def test_symbol_id_distinguishes_same_name_in_different_scopes():
     assert first != second
 
 
+def test_symbol_id_normalizes_windows_and_unix_path_separators():
+    windows = SymbolId("python", "src\\a.py", "run", SymbolKind.FUNCTION)
+    unix = SymbolId("python", "src/a.py", "run", SymbolKind.FUNCTION)
+
+    assert windows == unix
+    assert windows.relative_path == "src/a.py"
+    assert hash(windows) == hash(unix)
+
+
 def test_project_and_analysis_finding_remain_minimal_data_objects():
     project = Project("project-1", "Example", "/tmp/example")
     finding = AnalysisFinding("E501", "line too long", "warning", "example.py", 4)

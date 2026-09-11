@@ -6,6 +6,10 @@ from hashlib import sha256
 from typing import Optional
 
 
+def _normalize_relative_path(relative_path: str) -> str:
+    return relative_path.replace("\\", "/")
+
+
 class SymbolKind(str, Enum):
     CLASS = "class"
     FUNCTION = "function"
@@ -28,7 +32,7 @@ class SourceFile:
     content_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "relative_path", self.relative_path.replace("\\", "/"))
+        object.__setattr__(self, "relative_path", _normalize_relative_path(self.relative_path))
         object.__setattr__(self, "content_hash", sha256(self.content.encode("utf-8")).hexdigest())
 
 
@@ -40,6 +44,9 @@ class SymbolId:
     kind: SymbolKind
     semantic_disambiguator: Optional[str] = None
     fallback_line: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "relative_path", _normalize_relative_path(self.relative_path))
 
     def __str__(self) -> str:
         parts = [self.language, self.relative_path, self.qualified_name, self.kind.value]

@@ -6,7 +6,7 @@
 
 ## Current State
 
-- Development branch: `v3.0-migration`
+- Current branch: `v3.0.0-test1`
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -15,7 +15,7 @@
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `25 passed, 1 xfailed`
+- Test baseline: `34 passed, 1 xfailed`
 
 ## Current Architecture
 
@@ -27,11 +27,17 @@ Current domain: `Project`, `SourceFile`, `Symbol`, `SymbolId`, `AnalysisFinding`
 
 For Java overloads, `semantic_disambiguator` uses the normalized parameter signature. `fallback_line` is collision fallback only. `content_hash` is not part of normal identity.
 
+`SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
+source slice returned for that symbol; neither hash is part of `SymbolId`.
+
 ## Known Debt and Boundaries
 
 - The strict xfail documents a processor concurrency issue: results use the symbol `name` as a key, so same-named symbols can overwrite one another.
 - The legacy Python parser does not extract nested functions or local classes inside functions.
-- The Java regex parser guarantees only basic overload and parameter-declaration handling.
+- Java signature normalization is deterministic best-effort canonicalization for the
+  parameter declarations currently needed by V3.0, not a complete Java compiler
+  signature parser. The legacy regex parser guarantees only basic overload and
+  parameter-declaration handling.
 - V3.0 does not add RAG, Multi-Agent, Router, API, or VS Code integration; do not rewrite the Java parser. Migrate incrementally and keep Gradio working.
 
 ## Collaboration
