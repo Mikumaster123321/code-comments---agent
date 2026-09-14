@@ -11,11 +11,12 @@
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
   - Phase 2 — Processor Symbol Migration: completed
+  - Phase 3.1 — Project Discovery / Project Scanner: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `42 passed`
+- Test baseline: `47 passed`
 
 ## Current Architecture
 
@@ -29,6 +30,10 @@ For Java overloads, `semantic_disambiguator` uses the normalized parameter signa
 
 Processor concurrency results, errors, annotated-source backfill, Markdown document
 association, and navigation anchors use `SymbolId` as their internal identity key.
+
+`ProjectScanner` builds a read-only `ScanResult` containing the project, directories,
+files, detected languages, applied ignore rules, metadata, per-file hashes, and a
+deterministic aggregate project hash. It does not perform code analysis.
 
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
@@ -46,6 +51,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The legacy Java annotator is line-oriented: when several declarations share one
   physical line, their identities and documentation remain distinct, but generated
   Javadocs are inserted above the shared line rather than directly before each declaration.
+- Project Scanner applies built-in rules, root `.gitignore`, and caller rules with a
+  deterministic Gitignore-like subset. Nested ignore files and full Git ignore
+  semantics are not implemented; symlinks are deliberately not followed.
+- Import graphs, dependency analysis, snapshots, and RAG are outside Phase 3.1.
 
 ## Collaboration
 

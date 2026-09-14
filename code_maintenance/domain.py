@@ -24,6 +24,45 @@ class Project:
 
 
 @dataclass(frozen=True)
+class ProjectDirectory:
+    relative_path: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "relative_path", _normalize_relative_path(self.relative_path))
+
+
+@dataclass(frozen=True)
+class ProjectFile:
+    relative_path: str
+    language: str
+    size_bytes: int
+    modified_time_ns: int
+    content_hash: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "relative_path", _normalize_relative_path(self.relative_path))
+
+
+@dataclass(frozen=True)
+class ScanMetadata:
+    directory_count: int
+    file_count: int
+    total_bytes: int
+    language_counts: tuple[tuple[str, int], ...]
+    skipped_entries: int = 0
+
+
+@dataclass(frozen=True)
+class ScanResult:
+    project: Project
+    directories: tuple[ProjectDirectory, ...]
+    files: tuple[ProjectFile, ...]
+    ignore_rules: tuple[str, ...]
+    metadata: ScanMetadata
+    content_hash: str
+
+
+@dataclass(frozen=True)
 class SourceFile:
     project_id: str
     relative_path: str
