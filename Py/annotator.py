@@ -40,8 +40,12 @@ def build_markdown_docs(doc_entries: list) -> str:
     used_ids: set[str] = set()
     # 1. 先遍历一遍，给每个条目分配唯一 slug_id
     for entry in doc_entries:
-        prefix = "cls-" if entry.get("type") == "class" else "fn-"
-        entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
+        slug_id = entry.get("slug_id")
+        if slug_id and slug_id not in used_ids:
+            used_ids.add(slug_id)
+        else:
+            prefix = "cls-" if entry.get("type") == "class" else "fn-"
+            entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
 
     # 2. 顶部 Table of Contents 目录
     has_entries = bool(doc_entries)
@@ -138,5 +142,4 @@ def insert_docstring_into_code(source: str, item: dict, docstring: str) -> str:
         raise SyntaxError(f"插入 docstring 后语法错误，已跳过: {item['name']}")
 
     return result
-
 

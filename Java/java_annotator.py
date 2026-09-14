@@ -139,8 +139,12 @@ def build_java_markdown_docs(doc_entries: list) -> str:
     md = "# Java API Documentation\n\n"
     used_ids: set[str] = set()
     for entry in doc_entries:
-        prefix = "cls-" if entry.get("type") == "class" else "m-"
-        entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
+        slug_id = entry.get("slug_id")
+        if slug_id and slug_id not in used_ids:
+            used_ids.add(slug_id)
+        else:
+            prefix = "cls-" if entry.get("type") == "class" else "m-"
+            entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
 
     if doc_entries:
         md += "## 📑 Table of Contents\n\n"

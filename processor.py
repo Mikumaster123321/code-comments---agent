@@ -43,6 +43,7 @@ from Java.java_annotator import (
     extract_existing_javadoc, _validate_braces,
 )
 from Py.analyzer import analyze_code_quality, check_type_annotations
+from code_maintenance import JavaAdapter, PythonAdapter, SourceFile, Symbol, SymbolId
 from config import MAX_WORKERS
 from i18n import LANG_CODE, needs_translation
 
@@ -131,6 +132,80 @@ def _shutdown_executor_safe(executor: ThreadPoolExecutor, futures_map: Optional[
         executor.shutdown(wait=False)
 
 
+def _parse_items_with_symbols(
+    source_code: str,
+    language: str,
+    relative_path: Optional[str] = None,
+) -> tuple[list[dict], dict[SymbolId, Symbol]]:
+    """Parse legacy items and attach their stable domain identities."""
+    is_java = language.lower() == "java"
+    normalized_language = "java" if is_java else "python"
+    effective_path = relative_path or ("source.java" if is_java else "source.py")
+    parser = get_java_functions if is_java else get_defined_functions
+    adapter = JavaAdapter() if is_java else PythonAdapter()
+    items = parser(source_code)
+    symbols = adapter.parse_symbols(
+        SourceFile("processor", effective_path, normalized_language, source_code)
+    )
+    if len(items) != len(symbols):
+        raise RuntimeError("legacy parser and Symbol adapter returned different item counts")
+
+    symbol_lookup: dict[SymbolId, Symbol] = {}
+    used_slugs: set[str] = set()
+    for item, symbol in zip(items, symbols):
+        if item["name"] != symbol.name or item["lineno"] != symbol.start_line:
+            raise RuntimeError("legacy parser and Symbol adapter returned different item order")
+        if symbol.id in symbol_lookup:
+            raise RuntimeError(f"duplicate SymbolId cannot be processed safely: {symbol.id}")
+        symbol_lookup[symbol.id] = symbol
+        item["symbol_id"] = symbol.id
+        item["qualified_name"] = symbol.qualified_name
+        prefix = "cls-" if item["type"] == "class" else ("m-" if is_java else "fn-")
+        item["slug_id"] = _slugify_name(item["name"], prefix=prefix, used=used_slugs)
+    return items, symbol_lookup
+
+
+def _symbol_base_identity(symbol_id: SymbolId) -> tuple:
+    return (
+        symbol_id.language,
+        symbol_id.relative_path,
+        symbol_id.qualified_name,
+        symbol_id.kind,
+        symbol_id.semantic_disambiguator,
+    )
+
+
+def _refresh_doc_entry_code(
+    annotated_code: str,
+    doc_entries: list[dict],
+    language: str,
+    relative_path: Optional[str] = None,
+) -> None:
+    """Backfill annotated source slices by SymbolId, including fallback collisions."""
+    refreshed_items, _ = _parse_items_with_symbols(
+        annotated_code, language, relative_path
+    )
+    exact = {item["symbol_id"]: item for item in refreshed_items}
+    by_base: dict[tuple, list[dict]] = {}
+    for item in refreshed_items:
+        base = _symbol_base_identity(item["symbol_id"])
+        by_base.setdefault(base, []).append(item)
+
+    consumed: set[int] = set()
+    for entry in doc_entries:
+        symbol_id = entry["symbol_id"]
+        refreshed = exact.get(symbol_id)
+        if refreshed is None or id(refreshed) in consumed:
+            candidates = by_base.get(_symbol_base_identity(symbol_id), [])
+            refreshed = next(
+                (candidate for candidate in candidates if id(candidate) not in consumed),
+                None,
+            )
+        if refreshed is not None:
+            consumed.add(id(refreshed))
+            entry["code"] = refreshed["code"]
+
+
 def handle_file_upload(uploaded_file):
     """读取上传的源代码文件内容，根据扩展名自动识别语言
 
@@ -161,7 +236,13 @@ def handle_file_upload(uploaded_file):
         return "", language
 
 
-def _process_python(source_code: str, incremental: bool, comment_lang: str = "中文", python_style: Optional[str] = None):
+def _process_python(
+    source_code: str,
+    incremental: bool,
+    comment_lang: str = "中文",
+    python_style: Optional[str] = None,
+    relative_path: Optional[str] = None,
+):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
     Args:
@@ -174,7 +255,9 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
         tuple: (annotated_code, markdown_doc, log_text, md_path, py_path)
     """
     lang_code = LANG_CODE.get(comment_lang, "zh")
-    items = get_defined_functions(source_code)
+    items, symbol_lookup = _parse_items_with_symbols(
+        source_code, "Python", relative_path
+    )
     if not items:
         return source_code, "未检测到函数或类", "日志：无处理对象。", None, None
 
@@ -229,26 +312,27 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
         log.append(f"=== 并发生成 docstring（{len(to_process)} 个节点，{MAX_WORKERS} 并发）===")
         t0 = time.time()
 
-        results = {}
-        errors = {}
+        results: dict[SymbolId, str] = {}
+        errors: dict[SymbolId, Exception] = {}
 
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
                 doc = generate_docstring(item, comment_lang, python_style)
-                return item["name"], doc, None
+                return item["symbol_id"], doc, None
             except Exception as e:
-                return item["name"], None, e
+                return item["symbol_id"], None, e
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {executor.submit(_gen, item): item for item in to_process}
             for future in as_completed(futures):
-                name, doc, err = future.result()
+                symbol_id, doc, err = future.result()
+                name = symbol_lookup[symbol_id].name
                 if err:
-                    errors[name] = err
+                    errors[symbol_id] = err
                     log.append(f"✗ {name} 生成失败: {err}")
                 else:
-                    results[name] = doc
+                    results[symbol_id] = doc
                     log.append(f"✓ {name} 生成完成")
 
         elapsed = time.time() - t0
@@ -256,10 +340,11 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
 
         sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
         for item in sorted_items:
-            if item["name"] not in results:
+            symbol_id = item["symbol_id"]
+            if symbol_id not in results:
                 continue
             try:
-                doc = results[item["name"]]
+                doc = results[symbol_id]
                 item["docstring"] = doc
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, doc)
@@ -270,15 +355,9 @@ def _process_python(source_code: str, incremental: bool, comment_lang: str = "�
     # 刷新 doc_entries 中的 code 字段：用最终 annotated_code 重新提取，
     # 确保 Markdown 文档代码块中显示的是翻译/生成后的注释，而非原始注释
     try:
-        new_items_map = {it["name"]: it for it in get_defined_functions(annotated_code)}
-        ann_lines = annotated_code.splitlines()
-        for entry in doc_entries:
-            it = new_items_map.get(entry["name"])
-            if it is None:
-                continue
-            start = it["lineno"] - 1
-            end = it["node"].end_lineno
-            entry["code"] = "\n".join(ann_lines[start:end])
+        _refresh_doc_entry_code(
+            annotated_code, doc_entries, "Python", relative_path
+        )
     except Exception:
         pass
     markdown_doc = build_markdown_docs(doc_entries)
@@ -303,6 +382,7 @@ def _process_python_with_progress(
     comment_lang: str = "中文",
     python_style: Optional[str] = None,
     cancel_token: Optional[CancelToken] = None,
+    relative_path: Optional[str] = None,
 ) -> Iterator[tuple]:
     """Python 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -322,7 +402,9 @@ def _process_python_with_progress(
     cancel_token = cancel_token or CancelToken()
 
     # 阶段 0-5%：解析
-    items = get_defined_functions(source_code)
+    items, symbol_lookup = _parse_items_with_symbols(
+        source_code, "Python", relative_path
+    )
     log: list[str] = []
     if not items:
         msg = "未检测到函数或类"
@@ -393,15 +475,15 @@ def _process_python_with_progress(
             yield _progress_emit(log, None)
             t0 = time.time()
 
-            results: dict[str, str] = {}
-            errors: dict[str, Exception] = {}
+            results: dict[SymbolId, str] = {}
+            errors: dict[SymbolId, Exception] = {}
 
-            def _gen(item: dict) -> tuple[str, Optional[str], Optional[Exception]]:
+            def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
                     doc = generate_docstring(item, comment_lang, python_style)
-                    return item["name"], doc, None
+                    return item["symbol_id"], doc, None
                 except Exception as e:
-                    return item["name"], None, e
+                    return item["symbol_id"], None, e
 
             # 非 with：取消时可以主动 shutdown(cancel_futures=True)
             executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -420,16 +502,17 @@ def _process_python_with_progress(
                                 f.cancel()
                         break
                     try:
-                        name, doc, err = future.result()
+                        symbol_id, doc, err = future.result()
                     except Exception as e:
-                        name = futures[future]["name"]
+                        symbol_id = futures[future]["symbol_id"]
                         doc, err = None, e
+                    name = symbol_lookup[symbol_id].name
                     done_count += 1
                     if err:
-                        errors[name] = err
+                        errors[symbol_id] = err
                         log.append(f"✗ {name} 生成失败: {err}")
                     else:
-                        results[name] = doc
+                        results[symbol_id] = doc
                         log.append(f"✓ {name} 生成完成")
                     yield _progress_emit(log, None)
             finally:
@@ -444,10 +527,11 @@ def _process_python_with_progress(
             for item in sorted_items:
                 if cancel_token.is_canceled():
                     break
-                if item["name"] not in results:
+                symbol_id = item["symbol_id"]
+                if symbol_id not in results:
                     continue
                 try:
-                    doc = results[item["name"]]
+                    doc = results[symbol_id]
                     item["docstring"] = doc
                     doc_entries.append(item)
                     annotated_code = insert_docstring_into_code(annotated_code, item, doc)
@@ -462,15 +546,9 @@ def _process_python_with_progress(
     # 阶段 85-95%：构建 Markdown + 刷新 code
     doc_entries.sort(key=lambda x: x["lineno"])
     try:
-        new_items_map = {it["name"]: it for it in get_defined_functions(annotated_code)}
-        ann_lines = annotated_code.splitlines()
-        for entry in doc_entries:
-            it = new_items_map.get(entry["name"])
-            if it is None:
-                continue
-            start = it["lineno"] - 1
-            end = it["node"].end_lineno
-            entry["code"] = "\n".join(ann_lines[start:end])
+        _refresh_doc_entry_code(
+            annotated_code, doc_entries, "Python", relative_path
+        )
     except Exception:
         pass
     markdown_doc = build_markdown_docs(doc_entries)
@@ -493,7 +571,13 @@ def _process_python_with_progress(
     yield _progress_emit(log, final)
 
 
-def _process_java(source_code: str, incremental: bool, comment_lang: str = "中文", java_style: Optional[str] = None):
+def _process_java(
+    source_code: str,
+    incremental: bool,
+    comment_lang: str = "中文",
+    java_style: Optional[str] = None,
+    relative_path: Optional[str] = None,
+):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
     Args:
@@ -506,7 +590,9 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
         tuple: (annotated_code, markdown_doc, log_text, md_path, java_path)
     """
     lang_code = LANG_CODE.get(comment_lang, "zh")
-    items = get_java_functions(source_code)
+    items, symbol_lookup = _parse_items_with_symbols(
+        source_code, "Java", relative_path
+    )
     if not items:
         return source_code, "未检测到类或方法", "日志：无处理对象。", None, None
 
@@ -570,26 +656,27 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
         log.append(f"=== 并发生成 Javadoc（{len(to_process)} 个节点，{MAX_WORKERS} 并发）===")
         t0 = time.time()
 
-        results = {}
-        errors = {}
+        results: dict[SymbolId, str] = {}
+        errors: dict[SymbolId, Exception] = {}
 
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
                 doc = generate_javadoc(item, comment_lang, java_style)
-                return item["name"], doc, None
+                return item["symbol_id"], doc, None
             except Exception as e:
-                return item["name"], None, e
+                return item["symbol_id"], None, e
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {executor.submit(_gen, item): item for item in to_process}
             for future in as_completed(futures):
-                name, doc, err = future.result()
+                symbol_id, doc, err = future.result()
+                name = symbol_lookup[symbol_id].name
                 if err:
-                    errors[name] = err
+                    errors[symbol_id] = err
                     log.append(f"✗ {name} 生成失败: {err}")
                 else:
-                    results[name] = doc
+                    results[symbol_id] = doc
                     log.append(f"✓ {name} 生成完成")
 
         elapsed = time.time() - t0
@@ -597,10 +684,11 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
 
         sorted_items = sorted(to_process, key=lambda x: x["lineno"], reverse=True)
         for item in sorted_items:
-            if item["name"] not in results:
+            symbol_id = item["symbol_id"]
+            if symbol_id not in results:
                 continue
             try:
-                doc = results[item["name"]]
+                doc = results[symbol_id]
                 item["docstring"] = doc
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, doc)
@@ -611,15 +699,9 @@ def _process_java(source_code: str, incremental: bool, comment_lang: str = "中�
     # 刷新 doc_entries 中的 code 字段：用最终 annotated_code 重新提取，
     # 确保 Markdown 文档代码块中显示的是翻译/生成后的注释，而非原始注释
     try:
-        new_items_map = {it["name"]: it for it in get_java_functions(annotated_code)}
-        ann_lines = annotated_code.splitlines()
-        for entry in doc_entries:
-            it = new_items_map.get(entry["name"])
-            if it is None:
-                continue
-            start = it["lineno"] - 1
-            end = it.get("end_lineno", len(ann_lines))
-            entry["code"] = "\n".join(ann_lines[start:end])
+        _refresh_doc_entry_code(
+            annotated_code, doc_entries, "Java", relative_path
+        )
     except Exception:
         pass
     markdown_doc = build_java_markdown_docs(doc_entries)
@@ -644,6 +726,7 @@ def _process_java_with_progress(
     comment_lang: str = "中文",
     java_style: Optional[str] = None,
     cancel_token: Optional[CancelToken] = None,
+    relative_path: Optional[str] = None,
 ) -> Iterator[tuple]:
     """Java 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -658,7 +741,9 @@ def _process_java_with_progress(
     lang_code = LANG_CODE.get(comment_lang, "zh")
     cancel_token = cancel_token or CancelToken()
 
-    items = get_java_functions(source_code)
+    items, symbol_lookup = _parse_items_with_symbols(
+        source_code, "Java", relative_path
+    )
     log: list[str] = []
     if not items:
         msg = "未检测到类或方法"
@@ -736,15 +821,15 @@ def _process_java_with_progress(
             yield _progress_emit(log, None)
             t0 = time.time()
 
-            results: dict[str, str] = {}
-            errors: dict[str, Exception] = {}
+            results: dict[SymbolId, str] = {}
+            errors: dict[SymbolId, Exception] = {}
 
-            def _gen(item: dict) -> tuple[str, Optional[str], Optional[Exception]]:
+            def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
                     doc = generate_javadoc(item, comment_lang, java_style)
-                    return item["name"], doc, None
+                    return item["symbol_id"], doc, None
                 except Exception as e:
-                    return item["name"], None, e
+                    return item["symbol_id"], None, e
 
             executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
             try:
@@ -759,15 +844,16 @@ def _process_java_with_progress(
                                 f.cancel()
                         break
                     try:
-                        name, doc, err = future.result()
+                        symbol_id, doc, err = future.result()
                     except Exception as e:
-                        name = futures[future]["name"]
+                        symbol_id = futures[future]["symbol_id"]
                         doc, err = None, e
+                    name = symbol_lookup[symbol_id].name
                     if err:
-                        errors[name] = err
+                        errors[symbol_id] = err
                         log.append(f"✗ {name} 生成失败: {err}")
                     else:
-                        results[name] = doc
+                        results[symbol_id] = doc
                         log.append(f"✓ {name} 生成完成")
                     yield _progress_emit(log, None)
             finally:
@@ -782,10 +868,11 @@ def _process_java_with_progress(
             for item in sorted_items:
                 if cancel_token.is_canceled():
                     break
-                if item["name"] not in results:
+                symbol_id = item["symbol_id"]
+                if symbol_id not in results:
                     continue
                 try:
-                    doc = results[item["name"]]
+                    doc = results[symbol_id]
                     item["docstring"] = doc
                     doc_entries.append(item)
                     annotated_code = insert_javadoc_into_code(annotated_code, item, doc)
@@ -800,15 +887,9 @@ def _process_java_with_progress(
     # 阶段 85-95%：构建 Markdown
     doc_entries.sort(key=lambda x: x["lineno"])
     try:
-        new_items_map = {it["name"]: it for it in get_java_functions(annotated_code)}
-        ann_lines = annotated_code.splitlines()
-        for entry in doc_entries:
-            it = new_items_map.get(entry["name"])
-            if it is None:
-                continue
-            start = it["lineno"] - 1
-            end = it.get("end_lineno", len(ann_lines))
-            entry["code"] = "\n".join(ann_lines[start:end])
+        _refresh_doc_entry_code(
+            annotated_code, doc_entries, "Java", relative_path
+        )
     except Exception:
         pass
     markdown_doc = build_java_markdown_docs(doc_entries)
@@ -831,7 +912,8 @@ def _process_java_with_progress(
 
 
 def process_code(source_code: str, incremental: bool = False, language: str = "Python",
-                 comment_lang: str = "中文", python_style: Optional[str] = None, java_style: Optional[str] = None):
+                 comment_lang: str = "中文", python_style: Optional[str] = None,
+                 java_style: Optional[str] = None, relative_path: Optional[str] = None):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
@@ -855,8 +937,12 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
         return source_code, "代码无效，无法生成注释。", "日志：代码无效（非有效 Java 代码），请检查输入。", None, None
 
     if language == "Java":
-        return _process_java(source_code, incremental, comment_lang, java_style)
-    return _process_python(source_code, incremental, comment_lang, python_style)
+        return _process_java(
+            source_code, incremental, comment_lang, java_style, relative_path
+        )
+    return _process_python(
+        source_code, incremental, comment_lang, python_style, relative_path
+    )
 
 
 def process_code_with_progress(
@@ -868,6 +954,7 @@ def process_code_with_progress(
     java_style: Optional[str] = None,
     cancel_token: Optional[CancelToken] = None,
     progress_cb: Optional[Callable[[float, str], None]] = None,
+    relative_path: Optional[str] = None,
 ) -> Iterator[tuple]:
     """主处理函数（生成器版，带实时进度 + gr.Progress）
 
@@ -912,9 +999,13 @@ def process_code_with_progress(
 
     # 2. 路由到对应语言的生成器，逐次透传 yield
     inner = (
-        _process_java_with_progress(source_code, incremental, comment_lang, java_style, cancel_token)
+        _process_java_with_progress(
+            source_code, incremental, comment_lang, java_style, cancel_token, relative_path
+        )
         if language == "Java"
-        else _process_python_with_progress(source_code, incremental, comment_lang, python_style, cancel_token)
+        else _process_python_with_progress(
+            source_code, incremental, comment_lang, python_style, cancel_token, relative_path
+        )
     )
 
     final_5tuple: Optional[tuple] = None
@@ -1738,7 +1829,7 @@ def process_batch_files(
             try:
                 annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
-                    python_style=python_style, java_style=java_style,
+                    python_style=python_style, java_style=java_style, relative_path=rel_path,
                 )
             except Exception as e:
                 log.append(f"  ✗ process_code 异常: {e}")
@@ -1945,7 +2036,7 @@ def process_batch_with_progress(
             try:
                 annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
-                    python_style=python_style, java_style=java_style,
+                    python_style=python_style, java_style=java_style, relative_path=rel_path,
                 )
             except Exception as e:
                 log.append(f"  ✗ process_code 异常: {e}")
@@ -2246,21 +2337,16 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
     if not source_code:
         return ""
     try:
-        if language == "Java":
-            items = get_java_functions(source_code)
-        else:
-            items = get_defined_functions(source_code)
+        items, _ = _parse_items_with_symbols(source_code, language)
     except Exception:
         return ""
     if not items:
         return ""
 
     # 1. 先按 items 原始顺序分配 slug（与 annotator 一致，保证锚点跳转有效）
-    used_ids: set[str] = set()
-    slug_map: dict[int, str] = {}  # id(item) → slug
-    for it in items:
-        prefix = "cls-" if it.get("type") == "class" else ("fn-" if language == "Python" else "m-")
-        slug_map[id(it)] = _slugify_name(it["name"], prefix=prefix, used=used_ids)
+    slug_map: dict[SymbolId, str] = {
+        item["symbol_id"]: item["slug_id"] for item in items
+    }
 
     def _icon(it):
         return "🧩" if it.get("type") == "class" else "🔧"
@@ -2274,7 +2360,7 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
     if not collapsible:
         outline_lines = [f"**{title}**\n"]
         for it in items:
-            slug = slug_map[id(it)]
+            slug = slug_map[it["symbol_id"]]
             line = it.get("lineno", "?")
             outline_lines.append(f"- {_icon(it)} [`{it['name']}` ({_t_label(it)})](#{slug}) — *L{line}*")
         outline_lines.append("\n> 💡 点击条目跳转至「API 文档」Tab 对应章节（锚点滚动定位）\n")
@@ -2285,12 +2371,13 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
     classes = [it for it in items if it.get("type") == "class"]
 
     def _find_parent_cls(item):
-        for cls in classes:
-            cls_start = cls.get("lineno", 0)
-            cls_end = cls.get("end_lineno", 0) or 0
-            if cls_end and cls_start < item.get("lineno", 0) <= cls_end:
-                return cls
-        return None
+        qualified_name = item["qualified_name"]
+        parents = [
+            cls for cls in classes
+            if cls is not item
+            and qualified_name.startswith(f"{cls['qualified_name']}.")
+        ]
+        return max(parents, key=lambda cls: len(cls["qualified_name"]), default=None)
 
     # 3. 构建顶级条目列表（class + 顶级 function/method），按 lineno 排序
     top_items = []
@@ -2302,7 +2389,7 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
     # 4. 输出 <details> 折叠结构
     parts = [f"**{title}**\n"]
     for it in top_items:
-        slug = slug_map[id(it)]
+        slug = slug_map[it["symbol_id"]]
         line = it.get("lineno", "?")
         icon = _icon(it)
         t_lbl = _t_label(it)
@@ -2322,7 +2409,7 @@ def build_outline_markdown(source_code: str, language: str = "Python", title: st
             if children:
                 parts.append("<ul>")
                 for child in children:
-                    c_slug = slug_map[id(child)]
+                    c_slug = slug_map[child["symbol_id"]]
                     c_line = child.get("lineno", "?")
                     parts.append(
                         f'<li>{_icon(child)} <a href="#{c_slug}"><code>{child["name"]}</code></a>'
@@ -2560,5 +2647,3 @@ def clear_workspace(path: Optional[str] = None) -> tuple[bool, str]:
         return True, "ℹ️ 会话文件不存在，无需清除"
     except Exception as e:
         return False, f"❌ 清除失败：{type(e).__name__}: {e}"
-
-
