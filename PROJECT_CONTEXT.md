@@ -23,6 +23,7 @@
   - Phase 4.1 — Provider / BYOK Foundation: completed
   - Phase 4.1.1 — Legacy Provider Atomicity Hardening: completed
   - Phase 4.1 Documentation Gate: completed
+  - V3.0 RC1.1 — Release Engineering Gate: completed (`PASS WITH ISSUES`)
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
@@ -70,7 +71,18 @@
 - Phase 4.1 Documentation Gate: `CLOSED`
 - BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
   Credential/Provider-free at their respective persistence and domain boundaries
-- Next: V3.0 RC1
+- Release metadata source: `code_maintenance.__version__ = "3.0.0-rc1"`
+- Python support: minimum and recommended `3.10`; CI validates Python 3.10
+- RC1.1 clean install: `PASS` in a repository-external Python 3.13.7 virtual
+  environment; install, import, startup, dependency, and 129-test gates passed
+- RC1.1 host note: the existing Anaconda Python 3.13.5 installation segfaults while
+  importing both `gradio` and `rlcompleter`; this is isolated from the clean
+  environment and is non-blocking for the release candidate
+- RC1.1 security and portability checks: `PASS`; no tracked credential, workspace,
+  cache, junk file, or production/user-document local absolute path was found
+- V3.0 Core Feature Freeze: active; only release-blocker, packaging, startup,
+  reproducibility, security, release-metadata, and necessary test changes are allowed
+- Next: RC1.2 Product Documentation
 
 ## Current Architecture
 
