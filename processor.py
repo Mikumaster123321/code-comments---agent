@@ -45,7 +45,9 @@ from Java.java_annotator import (
 from Py.analyzer import analyze_code_quality, check_type_annotations
 from code_maintenance import JavaAdapter, PythonAdapter, SourceFile, Symbol, SymbolId
 from config import MAX_WORKERS
+from config import get_active_llm_provider
 from i18n import LANG_CODE, needs_translation
+from llm_provider import LLMProvider
 
 
 # 允许的源文件扩展名
@@ -242,6 +244,7 @@ def _process_python(
     comment_lang: str = "中文",
     python_style: Optional[str] = None,
     relative_path: Optional[str] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
@@ -295,7 +298,9 @@ def _process_python(
         for item in to_translate_sorted:
             try:
                 existing = ast.get_docstring(item["node"])
-                translated = translate_docstring(existing, comment_lang, python_style)
+                translated = translate_docstring(
+                    existing, comment_lang, python_style, llm_provider
+                )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, translated)
@@ -318,7 +323,9 @@ def _process_python(
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
-                doc = generate_docstring(item, comment_lang, python_style)
+                doc = generate_docstring(
+                    item, comment_lang, python_style, llm_provider
+                )
                 return item["symbol_id"], doc, None
             except Exception as e:
                 return item["symbol_id"], None, e
@@ -383,6 +390,7 @@ def _process_python_with_progress(
     python_style: Optional[str] = None,
     cancel_token: Optional[CancelToken] = None,
     relative_path: Optional[str] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> Iterator[tuple]:
     """Python 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -450,7 +458,9 @@ def _process_python_with_progress(
                 break
             try:
                 existing = ast.get_docstring(item["node"])
-                translated = translate_docstring(existing, comment_lang, python_style)
+                translated = translate_docstring(
+                    existing, comment_lang, python_style, llm_provider
+                )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, translated)
@@ -480,7 +490,9 @@ def _process_python_with_progress(
 
             def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
-                    doc = generate_docstring(item, comment_lang, python_style)
+                    doc = generate_docstring(
+                        item, comment_lang, python_style, llm_provider
+                    )
                     return item["symbol_id"], doc, None
                 except Exception as e:
                     return item["symbol_id"], None, e
@@ -577,6 +589,7 @@ def _process_java(
     comment_lang: str = "中文",
     java_style: Optional[str] = None,
     relative_path: Optional[str] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
@@ -639,7 +652,9 @@ def _process_java(
                 existing_text = extract_existing_javadoc(
                     source_lines, existing_range[0], existing_range[1]
                 )
-                translated = translate_javadoc(existing_text, comment_lang, java_style)
+                translated = translate_javadoc(
+                    existing_text, comment_lang, java_style, llm_provider
+                )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
@@ -662,7 +677,9 @@ def _process_java(
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
-                doc = generate_javadoc(item, comment_lang, java_style)
+                doc = generate_javadoc(
+                    item, comment_lang, java_style, llm_provider
+                )
                 return item["symbol_id"], doc, None
             except Exception as e:
                 return item["symbol_id"], None, e
@@ -727,6 +744,7 @@ def _process_java_with_progress(
     java_style: Optional[str] = None,
     cancel_token: Optional[CancelToken] = None,
     relative_path: Optional[str] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> Iterator[tuple]:
     """Java 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -797,7 +815,9 @@ def _process_java_with_progress(
                 existing_text = extract_existing_javadoc(
                     source_lines, existing_range[0], existing_range[1]
                 )
-                translated = translate_javadoc(existing_text, comment_lang, java_style)
+                translated = translate_javadoc(
+                    existing_text, comment_lang, java_style, llm_provider
+                )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
@@ -826,7 +846,9 @@ def _process_java_with_progress(
 
             def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
-                    doc = generate_javadoc(item, comment_lang, java_style)
+                    doc = generate_javadoc(
+                        item, comment_lang, java_style, llm_provider
+                    )
                     return item["symbol_id"], doc, None
                 except Exception as e:
                     return item["symbol_id"], None, e
@@ -913,7 +935,8 @@ def _process_java_with_progress(
 
 def process_code(source_code: str, incremental: bool = False, language: str = "Python",
                  comment_lang: str = "中文", python_style: Optional[str] = None,
-                 java_style: Optional[str] = None, relative_path: Optional[str] = None):
+                 java_style: Optional[str] = None, relative_path: Optional[str] = None,
+                 llm_provider: Optional[LLMProvider] = None):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
@@ -938,10 +961,12 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
 
     if language == "Java":
         return _process_java(
-            source_code, incremental, comment_lang, java_style, relative_path
+            source_code, incremental, comment_lang, java_style, relative_path,
+            llm_provider or get_active_llm_provider(),
         )
     return _process_python(
-        source_code, incremental, comment_lang, python_style, relative_path
+        source_code, incremental, comment_lang, python_style, relative_path,
+        llm_provider or get_active_llm_provider(),
     )
 
 
@@ -955,6 +980,7 @@ def process_code_with_progress(
     cancel_token: Optional[CancelToken] = None,
     progress_cb: Optional[Callable[[float, str], None]] = None,
     relative_path: Optional[str] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> Iterator[tuple]:
     """主处理函数（生成器版，带实时进度 + gr.Progress）
 
@@ -998,13 +1024,16 @@ def process_code_with_progress(
             pass
 
     # 2. 路由到对应语言的生成器，逐次透传 yield
+    task_provider = llm_provider or get_active_llm_provider()
     inner = (
         _process_java_with_progress(
-            source_code, incremental, comment_lang, java_style, cancel_token, relative_path
+            source_code, incremental, comment_lang, java_style, cancel_token,
+            relative_path, task_provider,
         )
         if language == "Java"
         else _process_python_with_progress(
-            source_code, incremental, comment_lang, python_style, cancel_token, relative_path
+            source_code, incremental, comment_lang, python_style, cancel_token,
+            relative_path, task_provider,
         )
     )
 
@@ -1398,7 +1427,11 @@ def style_lint(source_code: str, language: str = "Python", comment_lang: str = "
     return "\n".join(lines_out)
 
 
-def _analyze_java(source_code: str, comment_lang: str = "中文"):
+def _analyze_java(
+    source_code: str,
+    comment_lang: str = "中文",
+    llm_provider: Optional[LLMProvider] = None,
+):
     """Java 代码分析：大括号校验 + 代码摘要 + 风格检查
 
     Args:
@@ -1444,7 +1477,7 @@ def _analyze_java(source_code: str, comment_lang: str = "中文"):
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_java_summary(source_code, comment_lang)
+        summary = generate_java_summary(source_code, comment_lang, llm_provider)
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"
@@ -1453,7 +1486,12 @@ def _analyze_java(source_code: str, comment_lang: str = "中文"):
     return quality_report, annotation_report, summary, style_report, "\n".join(log)
 
 
-def analyze_code(source_code: str, language: str = "Python", comment_lang: str = "中文"):
+def analyze_code(
+    source_code: str,
+    language: str = "Python",
+    comment_lang: str = "中文",
+    llm_provider: Optional[LLMProvider] = None,
+):
     """主分析函数，返回质量报告、类型注解报告、摘要、风格报告、日志
 
     Args:
@@ -1468,7 +1506,11 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
         return "未输入代码", "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
 
     if language == "Java":
-        return _analyze_java(source_code, comment_lang)
+        return _analyze_java(
+            source_code,
+            comment_lang,
+            llm_provider or get_active_llm_provider(),
+        )
 
     # Python 代码有效性验证
     if not _is_valid_python(source_code):
@@ -1480,6 +1522,7 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
             "日志：代码无效（语法解析失败），分析前验证未通过。"
         )
 
+    task_provider = llm_provider or get_active_llm_provider()
     log = []
     log.append("=== 代码质量分析 ===")
     try:
@@ -1508,7 +1551,11 @@ def analyze_code(source_code: str, language: str = "Python", comment_lang: str =
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
-        summary = generate_code_summary(source_code, comment_lang)
+        summary = generate_code_summary(
+            source_code,
+            comment_lang,
+            task_provider,
+        )
         log.append("✓ 摘要生成完成")
     except Exception as e:
         summary = f"摘要生成失败: {e}"
@@ -1688,6 +1735,7 @@ def process_batch_files(
     python_style: Optional[str] = None,
     java_style: Optional[str] = None,
     naming_strategy: str = NAMING_SUFFIX,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> tuple[str, Optional[str]]:
     """批量处理上传的多个文件或 ZIP 压缩包
 
@@ -1711,6 +1759,7 @@ def process_batch_files(
     """
     if naming_strategy not in NAMING_STRATEGIES:
         naming_strategy = NAMING_SUFFIX
+    task_provider = llm_provider or get_active_llm_provider()
     log: list[str] = []
     # 1. 展开上传，解析路径
     if not uploaded_files:
@@ -1830,6 +1879,7 @@ def process_batch_files(
                 annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
+                    llm_provider=task_provider,
                 )
             except Exception as e:
                 log.append(f"  ✗ process_code 异常: {e}")
@@ -1886,6 +1936,7 @@ def process_batch_with_progress(
     naming_strategy: str = NAMING_SUFFIX,
     cancel_token: Optional[CancelToken] = None,
     progress_cb: Optional[Callable[[float, str], None]] = None,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> Iterator[tuple[str, Optional[str]]]:
     """批量处理（生成器版，带实时进度 + 取消 + gr.Progress）
 
@@ -1902,6 +1953,7 @@ def process_batch_with_progress(
     if naming_strategy not in NAMING_STRATEGIES:
         naming_strategy = NAMING_SUFFIX
     cancel_token = cancel_token or CancelToken()
+    task_provider = llm_provider or get_active_llm_provider()
 
     log: list[str] = []
     if not uploaded_files:
@@ -2037,6 +2089,7 @@ def process_batch_with_progress(
                 annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
+                    llm_provider=task_provider,
                 )
             except Exception as e:
                 log.append(f"  ✗ process_code 异常: {e}")
@@ -2487,12 +2540,21 @@ _I18N_PREFLIGHT = {
 }
 
 
-def estimate_markup_cost(num_items: int, lang: str, avg_per_item: int | None = None) -> tuple[int, int, int, float]:
+def estimate_markup_cost(
+    num_items: int,
+    lang: str,
+    avg_per_item: int | None = None,
+    llm_provider: Optional[LLMProvider] = None,
+) -> tuple[int, int, int, float]:
     """processor 内封装：仅做 token 估算（不调用网络），供 UI 监听输入变化时实时估算使用。
 
     返回 (total_tokens, input_tokens_est, output_tokens_est, cost_rmb)
     """
-    return estimate_tokens_cost(num_items, avg_per_item)
+    return estimate_tokens_cost(
+        num_items,
+        avg_per_item,
+        llm_provider or get_active_llm_provider(),
+    )
 
 
 def preflight_check(
@@ -2501,6 +2563,7 @@ def preflight_check(
     ui_lang: str = "中文",
     do_ping: bool = False,
     avg_per_item: int | None = None,
+    llm_provider: Optional[LLMProvider] = None,
 ) -> tuple[bool, str, str]:
     """启动期 / 生成按钮前预检入口。
 
@@ -2524,10 +2587,11 @@ def preflight_check(
     """
     ui_lang_key = ui_lang if ui_lang in _I18N_PREFLIGHT else "中文"
     tpl = _I18N_PREFLIGHT[ui_lang_key]
+    task_provider = llm_provider or get_active_llm_provider()
 
     # —— A. API Key 预检（do_ping=True 时才调用网络）——
     if do_ping:
-        ok, msg = ping_api_key()
+        ok, msg = ping_api_key(provider=task_provider)
     else:
         ok, msg = True, ""
     if not msg:
@@ -2555,7 +2619,11 @@ def preflight_check(
         return ok, pf_md, est_md
     n_funcs = sum(1 for x in items if x.get("type") != "class")
     n_classes = sum(1 for x in items if x.get("type") == "class")
-    total_tok, in_tok, out_tok, cost = estimate_tokens_cost(n_items, avg_per_item)
+    total_tok, in_tok, out_tok, cost = estimate_tokens_cost(
+        n_items,
+        avg_per_item,
+        task_provider,
+    )
     per = (int(avg_per_item) if avg_per_item and avg_per_item > 0 else None) or 350
     est_md = (
         f"**{tpl['cost_title']}**\n\n"

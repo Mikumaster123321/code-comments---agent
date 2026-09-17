@@ -27,6 +27,12 @@ import threading
 from typing import Optional
 import openai
 from dotenv import load_dotenv
+from llm_provider import (
+    ModelConfig,
+    ProviderRegistry,
+    RuntimeCredential,
+    TaskScopedLLMProvider,
+)
 
 load_dotenv()
 
@@ -127,6 +133,8 @@ PROVIDERS: dict[str, dict] = {
     },
 }
 
+PROVIDER_REGISTRY = ProviderRegistry(PROVIDERS)
+
 
 # ==========================================================================
 # 2. Provider 标签本地化
@@ -151,6 +159,7 @@ _active_model: str = "deepseek-chat"
 _active_api_key: Optional[str] = None
 _active_base_url: Optional[str] = None   # None = 使用 PROVIDERS 定义的默认
 _active_client: Optional[openai.OpenAI] = None
+_active_llm_provider: Optional[TaskScopedLLMProvider] = None
 _custom_model_name: Optional[str] = None  # custom provider 下用户自定义的模型名
 
 
@@ -166,11 +175,21 @@ def _env_first(provider_key: str) -> Optional[str]:
 
 def _rebuild_client() -> None:
     """按当前 _active_* 状态重建 _active_client"""
-    global _active_client
+    global _active_client, _active_llm_provider
     p = PROVIDERS[_active_provider]
     base_url = _active_base_url if _active_base_url else p["base_url"]
     api_key = _active_api_key or _env_first(_active_provider) or "EMPTY_API_KEY"
-    _active_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+    model_config = PROVIDER_REGISTRY.create_model_config(
+        _active_provider,
+        _active_model,
+        base_url,
+    )
+    _active_llm_provider = PROVIDER_REGISTRY.create_provider(
+        model_config,
+        RuntimeCredential(api_key),
+        openai.OpenAI,
+    )
+    _active_client = _active_llm_provider.client
 
 
 # ---------- 初始化：按 .env 的 PROVIDER / MODEL 变量默认启动 ----------
@@ -292,7 +311,7 @@ def switch_provider(
         try:
             _rebuild_client()
         except Exception as e:
-            return False, f"❌ 连接 client 失败：{type(e).__name__}: {e}"
+            return False, f"❌ 连接 client 失败：{type(e).__name__}"
 
         p_label = _provider_label(provider_key, "中文")
         return True, f"✅ 已切换到 {p_label} → 模型 `{_active_model}`"
@@ -308,14 +327,14 @@ def set_api_key(api_key: str) -> tuple[bool, str]:
             try:
                 _rebuild_client()
             except Exception as e:
-                return False, f"❌ {e}"
+                return False, f"❌ {type(e).__name__}"
             return True, "✅ API Key 已重置为环境变量值"
     with _lock:
         _active_api_key = api_key.strip()
         try:
             _rebuild_client()
         except Exception as e:
-            return False, f"❌ {e}"
+            return False, f"❌ {type(e).__name__}"
         return True, "✅ API Key 已更新（仅运行时有效，不会写入 .env）"
 
 
@@ -330,19 +349,21 @@ def set_custom_base_url(base_url: Optional[str]) -> tuple[bool, str]:
         try:
             _rebuild_client()
         except Exception as e:
-            return False, f"❌ {e}"
+            return False, f"❌ {type(e).__name__}"
         url = _active_base_url or p["base_url"]
         return True, f"✅ Base URL 已更新为 `{url}`"
 
 
 def get_active_provider() -> str:
     """当前 Provider key（deepseek / openai / …）"""
-    return _active_provider
+    with _lock:
+        return _active_provider
 
 
 def get_active_model() -> str:
     """当前 Model name（用于 client.chat.completions.create 的 model= 参数）"""
-    return _active_model
+    with _lock:
+        return _active_model
 
 
 def get_active_client() -> openai.OpenAI:
@@ -353,25 +374,62 @@ def get_active_client() -> openai.OpenAI:
         return _active_client
 
 
+def get_active_model_config() -> ModelConfig:
+    """Capture the active credential-free model configuration atomically."""
+    with _lock:
+        if _active_llm_provider is None:
+            _rebuild_client()
+        return _active_llm_provider.config
+
+
+def get_active_llm_provider() -> TaskScopedLLMProvider:
+    """Capture the current model/client pair for one task or request."""
+    with _lock:
+        if _active_llm_provider is None:
+            _rebuild_client()
+        return _active_llm_provider
+
+
+def create_llm_provider(
+    model_config: ModelConfig,
+    credential: RuntimeCredential,
+    client_factory=openai.OpenAI,
+) -> TaskScopedLLMProvider:
+    """Build an independent task-scoped provider without changing legacy state."""
+    return PROVIDER_REGISTRY.create_provider(
+        model_config,
+        credential,
+        client_factory,
+    )
+
+
+def get_provider_registry() -> ProviderRegistry:
+    return PROVIDER_REGISTRY
+
+
 def get_active_base_url() -> str:
     """当前 base_url（调试 / UI 显示用）"""
-    p = PROVIDERS[_active_provider]
-    return _active_base_url or p["base_url"]
+    with _lock:
+        p = PROVIDERS[_active_provider]
+        return _active_base_url or p["base_url"]
 
 
 def is_active_provider_customizable() -> bool:
     """当前 Provider 是否允许自定义 base_url（Azure / Custom）"""
-    return PROVIDERS[_active_provider]["customizable_base_url"]
+    with _lock:
+        return PROVIDERS[_active_provider]["customizable_base_url"]
 
 
 def get_price_input_per_m() -> float:
     """当前 Provider 输入单价（元 / 1M tokens）"""
-    return PROVIDERS[_active_provider]["price_input_per_m"]
+    with _lock:
+        return PROVIDERS[_active_provider]["price_input_per_m"]
 
 
 def get_price_output_per_m() -> float:
     """当前 Provider 输出单价（元 / 1M tokens）"""
-    return PROVIDERS[_active_provider]["price_output_per_m"]
+    with _lock:
+        return PROVIDERS[_active_provider]["price_output_per_m"]
 
 
 # ==========================================================================

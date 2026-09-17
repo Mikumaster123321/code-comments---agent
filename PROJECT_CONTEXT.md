@@ -20,12 +20,12 @@
   - Phase 4 — Project Analysis Engine: completed
   - Phase 4.0.1 — Analysis Engine Post-QA Hardening: completed
   - Phase 4 Documentation Gate: completed
-  - Phase 4.1 — Provider / BYOK Foundation: next
+  - Phase 4.1 — Provider / BYOK Foundation: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `110 passed`
+- Test baseline: `123 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -44,7 +44,21 @@
 - Phase 4 Final QA: `PASS` (further retest not required)
 - Phase 4 tests: `32 passed`
 - Offline LLM-contract smoke: `6 passed`
-- Next: Phase 4.1 — Provider / BYOK Foundation
+- Phase 4.1: `Completed`
+- Phase 4.1 BYOK foundation: immutable credential-free `ModelConfig`, redacted
+  runtime-only `RuntimeCredential`, read-only `ProviderRegistry`, and task-scoped
+  provider/client construction over the existing Provider set
+- Phase 4.1 task isolation: processor, analysis, batch, progress, preflight, retry,
+  and direct LLM-service paths can use one explicitly captured provider/client without
+  rereading mutable legacy active state during the task
+- Phase 4.1 legacy compatibility: existing `switch_provider()`, `set_api_key()`,
+  active getters, and Gradio UI remain available as a bridge that configures future
+  task contexts
+- Phase 4.1 security: credentials are excluded from `ModelConfig`, ordinary
+  serialization, workspace persistence, provider/client representations, and sanitized
+  provider error messages
+- Phase 4.1 tests: `13 passed`
+- Next: DeepSeek Phase 4.1 Independent QA
 
 ## Current Architecture
 
@@ -189,6 +203,14 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   edge case. These items do not block Phase 4.1.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
   incremental graph updates remain outside the current implementation.
+- Phase 4.1 provides only an in-memory runtime credential boundary. It does not provide
+  Keychain, Secret Service, Vault, encryption, database persistence, or credential UI;
+  secure IDE credential storage remains deferred to V3.4.
+- The legacy Gradio Provider selection remains process-level state for compatibility.
+  Each started task now captures an isolated provider/client, while per-session UI
+  configuration state remains future work.
+- Provider clients still use the existing OpenAI-compatible SDK surface. Phase 4.1 adds
+  no Provider, automatic selection, fallback policy, benchmark, model scoring, or Router.
 
 ## Frozen Decisions
 

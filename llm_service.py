@@ -14,6 +14,7 @@ import config as _cfg
 from config import TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
 from config import AVG_TOKENS_PER_ITEM, INPUT_RATIO, OUTPUT_RATIO
 from i18n import LANG_NAME, LANG_CODE
+from llm_provider import LLMProvider
 
 # ================== 注释风格定义 ==================
 
@@ -156,7 +157,16 @@ JAVA_TRANSLATE_STYLE_RULES = {
 }
 
 
-def _call_llm_with_retry(prompt: str, temperature: float, max_tokens: int) -> str:
+class LLMRequestError(RuntimeError):
+    """Sanitized provider failure that never includes credentials or raw responses."""
+
+
+def _call_llm_with_retry(
+    prompt: str,
+    temperature: float,
+    max_tokens: int,
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """带重试机制的 LLM 调用
 
     Args:
@@ -170,11 +180,11 @@ def _call_llm_with_retry(prompt: str, temperature: float, max_tokens: int) -> st
     Raises:
         Exception: 重试次数用尽后抛出最后一次异常
     """
+    task_provider = provider or _cfg.get_active_llm_provider()
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = _cfg.get_active_client().chat.completions.create(
-                model=_cfg.get_active_model(),
+            response = task_provider.create_completion(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens
@@ -185,7 +195,15 @@ def _call_llm_with_retry(prompt: str, temperature: float, max_tokens: int) -> st
             last_error = e
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY * (attempt + 1))
-    raise last_error
+        except Exception as e:
+            raise LLMRequestError(
+                f"LLM request failed for provider={task_provider.config.provider_id}, "
+                f"model={task_provider.config.model}: {type(e).__name__}"
+            ) from None
+    raise LLMRequestError(
+        f"LLM request failed for provider={task_provider.config.provider_id}, "
+        f"model={task_provider.config.model}: {type(last_error).__name__}"
+    ) from None
 
 
 def _clean_docstring(docstring: str) -> str:
@@ -224,7 +242,12 @@ def _clean_docstring(docstring: str) -> str:
     return docstring.strip()
 
 
-def generate_docstring(item: dict, comment_lang: str = "中文", style: Optional[str] = None) -> str:
+def generate_docstring(
+    item: dict,
+    comment_lang: str = "中文",
+    style: Optional[str] = None,
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """调用 LLM 生成文档字符串
 
     Args:
@@ -246,11 +269,15 @@ def generate_docstring(item: dict, comment_lang: str = "中文", style: Optional
         lang_name=lang_name,
         style_rules=style_rules,
     )
-    docstring = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
+    docstring = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS, provider)
     return _clean_docstring(docstring)
 
 
-def generate_code_summary(source: str, comment_lang: str = "中文") -> str:
+def generate_code_summary(
+    source: str,
+    comment_lang: str = "中文",
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """调用 LLM 生成代码摘要：模块功能、核心类、依赖关系
 
     Args:
@@ -273,10 +300,15 @@ def generate_code_summary(source: str, comment_lang: str = "中文") -> str:
         f"源代码：\n"
         f"{source}"
     )
-    return _call_llm_with_retry(prompt, 0.3, 512)
+    return _call_llm_with_retry(prompt, 0.3, 512, provider)
 
 
-def translate_docstring(docstring: str, comment_lang: str, style: Optional[str] = None) -> str:
+def translate_docstring(
+    docstring: str,
+    comment_lang: str,
+    style: Optional[str] = None,
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """将已有 docstring 翻译为目标语言，并按目标风格重组格式
 
     Args:
@@ -302,7 +334,7 @@ def translate_docstring(docstring: str, comment_lang: str, style: Optional[str] 
         f"文档字符串：\n"
         f"{docstring}"
     )
-    result = _call_llm_with_retry(prompt, 0.3, MAX_TOKENS)
+    result = _call_llm_with_retry(prompt, 0.3, MAX_TOKENS, provider)
     return _clean_docstring(result)
 
 
@@ -334,7 +366,12 @@ def _clean_javadoc(text: str) -> str:
     return text.strip()
 
 
-def generate_javadoc(item: dict, comment_lang: str = "中文", style: Optional[str] = None) -> str:
+def generate_javadoc(
+    item: dict,
+    comment_lang: str = "中文",
+    style: Optional[str] = None,
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """调用 LLM 生成 Java Javadoc 注释
 
     Args:
@@ -356,11 +393,15 @@ def generate_javadoc(item: dict, comment_lang: str = "中文", style: Optional[s
         lang_name=lang_name,
         style_rules=style_rules,
     )
-    javadoc = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS)
+    javadoc = _call_llm_with_retry(prompt, TEMPERATURE, MAX_TOKENS, provider)
     return _clean_javadoc(javadoc)
 
 
-def generate_java_summary(source: str, comment_lang: str = "中文") -> str:
+def generate_java_summary(
+    source: str,
+    comment_lang: str = "中文",
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """调用 LLM 生成 Java 代码摘要：模块功能、核心类、依赖关系
 
     Args:
@@ -383,10 +424,15 @@ def generate_java_summary(source: str, comment_lang: str = "中文") -> str:
         f"源代码：\n"
         f"{source}"
     )
-    return _call_llm_with_retry(prompt, 0.3, 512)
+    return _call_llm_with_retry(prompt, 0.3, 512, provider)
 
 
-def translate_javadoc(javadoc: str, comment_lang: str, style: Optional[str] = None) -> str:
+def translate_javadoc(
+    javadoc: str,
+    comment_lang: str,
+    style: Optional[str] = None,
+    provider: Optional[LLMProvider] = None,
+) -> str:
     """将已有 Javadoc 翻译为目标语言，并按目标风格重组格式
 
     Args:
@@ -412,13 +458,16 @@ def translate_javadoc(javadoc: str, comment_lang: str, style: Optional[str] = No
         f"Javadoc 内容：\n"
         f"{javadoc}"
     )
-    result = _call_llm_with_retry(prompt, 0.3, MAX_TOKENS)
+    result = _call_llm_with_retry(prompt, 0.3, MAX_TOKENS, provider)
     return _clean_javadoc(result)
 
 
 # ================== API Key 预检 + Token 成本估算 ==================
 
-def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
+def ping_api_key(
+    timeout: float = 6.0,
+    provider: Optional[LLMProvider] = None,
+) -> tuple[bool, str]:
     """1-token 心跳测试：检查 API Key 是否有效、模型是否可用（v2.4.0 动态获取 client/model）。
 
     注意：不会重试（因为要快速反馈），超时 6s 判定失败。
@@ -428,10 +477,10 @@ def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
         ok=True, message="OK" / "OK (model=<model>)" 表示通过
         ok=False, message 为友好错误描述（HTTP 401 Key 无效 / 网络异常 / 超时 / 其他）
     """
-    cur_model = _cfg.get_active_model()
+    task_provider = provider or _cfg.get_active_llm_provider()
+    cur_model = task_provider.config.model
     try:
-        resp = _cfg.get_active_client().chat.completions.create(
-            model=cur_model,
+        resp = task_provider.create_completion(
             messages=[{"role": "user", "content": "ping"}],
             temperature=0.0,
             max_tokens=1,
@@ -452,13 +501,13 @@ def ping_api_key(timeout: float = 6.0) -> tuple[bool, str]:
         return False, f"APITimeoutError: 请求超时（{timeout}s），请检查网络或稍后重试"
     except Exception as e:
         name = type(e).__name__
-        msg = str(e).strip().splitlines()[0] if str(e).strip() else name
-        return False, f"{name}: {msg}"
+        return False, name
 
 
 def estimate_tokens_cost(
     num_items: int,
     avg_tokens_per_item: int | None = None,
+    provider: Optional[LLMProvider] = None,
 ) -> tuple[int, int, int, float]:
     """根据函数/方法数量估算 Token 用量与成本（人民币）。
 
@@ -479,6 +528,12 @@ def estimate_tokens_cost(
     total = num_items * per
     inp = int(total * INPUT_RATIO)
     out = int(total * OUTPUT_RATIO)
-    # 成本 = 输入 tokens/1e6 * 输入单价 + 输出 tokens/1e6 * 输出单价（v2.4.0 按当前 Provider 动态计算）
-    cost = (inp / 1_000_000.0) * _cfg.get_price_input_per_m() + (out / 1_000_000.0) * _cfg.get_price_output_per_m()
+    if provider is None:
+        price_input = _cfg.get_price_input_per_m()
+        price_output = _cfg.get_price_output_per_m()
+    else:
+        metadata = _cfg.get_provider_registry().get(provider.config.provider_id)
+        price_input = metadata.price_input_per_m
+        price_output = metadata.price_output_per_m
+    cost = (inp / 1_000_000.0) * price_input + (out / 1_000_000.0) * price_output
     return total, inp, out, round(cost, 4)
