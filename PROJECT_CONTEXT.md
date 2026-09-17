@@ -24,10 +24,13 @@
   - Phase 4.1.1 — Legacy Provider Atomicity Hardening: completed
   - Phase 4.1 Documentation Gate: completed
   - V3.0 RC1.1 — Release Engineering Gate: completed (`PASS WITH ISSUES`)
-  - V3.1 — Project Intelligence / RAG
-  - V3.2 — Multi-Agent
-  - V3.3 — Multi-Model Router
-  - V3.4 — VS Code
+  - V3.0 RC1.2 — Repository Hygiene Gate: completed (`PASS WITH CLEANUP RECOMMENDED`)
+  - V3.0.0 — RC1 / current release candidate
+  - V3.0.1 — Managed AI Access & Credits: planned
+  - V3.1 — Project Intelligence / RAG: planned
+  - V3.2 — Multi-Agent: planned
+  - V3.3 — Data-driven Model Router: planned
+  - V3.4 — VS Code Integration + Secure Credential UI: planned
 - Test baseline: `129 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
@@ -80,9 +83,51 @@
   environment and is non-blocking for the release candidate
 - RC1.1 security and portability checks: `PASS`; no tracked credential, workspace,
   cache, junk file, or production/user-document local absolute path was found
+- RC1.2 repository hygiene: `PASS WITH CLEANUP RECOMMENDED`; Release Blockers `0`,
+  no tracked delete candidate, and no directory restructuring approved for RC1
 - V3.0 Core Feature Freeze: active; only release-blocker, packaging, startup,
   reproducibility, security, release-metadata, and necessary test changes are allowed
-- Next: RC1.2 Product Documentation
+- Next: RC1.3 Product Documentation
+
+## Planned Version Roadmap
+
+### V3.0.0 — Current Release Candidate
+
+V3.0.0 remains in RC1. It contains the completed V3 core and BYOK foundation and is
+not yet a final release.
+
+### V3.0.1 — Managed AI Access & Credits
+
+Status: **PLANNED**. This is not part of V3.0.0 RC1, and no implementation module is
+authorized by this roadmap entry.
+
+V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
+API configuration to use platform-managed AI access. Planned capabilities are:
+
+- BYOK mode remains available;
+- optional platform-managed AI access;
+- `CreditAccount` and `CreditLedger` concepts;
+- administrative credit grants;
+- usage metering;
+- a `PricingPolicy` abstraction;
+- a reserved recharge/payment interface.
+
+The first implementation stage should support only `ADMIN_GRANT` and `USAGE`.
+`PURCHASE` and payment-provider integration remain interface reservations rather than
+mandatory first-stage integrations.
+
+The platform Provider credential must never be delivered to a client or written into
+a plugin, frontend, ordinary configuration file, or client package. Managed mode must
+use this server-side boundary:
+
+`Client -> Platform Backend -> Authentication / Credit Check -> Server-side Provider Credential -> LLM Provider`
+
+### Later Planned Versions
+
+- V3.1 — Project Intelligence / RAG: **PLANNED**
+- V3.2 — Multi-Agent: **PLANNED**
+- V3.3 — Data-driven Model Router: **PLANNED**
+- V3.4 — VS Code Integration + Secure Credential UI: **PLANNED**
 
 ## Current Architecture
 
