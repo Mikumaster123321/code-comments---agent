@@ -17,6 +17,8 @@
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
 - Test baseline: `47 passed`
+- Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
+- Next: Phase 3.2 — Project Knowledge Graph
 
 ## Current Architecture
 
@@ -55,6 +57,16 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   deterministic Gitignore-like subset. Nested ignore files and full Git ignore
   semantics are not implemented; symlinks are deliberately not followed.
 - Import graphs, dependency analysis, snapshots, and RAG are outside Phase 3.1.
+
+## Frozen Decisions
+
+### BYOK / Credential & Provider Policy
+
+- Official releases do not include a developer API key.
+- Users configure their own Provider, Model, and Credential.
+- API keys must not enter Git, ordinary configuration files, or logs.
+- Phase 4.1 establishes the Provider/BYOK Foundation.
+- The V3.4 IDE stage provides a secure credential-configuration UI.
 
 ## Collaboration
 
