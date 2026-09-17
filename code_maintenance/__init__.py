@@ -11,15 +11,29 @@ from .domain import (
     SymbolId,
     SymbolKind,
 )
+from .graph import (
+    GraphEdge,
+    GraphNode,
+    GraphNodeKind,
+    GraphRelationKind,
+    ProjectGraph,
+    ProjectGraphBuilder,
+)
 from .scanner import ProjectScanner
 
 __all__ = [
     "AnalysisFinding",
+    "GraphEdge",
+    "GraphNode",
+    "GraphNodeKind",
+    "GraphRelationKind",
     "JavaAdapter",
     "LanguageAdapter",
     "Project",
     "ProjectDirectory",
     "ProjectFile",
+    "ProjectGraph",
+    "ProjectGraphBuilder",
     "ProjectScanner",
     "PythonAdapter",
     "ScanMetadata",

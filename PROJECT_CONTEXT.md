@@ -12,13 +12,16 @@
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
   - Phase 2 — Processor Symbol Migration: completed
   - Phase 3.1 — Project Discovery / Project Scanner: completed
+  - Phase 3.2 — Project Relationship Awareness / Project Graph: completed
+  - Phase 3.3 — Project Snapshot / State: next
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `47 passed`
+- Test baseline: `55 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
-- Next: Phase 3.2 — Project Knowledge Graph
+- Phase 3.2: `Completed`
+- Next: Phase 3.3 — Project Snapshot / State
 
 ## Current Architecture
 
@@ -36,6 +39,15 @@ association, and navigation anchors use `SymbolId` as their internal identity ke
 `ProjectScanner` builds a read-only `ScanResult` containing the project, directories,
 files, detected languages, applied ignore rules, metadata, per-file hashes, and a
 deterministic aggregate project hash. It does not perform code analysis.
+
+`ProjectGraphBuilder` builds a deterministic in-memory `ProjectGraph` from a
+`ScanResult`. Graph nodes are `PROJECT`, `FILE`, `SYMBOL`, and `EXTERNAL_MODULE`;
+relations are limited to `CONTAINS` and `IMPORTS`. Project, file, and symbol identities
+reuse `Project.id`, `ProjectFile.relative_path`, and `SymbolId`. Python imports are
+discovered with the standard AST, while Java package and import discovery remains
+best-effort compatibility without a parser framework. Exact, unique local module/type
+matches resolve to file nodes; all other import targets remain deterministic unresolved
+external-module nodes.
 
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
@@ -56,7 +68,12 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Project Scanner applies built-in rules, root `.gitignore`, and caller rules with a
   deterministic Gitignore-like subset. Nested ignore files and full Git ignore
   semantics are not implemented; symlinks are deliberately not followed.
-- Import graphs, dependency analysis, snapshots, and RAG are outside Phase 3.1.
+- The Project Graph does not infer calls, references, inheritance, or wildcard/static
+  import ownership. Python local resolution uses project-root module paths only; Java
+  resolution requires an exact unique package/type match. Unmatched targets are
+  unresolved rather than claimed to be third-party dependencies.
+- Snapshots, dependency semantics beyond imports, graph persistence/databases, RAG,
+  and incremental graph updates are outside Phase 3.2.
 
 ## Frozen Decisions
 
