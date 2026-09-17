@@ -19,6 +19,8 @@
   - V3 Core Architecture Review: frozen by the Phase 4 architecture decisions
   - Phase 4 — Project Analysis Engine: completed
   - Phase 4.0.1 — Analysis Engine Post-QA Hardening: completed
+  - Phase 4 Documentation Gate: completed
+  - Phase 4.1 — Provider / BYOK Foundation: next
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
@@ -38,9 +40,11 @@
 - Phase 4 Independent QA: `PASS WITH ISSUES` (Critical 0; M1/M2 resolved in Phase 4.0.1)
 - Phase 4.0.1 M1 finding validation/isolation: `Resolved`
 - Phase 4.0.1 M2 recursion-depth-dependent SCC: `Resolved`
+- Phase 4 DeepSeek directed retest: `PASS` (M1 PASS; M2 PASS; caller-stack independence PASS; fan-out regression PASS; determinism PASS)
+- Phase 4 Final QA: `PASS` (further retest not required)
 - Phase 4 tests: `32 passed`
 - Offline LLM-contract smoke: `6 passed`
-- Next: DeepSeek Phase 4 Directed Retest
+- Next: Phase 4.1 — Provider / BYOK Foundation
 
 ## Current Architecture
 
@@ -84,8 +88,10 @@ hash values. `SnapshotDiff` compares snapshots from the same project root and re
 added, removed, changed, and unchanged files and symbols. Snapshot serialization is
 limited to an in-memory `to_dict()` representation; no persistence layer exists.
 
-`AnalysisEngine` is a deterministic service over an existing `ProjectSnapshot`. It
-runs a small ordered collection of `AnalysisTool` values, isolates each tool failure,
+`AnalysisEngine` is a deterministic service, not an Agent, over an existing
+`ProjectSnapshot`. Each `AnalysisTool` is deterministic and read-only and consumes
+only existing Snapshot/Graph state without reparsing source. The engine runs a small
+ordered collection of tools, isolates each tool failure,
 validates every returned `AnalysisFinding`, and canonically orders each tool's complete
 output inside that tool's isolation boundary before final aggregation. A failed or
 malformed tool produces a project-level `analysis.tool_failure` finding while the
@@ -178,7 +184,9 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Phase 4 QA Low / technical debt remains deferred: the
   `structure.symbol_density` rule id, Finding deduplication, duplicate tool-id
   enforcement, missing `tool_id` behavior, `_symbol_id_key` helper duplication, and
-  `TYPE_CHECKING` import cleanup. Phase 4.0.1 does not change these contracts.
+  `TYPE_CHECKING` import cleanup. R1 retains the hostile cross-tool `str` subclass
+  final-sort edge case, and R2 retains the hostile mutable `tool_id` failure-report
+  edge case. These items do not block Phase 4.1.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
   incremental graph updates remain outside the current implementation.
 
@@ -201,6 +209,7 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Users configure their own Provider, Model, and Credential.
 - API keys must not enter Git, ordinary configuration files, or logs.
 - Phase 4.1 establishes the Provider/BYOK Foundation.
+- A future Router uses only providers already configured by the user.
 - The V3.4 IDE stage provides a secure credential-configuration UI.
 
 ## Collaboration
