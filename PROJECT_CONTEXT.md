@@ -18,11 +18,12 @@
   - Phase 3.3.1 — Snapshot Post-QA Hardening: completed
   - V3 Core Architecture Review: frozen by the Phase 4 architecture decisions
   - Phase 4 — Project Analysis Engine: completed
+  - Phase 4.0.1 — Analysis Engine Post-QA Hardening: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `100 passed`
+- Test baseline: `110 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -34,9 +35,12 @@
 - Phase 3.3 DeepSeek directed retest: `PASS` (M1 PASS; M2 PASS; Golden Hash PASS)
 - Phase 3.3 Final QA: `PASS` (further retest not required)
 - Phase 4: `Completed`
-- Phase 4 tests: `22 passed`
+- Phase 4 Independent QA: `PASS WITH ISSUES` (Critical 0; M1/M2 resolved in Phase 4.0.1)
+- Phase 4.0.1 M1 finding validation/isolation: `Resolved`
+- Phase 4.0.1 M2 recursion-depth-dependent SCC: `Resolved`
+- Phase 4 tests: `32 passed`
 - Offline LLM-contract smoke: `6 passed`
-- Next: Phase 4 DeepSeek Independent QA
+- Next: DeepSeek Phase 4 Directed Retest
 
 ## Current Architecture
 
@@ -82,16 +86,21 @@ limited to an in-memory `to_dict()` representation; no persistence layer exists.
 
 `AnalysisEngine` is a deterministic service over an existing `ProjectSnapshot`. It
 runs a small ordered collection of `AnalysisTool` values, isolates each tool failure,
-aggregates findings, and applies one canonical finding order. A failed tool produces a
-project-level `analysis.tool_failure` finding while the remaining tools continue. The
-engine and tools do not scan, read files, parse source, call adapters, use the network,
-or call an LLM.
+validates every returned `AnalysisFinding`, and canonically orders each tool's complete
+output inside that tool's isolation boundary before final aggregation. A failed or
+malformed tool produces a project-level `analysis.tool_failure` finding while the
+remaining tools continue. Finding validation covers the string fields, integer line,
+and optional `SymbolId` fields required by canonical ordering. Failure messages contain
+only the stable tool id and exception type. The engine and tools do not scan, read
+files, parse source, call adapters, use the network, or call an LLM.
 
 Phase 4 provides `ComplexityTool`, `StructureTool`, and `DependencyTool`.
 `ComplexityTool` reports direct method concentration per class from graph containment;
 `StructureTool` reports per-file symbol density from snapshot symbol state; and
 `DependencyTool` reports internal import cycles and high import fan-out from existing
-`IMPORTS` edges. The stable rule ids are `complexity.class_method_count`,
+`IMPORTS` edges. Dependency cycle detection uses deterministic iterative strongly
+connected-component traversals and does not depend on Python's recursion limit. The
+stable rule ids are `complexity.class_method_count`,
 `structure.symbol_density`, `dependency.cycle`, `dependency.concentration`, and the
 engine-owned `analysis.tool_failure`. Quality findings use `warning`; tool execution
 failures use `error`.
@@ -166,6 +175,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - A Phase 4 `StyleTool` is deferred because no reliable style rule can be proved from
   the current `ProjectSnapshot`, `FileState`, `SymbolState`, and `ProjectGraph` data
   without reading source text.
+- Phase 4 QA Low / technical debt remains deferred: the
+  `structure.symbol_density` rule id, Finding deduplication, duplicate tool-id
+  enforcement, missing `tool_id` behavior, `_symbol_id_key` helper duplication, and
+  `TYPE_CHECKING` import cleanup. Phase 4.0.1 does not change these contracts.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
   incremental graph updates remain outside the current implementation.
 

@@ -41,6 +41,42 @@ def _finding_key(finding: AnalysisFinding) -> tuple:
     )
 
 
+def _validate_finding(finding: AnalysisFinding) -> None:
+    if not isinstance(finding, AnalysisFinding):
+        raise TypeError("analysis tools must return AnalysisFinding values")
+    for value in (
+        finding.rule_id,
+        finding.message,
+        finding.severity,
+        finding.relative_path,
+    ):
+        if not isinstance(value, str):
+            raise TypeError("finding text fields must be strings")
+    if type(finding.line) is not int:
+        raise TypeError("finding line must be an integer")
+    if finding.symbol_id is None:
+        return
+    if not isinstance(finding.symbol_id, SymbolId):
+        raise TypeError("finding symbol_id must be a SymbolId or None")
+    symbol_id = finding.symbol_id
+    for value in (
+        symbol_id.language,
+        symbol_id.relative_path,
+        symbol_id.qualified_name,
+    ):
+        if not isinstance(value, str):
+            raise TypeError("SymbolId text fields must be strings")
+    if not isinstance(symbol_id.kind, SymbolKind):
+        raise TypeError("SymbolId kind must be a SymbolKind")
+    if (
+        symbol_id.semantic_disambiguator is not None
+        and not isinstance(symbol_id.semantic_disambiguator, str)
+    ):
+        raise TypeError("SymbolId semantic_disambiguator must be a string or None")
+    if symbol_id.fallback_line is not None and type(symbol_id.fallback_line) is not int:
+        raise TypeError("SymbolId fallback_line must be an integer or None")
+
+
 @dataclass(frozen=True)
 class ComplexityTool:
     """Report classes with excessive direct method concentration."""
@@ -218,42 +254,49 @@ class DependencyTool:
 def _strongly_connected_components(
     adjacency: dict[str, set[str]],
 ) -> tuple[tuple[str, ...], ...]:
-    index = 0
-    indices: dict[str, int] = {}
-    low_links: dict[str, int] = {}
-    stack: list[str] = []
-    on_stack: set[str] = set()
+    neighbors = {
+        vertex: tuple(sorted(targets)) for vertex, targets in adjacency.items()
+    }
+    reverse_neighbors: dict[str, list[str]] = {vertex: [] for vertex in adjacency}
+    for vertex in sorted(neighbors):
+        for target in neighbors[vertex]:
+            reverse_neighbors[target].append(vertex)
+
+    visited: set[str] = set()
+    finish_order: list[str] = []
+    for start in sorted(neighbors):
+        if start in visited:
+            continue
+        visited.add(start)
+        stack: list[tuple[str, int]] = [(start, 0)]
+        while stack:
+            vertex, next_index = stack[-1]
+            if next_index < len(neighbors[vertex]):
+                target = neighbors[vertex][next_index]
+                stack[-1] = (vertex, next_index + 1)
+                if target not in visited:
+                    visited.add(target)
+                    stack.append((target, 0))
+                continue
+            stack.pop()
+            finish_order.append(vertex)
+
+    assigned: set[str] = set()
     components: list[tuple[str, ...]] = []
-
-    def visit(vertex: str) -> None:
-        nonlocal index
-        indices[vertex] = index
-        low_links[vertex] = index
-        index += 1
-        stack.append(vertex)
-        on_stack.add(vertex)
-
-        for neighbor in sorted(adjacency[vertex]):
-            if neighbor not in indices:
-                visit(neighbor)
-                low_links[vertex] = min(low_links[vertex], low_links[neighbor])
-            elif neighbor in on_stack:
-                low_links[vertex] = min(low_links[vertex], indices[neighbor])
-
-        if low_links[vertex] != indices[vertex]:
-            return
+    for start in reversed(finish_order):
+        if start in assigned:
+            continue
+        assigned.add(start)
         component = []
-        while True:
-            member = stack.pop()
-            on_stack.remove(member)
-            component.append(member)
-            if member == vertex:
-                break
+        reverse_stack = [start]
+        while reverse_stack:
+            vertex = reverse_stack.pop()
+            component.append(vertex)
+            for source in reversed(reverse_neighbors[vertex]):
+                if source not in assigned:
+                    assigned.add(source)
+                    reverse_stack.append(source)
         components.append(tuple(sorted(component)))
-
-    for vertex in sorted(adjacency):
-        if vertex not in indices:
-            visit(vertex)
     return tuple(sorted(components))
 
 
@@ -273,11 +316,9 @@ class AnalysisEngine:
         for tool in self._tools:
             try:
                 tool_findings = list(tool.analyze(snapshot))
-                if any(
-                    not isinstance(finding, AnalysisFinding)
-                    for finding in tool_findings
-                ):
-                    raise TypeError("analysis tools must return AnalysisFinding values")
+                for finding in tool_findings:
+                    _validate_finding(finding)
+                tool_findings.sort(key=_finding_key)
                 findings.extend(tool_findings)
             except Exception as error:
                 findings.append(

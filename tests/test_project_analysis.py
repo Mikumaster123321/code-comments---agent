@@ -174,6 +174,73 @@ def test_one_tool_failure_is_reported_without_destroying_other_results():
     )
 
 
+@pytest.mark.parametrize(
+    ("tool_id", "malformed"),
+    [
+        (
+            "bad-symbol",
+            AnalysisFinding(
+                "malformed.symbol", "bad symbol", "warning", "main.py", 0, "bad"
+            ),
+        ),
+        (
+            "bad-line",
+            AnalysisFinding("malformed.line", "bad line", "warning", "main.py", "0"),
+        ),
+        (
+            "bad-severity",
+            AnalysisFinding("malformed.severity", "bad severity", 5, "main.py", 0),
+        ),
+    ],
+)
+def test_malformed_finding_isolated_per_tool(tool_id, malformed):
+    healthy = file_finding("structure.healthy")
+    engine = AnalysisEngine(
+        [FixedTool(tool_id, [malformed]), FixedTool("healthy", [healthy])]
+    )
+
+    findings = engine.analyze(make_snapshot(("main.py",)))
+
+    assert healthy in findings
+    failures = [item for item in findings if item.rule_id == "analysis.tool_failure"]
+    assert len(failures) == 1
+    assert failures[0].message == (
+        f"Analysis tool '{tool_id}' failed with TypeError; other tools continued."
+    )
+
+
+def test_multiple_malformed_and_failing_tools_are_ordered_deterministically():
+    healthy = file_finding("structure.healthy")
+    tools = [
+        FixedTool(
+            "bad-symbol",
+            [AnalysisFinding("bad.symbol", "bad", "warning", "", 0, "bad")],
+        ),
+        FixedTool(
+            "bad-line",
+            [AnalysisFinding("bad.line", "bad", "warning", "", "0")],
+        ),
+        FixedTool(
+            "bad-severity",
+            [AnalysisFinding("bad.severity", "bad", 5, "", 0)],
+        ),
+        FailingTool(),
+        FixedTool("healthy", [healthy]),
+    ]
+    engine = AnalysisEngine(tools)
+
+    first = engine.analyze(make_snapshot())
+    second = engine.analyze(make_snapshot())
+
+    assert first == second
+    assert healthy in first
+    failures = [item for item in first if item.rule_id == "analysis.tool_failure"]
+    assert len(failures) == 4
+    assert [item.message for item in failures] == sorted(
+        item.message for item in failures
+    )
+
+
 def test_finding_scope_conventions_remain_expressible():
     symbol_id = SymbolId("python", "main.py", "run", SymbolKind.FUNCTION)
     project = AnalysisFinding("scope.project", "project", "warning", "", 0)
@@ -250,6 +317,72 @@ def test_dependency_tool_reports_multi_file_cycle_canonically():
     assert [(item.relative_path, item.message) for item in findings] == [
         ("a.py", "Import cycle includes 3 files: a.py, b.py, c.py.")
     ]
+
+
+def test_dependency_tool_handles_deep_acyclic_chain_without_failure():
+    files = tuple(f"node_{index:04d}.py" for index in range(1601))
+    imports = tuple(zip(files, files[1:]))
+    snapshot = make_snapshot(files, imports=imports)
+
+    findings = AnalysisEngine([DependencyTool(max_fan_out=10)]).analyze(snapshot)
+
+    assert findings == []
+
+
+def test_dependency_tool_finds_cycle_at_end_of_deep_chain():
+    files = tuple(f"node_{index:04d}.py" for index in range(1601))
+    imports = (*tuple(zip(files, files[1:])), (files[-1], files[1500]))
+    snapshot = make_snapshot(files, imports=imports)
+
+    findings = AnalysisEngine([DependencyTool(max_fan_out=10)]).analyze(snapshot)
+
+    cycles = [item for item in findings if item.rule_id == "dependency.cycle"]
+    assert len(cycles) == 1
+    assert cycles[0].relative_path == files[1500]
+    assert files[-1] in cycles[0].message
+    assert not any(item.rule_id == "analysis.tool_failure" for item in findings)
+
+
+def test_dependency_tool_reports_self_cycle():
+    snapshot = make_snapshot(("self.py",), imports=(("self.py", "self.py"),))
+
+    findings = DependencyTool(max_fan_out=10).analyze(snapshot)
+
+    assert [(item.rule_id, item.relative_path, item.message) for item in findings] == [
+        ("dependency.cycle", "self.py", "Import cycle includes 1 file: self.py.")
+    ]
+
+
+def test_dependency_tool_reports_two_disjoint_cycles_in_stable_order():
+    snapshot = make_snapshot(
+        ("d.py", "b.py", "a.py", "c.py"),
+        imports=(
+            ("a.py", "b.py"),
+            ("b.py", "a.py"),
+            ("c.py", "d.py"),
+            ("d.py", "c.py"),
+        ),
+    )
+
+    findings = DependencyTool(max_fan_out=10).analyze(snapshot)
+
+    assert [(item.rule_id, item.relative_path) for item in findings] == [
+        ("dependency.cycle", "a.py"),
+        ("dependency.cycle", "c.py"),
+    ]
+
+
+def test_dependency_fan_out_counts_duplicate_import_edges_once():
+    snapshot = make_snapshot(
+        ("main.py",),
+        imports=(
+            ("main.py", "external"),
+            ("main.py", "external"),
+            ("main.py", "external"),
+        ),
+    )
+
+    assert DependencyTool(max_fan_out=1).analyze(snapshot) == []
 
 
 @pytest.mark.parametrize(
@@ -346,3 +479,18 @@ def test_phase_4_fixture_metrics_baseline():
         {"dependency.cycle": 1}
     )
     assert elapsed < 1.0
+
+
+def test_iterative_dependency_analysis_synthetic_graph_smoke():
+    files = tuple(f"file_{index:04d}.py" for index in range(3000))
+    chain = tuple(zip(files, files[1:]))
+    extra_edges = tuple((files[index], files[index + 2]) for index in range(2001))
+    imports = (*chain, *extra_edges)
+    snapshot = make_snapshot(files, imports=imports)
+    engine = AnalysisEngine([DependencyTool(max_fan_out=10)])
+
+    first = engine.analyze(snapshot)
+    second = engine.analyze(snapshot)
+
+    assert len(imports) == 5000
+    assert first == second == []
