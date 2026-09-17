@@ -14,18 +14,20 @@
   - Phase 3.1 — Project Discovery / Project Scanner: completed
   - Phase 3.2 — Project Relationship Awareness / Project Graph: completed
   - Phase 3.2.1 — Graph Identity & Containment Hardening: completed
-  - Phase 3.3 — Project Snapshot / State: next
+  - Phase 3.3 — Project Snapshot / State: completed
+  - Phase 4 — Project Analysis Engine: next
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `60 passed`
+- Test baseline: `70 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
 - Phase 3.2 QA: `Final PASS` (initial `PASS WITH ISSUES`; D1/D2 verified in retest)
-- Graph identity contract: `Frozen for Phase 3.3`
-- Next: Phase 3.3 — Project Snapshot / State
+- Graph identity contract: `Preserved by Phase 3.3`
+- Phase 3.3: `Completed`
+- Next: Phase 4 — Project Analysis Engine
 
 ## Current Architecture
 
@@ -59,6 +61,16 @@ relative imports use their importer package context to produce canonical graph
 identities before local resolution; imports without a reliable package context use a
 deterministic unresolved-relative identity instead of a guessed module.
 
+`SnapshotBuilder` builds an immutable in-memory `ProjectSnapshot` from a `ScanResult`
+and the existing `ProjectGraph`. Snapshot file state uses normalized relative paths and
+file content hashes; symbol state reuses `SymbolId` and `Symbol.content_hash`. Snapshot
+content identity is a SHA-256 hash of an explicit canonical representation containing
+the project identity, sorted file and symbol states, and sorted graph nodes and edges.
+It excludes `created_at`, file mtimes, random values, object representations, and Python
+hash values. `SnapshotDiff` compares snapshots from the same project root and reports
+added, removed, changed, and unchanged files and symbols. Snapshot serialization is
+limited to an in-memory `to_dict()` representation; no persistence layer exists.
+
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
 
@@ -90,8 +102,12 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   root does not provide a reliable package name.
 - `Project.id` depends on the resolved absolute project root path. The first Phase 3.3
   Snapshot version defaults to time-series comparison under the same project root.
-- Snapshots, dependency semantics beyond imports, graph persistence/databases, RAG,
-  and incremental graph updates are outside Phase 3.2.
+- Snapshot construction reads supported source files again to capture symbol content;
+  concurrent filesystem changes during a scan/build sequence are not made atomic.
+- Snapshot comparison is state comparison by file and symbol identity/content hash; it
+  does not provide semantic diffs, AST edit scripts, history, repositories, or storage.
+- Dependency semantics beyond imports, graph persistence/databases, RAG, and
+  incremental graph updates remain outside the current implementation.
 
 ## Frozen Decisions
 

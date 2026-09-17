@@ -20,9 +20,19 @@ from .graph import (
     ProjectGraphBuilder,
 )
 from .scanner import ProjectScanner
+from .snapshot import (
+    FileState,
+    ProjectSnapshot,
+    SnapshotBuilder,
+    SnapshotDiff,
+    SnapshotMetadata,
+    SymbolState,
+    compare_snapshots,
+)
 
 __all__ = [
     "AnalysisFinding",
+    "FileState",
     "GraphEdge",
     "GraphNode",
     "GraphNodeKind",
@@ -35,11 +45,17 @@ __all__ = [
     "ProjectGraph",
     "ProjectGraphBuilder",
     "ProjectScanner",
+    "ProjectSnapshot",
     "PythonAdapter",
     "ScanMetadata",
     "ScanResult",
     "SourceFile",
+    "SnapshotBuilder",
+    "SnapshotDiff",
+    "SnapshotMetadata",
     "Symbol",
     "SymbolId",
     "SymbolKind",
+    "SymbolState",
+    "compare_snapshots",
 ]
