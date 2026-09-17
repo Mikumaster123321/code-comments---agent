@@ -23,6 +23,8 @@
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
+- Phase 3.2 QA: `Final PASS` (initial `PASS WITH ISSUES`; D1/D2 verified in retest)
+- Graph identity contract: `Frozen for Phase 3.3`
 - Next: Phase 3.3 — Project Snapshot / State
 
 ## Current Architecture
@@ -84,10 +86,25 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   coarse targets such as `a.*`, and external-module nodes do not model package members.
 - Python `src` layouts, `pyproject` packaging semantics, namespace-package semantics,
   installed packages, and complete import resolution remain deferred.
+- Root `__init__.py` relative imports retain a narrow precision gap because the project
+  root does not provide a reliable package name.
+- `Project.id` depends on the resolved absolute project root path. The first Phase 3.3
+  Snapshot version defaults to time-series comparison under the same project root.
 - Snapshots, dependency semantics beyond imports, graph persistence/databases, RAG,
   and incremental graph updates are outside Phase 3.2.
 
 ## Frozen Decisions
+
+### Phase 3.3 Graph Identity Contract
+
+- `PROJECT`, `FILE`, and `SYMBOL` identities continue to reuse `Project.id`, normalized
+  relative paths, and `SymbolId`.
+- Class containment uses existing symbol ranges to select the enclosing class and links
+  through that class's `SymbolId`.
+- Canonical Python import targets are used for both internal resolution and unresolved
+  external-module identity.
+- Phase 3.3 does not treat the current location-dependent `Project.id` as a portable
+  cross-machine identity.
 
 ### BYOK / Credential & Provider Policy
 
