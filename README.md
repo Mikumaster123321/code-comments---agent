@@ -1,10 +1,10 @@
 # Code Comments Agent
 
-**当前版本：V3.0.0 RC1（`3.0.0-rc1`）**
+**当前版本：V3.0.0（`3.0.0`）— Stable Release**
 
-Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.0 RC1 的定位是 **Project-level Maintenance Core Foundation**：在保留 V2 用户能力的同时，提供稳定的项目扫描、关系图、快照、确定性分析和 BYOK Provider 基础。
+Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.0 的定位是 **Project-level Maintenance Core Foundation**：在保留 V2 用户能力的同时，提供稳定的项目扫描、关系图、快照、确定性分析和 BYOK Provider 基础。
 
-V3.0.0 仍是 Release Candidate，不是完整的 Autonomous Multi-Agent IDE。
+V3.0.0 已正式发布，但不是完整的 Autonomous Multi-Agent IDE。
 
 ## Available Now
 
@@ -138,7 +138,7 @@ python main.py
 
 ## Testing
 
-当前 V3.0.0 RC1 基线：**129 passed**。
+当前 V3.0.0 稳定版基线：**129 passed**。
 
 ```bash
 python -m pytest
@@ -176,7 +176,7 @@ code-comments---agent/
 
 ## Roadmap / Planned
 
-以下能力均为 **Planned**，不属于 V3.0.0 RC1 的已实现功能。
+以下能力均为 **Planned**，不属于 V3.0.0 的已实现功能。
 
 ### V3.0.1 — Managed AI Access & Credits
 
@@ -197,7 +197,7 @@ V3.0.0 默认支持 BYOK。V3.0.1 计划在保留 BYOK 的同时，为不希望�
 Client -> Platform Backend -> Auth / Credit Check -> Server-side Provider -> LLM
 ```
 
-以上均未在 V3.0.0 RC1 实现。
+以上均未在 V3.0.0 实现。
 
 ### Later Planned Versions
 
@@ -210,9 +210,9 @@ Client -> Platform Backend -> Auth / Credit Check -> Server-side Provider -> LLM
 
 从 V3 开始，README 保留简洁的永久版本记录。正式的 Major / Minor 版本条目可列出主要 Phase、Capability、Main changes 和 Tests；Patch 版本只记录主要修复、小功能和 Tests。完整过程继续保存在 Development Reports、QA Reports 和 Release Notes 中。
 
-### V3.0.0 RC1
+### V3.0.0
 
-**Project-level Maintenance Core Foundation**
+**Project-level Maintenance Core Foundation — Released / Stable Release**
 
 主要 Phase：
 

@@ -28,12 +28,16 @@
   - V3.0 RC1.3 — Product Documentation & README V3: completed
   - V3.0 RC1.4 — Full-System Release QA: completed (`PASS`)
   - V3.0 RC1.5 — Claude Final Release Review: completed (`APPROVE WITH NON-BLOCKING NOTES`)
-  - V3.0.0 — RC1 / current release candidate
+  - V3.0.0 — released
   - V3.0.1 — Managed AI Access & Credits: planned
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
   - V3.3 — Data-driven Model Router: planned
   - V3.4 — VS Code Integration + Secure Credential UI: planned
+- Version: `3.0.0`
+- V3.0.0 Final Release Gate: `PASS`
+- Release Blockers: `0`
+- Medium: `0`
 - Test baseline: `129 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
@@ -77,20 +81,18 @@
 - Phase 4.1 Documentation Gate: `CLOSED`
 - BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
   Credential/Provider-free at their respective persistence and domain boundaries
-- Release metadata source: `code_maintenance.__version__ = "3.0.0-rc1"`
+- Release metadata source: `code_maintenance.__version__ = "3.0.0"`
 - Python support: minimum and recommended `3.10`; CI validates Python 3.10
 - RC1.1 clean install: `PASS` in a repository-external Python 3.13.7 virtual
   environment; install, import, startup, dependency, and 129-test gates passed
 - RC1.1 host note: the existing Anaconda Python 3.13.5 installation segfaults while
   importing both `gradio` and `rlcompleter`; this is isolated from the clean
-  environment and is non-blocking for the release candidate
+  environment and is non-blocking for the release
 - RC1.1 security and portability checks: `PASS`; no tracked credential, workspace,
   cache, junk file, or production/user-document local absolute path was found
 - RC1.2 repository hygiene: `PASS WITH CLEANUP RECOMMENDED`; Release Blockers `0`,
   no tracked delete candidate, and no directory restructuring approved for RC1
-- V3.0 Core Feature Freeze: active; RC1 permits user/version documentation, approved
-  repository-hygiene hardening, documentation-only module header corrections, and
-  release-blocking packaging, startup, reproducibility, security, metadata, or test fixes
+- V3.0.0 Feature Freeze: completed
 - RC1.3 product documentation: completed; README V3 now records current product
   positioning, available capabilities, BYOK boundaries, V3.0.1 planned credits,
   installation and configuration, the permanent Version History policy, Python 3.10+
@@ -113,18 +115,23 @@
   repository; the report was recorded as `docs/qa/QA_Report_RC1_4_Full_System_Release.md`
   to close the Release QA Documentation Gate without changing product code, tests,
   README, or version metadata
-- Next: Final Release Gate
+- Final Release Gate: `PASS`; V3.0.0 is released with version `3.0.0`
+- Current-host validation: Anaconda Python 3.13.5 retains the known interpreter /
+  pytest debugging-plugin issue; `python -m pytest -p no:debugging` passes all 129 tests
+- Standard-environment evidence: RC1.4 records `python -m pytest` with `129 passed`
+  under standard CPython / clean venv; the host-specific issue is not a release blocker
+- Next development version: V3.0.1 — Managed AI Access & Credits (`PLANNED`)
 
 ## Planned Version Roadmap
 
-### V3.0.0 — Current Release Candidate
+### V3.0.0 — Released
 
-V3.0.0 remains in RC1. It contains the completed V3 core and BYOK foundation and is
-not yet a final release.
+V3.0.0 is the released stable Project-level Maintenance Core Foundation. It contains
+the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **PLANNED**. This is not part of V3.0.0 RC1, and no implementation module is
+Status: **PLANNED**. This is not part of V3.0.0, and no implementation module is
 authorized by this roadmap entry.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
