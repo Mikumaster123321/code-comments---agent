@@ -35,3 +35,12 @@ _commit_msg.txt
 
 # pytest 缓存
 .pytest_cache/
+
+# 测试覆盖率输出
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# 本地工作区状态
+*_code_comments_agent_workspace.json

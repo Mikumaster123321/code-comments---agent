@@ -25,6 +25,7 @@
   - Phase 4.1 Documentation Gate: completed
   - V3.0 RC1.1 — Release Engineering Gate: completed (`PASS WITH ISSUES`)
   - V3.0 RC1.2 — Repository Hygiene Gate: completed (`PASS WITH CLEANUP RECOMMENDED`)
+  - V3.0 RC1.3 — Product Documentation & README V3: completed
   - V3.0.0 — RC1 / current release candidate
   - V3.0.1 — Managed AI Access & Credits: planned
   - V3.1 — Project Intelligence / RAG: planned
@@ -85,9 +86,16 @@
   cache, junk file, or production/user-document local absolute path was found
 - RC1.2 repository hygiene: `PASS WITH CLEANUP RECOMMENDED`; Release Blockers `0`,
   no tracked delete candidate, and no directory restructuring approved for RC1
-- V3.0 Core Feature Freeze: active; only release-blocker, packaging, startup,
-  reproducibility, security, release-metadata, and necessary test changes are allowed
-- Next: RC1.3 Product Documentation
+- V3.0 Core Feature Freeze: active; RC1 permits user/version documentation, approved
+  repository-hygiene hardening, documentation-only module header corrections, and
+  release-blocking packaging, startup, reproducibility, security, metadata, or test fixes
+- RC1.3 product documentation: completed; README V3 now records current product
+  positioning, available capabilities, BYOK boundaries, V3.0.1 planned credits,
+  installation and configuration, the permanent Version History policy, Python 3.10+
+  support, and the 129-test RC baseline
+- RC1.3 repository hygiene: completed; the RC1.2-approved narrow coverage and local
+  workspace ignore rules were added without broad JSON or archive patterns
+- Next: RC1.4 Full-System Release QA
 
 ## Planned Version Roadmap
 
