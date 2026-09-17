@@ -26,6 +26,8 @@
   - V3.0 RC1.1 — Release Engineering Gate: completed (`PASS WITH ISSUES`)
   - V3.0 RC1.2 — Repository Hygiene Gate: completed (`PASS WITH CLEANUP RECOMMENDED`)
   - V3.0 RC1.3 — Product Documentation & README V3: completed
+  - V3.0 RC1.4 — Full-System Release QA: completed (`PASS`)
+  - V3.0 RC1.5 — Claude Final Release Review: completed (`APPROVE WITH NON-BLOCKING NOTES`)
   - V3.0.0 — RC1 / current release candidate
   - V3.0.1 — Managed AI Access & Credits: planned
   - V3.1 — Project Intelligence / RAG: planned
@@ -95,7 +97,23 @@
   support, and the 129-test RC baseline
 - RC1.3 repository hygiene: completed; the RC1.2-approved narrow coverage and local
   workspace ignore rules were added without broad JSON or archive patterns
-- Next: RC1.4 Full-System Release QA
+- RC1.4 full-system release QA: completed; verdict `PASS`, Release Blockers `0`,
+  Medium `0`, Low `6` (all non-blocking)
+- RC1.4 test baseline: `129 passed` in both the development environment and the
+  repository-external clean virtual environment
+- RC1.4 clean venv: `PASS`; install and `pip check` passed with no network failure and
+  no repository dependency failure
+- RC1.4 gates: clean install, README command validation, no-credential startup, BYOK
+  user flow, legacy feature integration, V3 Core integration, provider isolation and
+  security, version consistency and history, roadmap accuracy, repository hygiene,
+  directory consistency, CI, and startup smoke all `PASS`
+- RC1.5 Claude Final Release Review: completed; verdict
+  `APPROVE WITH NON-BLOCKING NOTES`, Release Blockers `0`
+- RC1.4 QA artifact: the RC1.5 review found the RC1.4 QA report missing from the
+  repository; the report was recorded as `docs/qa/QA_Report_RC1_4_Full_System_Release.md`
+  to close the Release QA Documentation Gate without changing product code, tests,
+  README, or version metadata
+- Next: Final Release Gate
 
 ## Planned Version Roadmap
 
