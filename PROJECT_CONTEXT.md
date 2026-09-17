@@ -13,14 +13,16 @@
   - Phase 2 — Processor Symbol Migration: completed
   - Phase 3.1 — Project Discovery / Project Scanner: completed
   - Phase 3.2 — Project Relationship Awareness / Project Graph: completed
+  - Phase 3.2.1 — Graph Identity & Containment Hardening: completed
   - Phase 3.3 — Project Snapshot / State: next
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `55 passed`
+- Test baseline: `60 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
+- Phase 3.2.1 hardening: `Completed`
 - Next: Phase 3.3 — Project Snapshot / State
 
 ## Current Architecture
@@ -49,6 +51,12 @@ best-effort compatibility without a parser framework. Exact, unique local module
 matches resolve to file nodes; all other import targets remain deterministic unresolved
 external-module nodes.
 
+Class containment is attributed with the existing symbol source ranges and the parent
+class `SymbolId`, rather than treating a bare qualified class name as unique. Python
+relative imports use their importer package context to produce canonical graph
+identities before local resolution; imports without a reliable package context use a
+deterministic unresolved-relative identity instead of a guessed module.
+
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
 
@@ -72,6 +80,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   import ownership. Python local resolution uses project-root module paths only; Java
   resolution requires an exact unique package/type match. Unmatched targets are
   unresolved rather than claimed to be third-party dependencies.
+- Self-imports currently produce explicit self-loop `IMPORTS` edges. Star imports remain
+  coarse targets such as `a.*`, and external-module nodes do not model package members.
+- Python `src` layouts, `pyproject` packaging semantics, namespace-package semantics,
+  installed packages, and complete import resolution remain deferred.
 - Snapshots, dependency semantics beyond imports, graph persistence/databases, RAG,
   and incremental graph updates are outside Phase 3.2.
 

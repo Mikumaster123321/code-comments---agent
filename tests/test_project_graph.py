@@ -62,6 +62,55 @@ def test_same_named_python_symbols_in_files_and_classes_remain_distinct(tmp_path
     }
 
 
+def test_duplicate_class_names_use_source_ranges_for_method_containment(tmp_path):
+    (tmp_path / "duplicate.py").write_text(
+        "class A:\n"
+        "    def run(self):\n"
+        "        return 1\n\n"
+        "class A:\n"
+        "    def run(self):\n"
+        "        return 2\n",
+        encoding="utf-8",
+    )
+
+    graph = build_graph(tmp_path)
+    symbol_contains = {
+        (str(edge.source.identity), str(edge.target.identity))
+        for edge in graph.edges_of_kind(GraphRelationKind.CONTAINS)
+        if edge.source.kind == edge.target.kind == GraphNodeKind.SYMBOL
+    }
+
+    assert symbol_contains == {
+        (
+            "python:duplicate.py:A:class:line:1",
+            "python:duplicate.py:A.run:method:line:2",
+        ),
+        (
+            "python:duplicate.py:A:class:line:5",
+            "python:duplicate.py:A.run:method:line:6",
+        ),
+    }
+
+
+def test_cross_file_same_class_names_keep_containment_isolated(tmp_path):
+    for filename in ("one.py", "two.py"):
+        (tmp_path / filename).write_text(
+            "class A:\n    def run(self):\n        pass\n", encoding="utf-8"
+        )
+
+    graph = build_graph(tmp_path)
+    symbol_contains = {
+        (str(edge.source.identity), str(edge.target.identity))
+        for edge in graph.edges_of_kind(GraphRelationKind.CONTAINS)
+        if edge.source.kind == edge.target.kind == GraphNodeKind.SYMBOL
+    }
+
+    assert symbol_contains == {
+        ("python:one.py:A:class", "python:one.py:A.run:method"),
+        ("python:two.py:A:class", "python:two.py:A.run:method"),
+    }
+
+
 def test_nested_classes_and_methods_use_existing_qualified_names(tmp_path):
     (tmp_path / "nested.py").write_text(
         "class Outer:\n"
@@ -107,14 +156,15 @@ def test_java_overloads_keep_symbol_identity_in_graph(tmp_path):
 
 def test_python_imports_cover_aliases_from_and_relative_forms(tmp_path):
     (tmp_path / "package").mkdir()
+    (tmp_path / "package" / "feature").mkdir()
     (tmp_path / "package" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "package" / "local.py").write_text("VALUE = 1\n", encoding="utf-8")
-    (tmp_path / "package" / "consumer.py").write_text(
+    (tmp_path / "package" / "feature" / "consumer.py").write_text(
         "import os\n"
         "import third.party as third\n"
         "from package import local\n"
         "from package.sub import name as alias\n"
-        "from . import local\n"
+        "from .. import local\n"
         "from ..shared import util\n",
         encoding="utf-8",
     )
@@ -123,16 +173,74 @@ def test_python_imports_cover_aliases_from_and_relative_forms(tmp_path):
     imports = {
         target
         for source, target in edge_pairs(graph, GraphRelationKind.IMPORTS)
-        if source == "package/consumer.py"
+        if source == "package/feature/consumer.py"
     }
     external_targets = {
         node.identity for node in graph.nodes_of_kind(GraphNodeKind.EXTERNAL_MODULE)
     }
 
     assert "package/local.py" in imports
-    assert {"os", "third.party", "package.sub.name", "..shared.util"} <= imports
-    assert ".local" not in imports
-    assert {"os", "third.party", "package.sub.name", "..shared.util"} <= external_targets
+    assert {"os", "third.party", "package.sub.name", "package.shared.util"} <= imports
+    assert "..local" not in imports
+    assert {
+        "os",
+        "third.party",
+        "package.sub.name",
+        "package.shared.util",
+    } <= external_targets
+
+
+def test_relative_unresolved_import_uses_canonical_module_identity(tmp_path):
+    module_dir = tmp_path / "package" / "feature"
+    module_dir.mkdir(parents=True)
+    (module_dir / "consumer.py").write_text(
+        "from ..services import user\n"
+        "from .local import other\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "root.py").write_text("from . import local\n", encoding="utf-8")
+
+    graph = build_graph(tmp_path)
+    external_targets = {
+        node.identity for node in graph.nodes_of_kind(GraphNodeKind.EXTERNAL_MODULE)
+    }
+
+    assert external_targets == {
+        "package.feature.local.other",
+        "package.services.user",
+        "unresolved-relative:<root>:1:local",
+    }
+    assert "..services.user" not in external_targets
+    assert ".local.other" not in external_targets
+
+
+def test_self_import_and_star_import_behaviors_remain_explicit(tmp_path):
+    (tmp_path / "selfmod.py").write_text(
+        "import selfmod\nfrom external import *\n", encoding="utf-8"
+    )
+
+    graph = build_graph(tmp_path)
+    imports = edge_pairs(graph, GraphRelationKind.IMPORTS)
+
+    assert ("selfmod.py", "selfmod.py") in imports
+    assert ("selfmod.py", "external.*") in imports
+
+
+def test_unicode_path_and_duplicate_alias_import_are_deterministic(tmp_path):
+    unicode_dir = tmp_path / "模块"
+    unicode_dir.mkdir()
+    (unicode_dir / "入口.py").write_text(
+        "import os\nimport os as operating_system\n", encoding="utf-8"
+    )
+
+    graph = build_graph(tmp_path)
+    imports = [
+        edge
+        for edge in graph.edges_of_kind(GraphRelationKind.IMPORTS)
+        if edge.source.identity == "模块/入口.py" and edge.target.identity == "os"
+    ]
+
+    assert len(imports) == 1
 
 
 def test_java_imports_cover_multiple_normal_imports_and_internal_resolution(tmp_path):

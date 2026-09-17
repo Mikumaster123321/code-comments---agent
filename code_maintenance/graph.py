@@ -109,23 +109,27 @@ def _java_imports(source: str) -> tuple[str, ...]:
 
 def _python_module(relative_path: str) -> str:
     path = relative_path.removesuffix(".py")
-    if path.endswith("/__init__"):
+    if path == "__init__":
+        path = ""
+    elif path.endswith("/__init__"):
         path = path[: -len("/__init__")]
     return path.replace("/", ".")
 
 
-def _resolve_python_target(target: str, importer_path: str) -> str:
+def _canonicalize_python_target(target: str, importer_path: str) -> str:
     if not target.startswith("."):
         return target
     level = len(target) - len(target.lstrip("."))
     suffix = target[level:]
     importer_module = _python_module(importer_path)
-    package_parts = importer_module.split(".")
+    package_parts = [part for part in importer_module.split(".") if part]
     if not importer_path.endswith("/__init__.py"):
         package_parts = package_parts[:-1]
     trim = level - 1
-    if trim > len(package_parts):
-        return target
+    if not package_parts or trim >= len(package_parts):
+        package = ".".join(package_parts) or "<root>"
+        imported_name = suffix or "*"
+        return f"unresolved-relative:{package}:{level}:{imported_name}"
     base = package_parts[: len(package_parts) - trim] if trim else package_parts
     return ".".join([*base, *([suffix] if suffix else [])])
 
@@ -209,12 +213,13 @@ class ProjectGraphBuilder:
                     imports = _python_imports(sources[relative_path])
                     resolved = (
                         (
-                            target,
-                            python_modules.get(
-                                _resolve_python_target(target, relative_path)
-                            ),
+                            canonical_target,
+                            python_modules.get(canonical_target),
                         )
                         for target in imports
+                        for canonical_target in (
+                            _canonicalize_python_target(target, relative_path),
+                        )
                     )
                 else:
                     imports = _java_imports(sources[relative_path])
@@ -257,17 +262,30 @@ class ProjectGraphBuilder:
         symbol_nodes: dict[SymbolId, GraphNode],
         edges: set[GraphEdge],
     ) -> None:
-        classes = {
-            symbol.qualified_name: symbol_nodes[symbol.id]
-            for symbol in symbols
-            if symbol.kind == SymbolKind.CLASS
-        }
+        classes: dict[str, list[Symbol]] = {}
+        for symbol in symbols:
+            if symbol.kind == SymbolKind.CLASS:
+                classes.setdefault(symbol.qualified_name, []).append(symbol)
         for symbol in symbols:
             parent_name = symbol.qualified_name.rpartition(".")[0]
-            parent = classes.get(parent_name)
-            if parent is not None:
+            candidates = [
+                candidate
+                for candidate in classes.get(parent_name, ())
+                if candidate.id != symbol.id
+                and candidate.start_line <= symbol.start_line
+                and candidate.end_line >= symbol.end_line
+            ]
+            if candidates:
+                parent = max(
+                    candidates,
+                    key=lambda candidate: (candidate.start_line, -candidate.end_line),
+                )
                 edges.add(
-                    GraphEdge(parent, symbol_nodes[symbol.id], GraphRelationKind.CONTAINS)
+                    GraphEdge(
+                        symbol_nodes[parent.id],
+                        symbol_nodes[symbol.id],
+                        GraphRelationKind.CONTAINS,
+                    )
                 )
 
     @staticmethod
