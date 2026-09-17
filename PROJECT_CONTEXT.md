@@ -16,13 +16,13 @@
   - Phase 3.2.1 — Graph Identity & Containment Hardening: completed
   - Phase 3.3 — Project Snapshot / State: completed
   - Phase 3.3.1 — Snapshot Post-QA Hardening: completed
-  - V3 Core Architecture Review: next
-  - Phase 4 — Project Analysis Engine: planned after architecture review
+  - V3 Core Architecture Review: frozen by the Phase 4 architecture decisions
+  - Phase 4 — Project Analysis Engine: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `78 passed`
+- Test baseline: `100 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -33,7 +33,10 @@
 - Phase 3.3.1 Snapshot Post-QA Hardening: `Completed`
 - Phase 3.3 DeepSeek directed retest: `PASS` (M1 PASS; M2 PASS; Golden Hash PASS)
 - Phase 3.3 Final QA: `PASS` (further retest not required)
-- Next: V3 Core Architecture Review
+- Phase 4: `Completed`
+- Phase 4 tests: `22 passed`
+- Offline LLM-contract smoke: `6 passed`
+- Next: Phase 4 DeepSeek Independent QA
 
 ## Current Architecture
 
@@ -76,6 +79,29 @@ It excludes `created_at`, file mtimes, random values, object representations, an
 hash values. `SnapshotDiff` compares snapshots from the same project root and reports
 added, removed, changed, and unchanged files and symbols. Snapshot serialization is
 limited to an in-memory `to_dict()` representation; no persistence layer exists.
+
+`AnalysisEngine` is a deterministic service over an existing `ProjectSnapshot`. It
+runs a small ordered collection of `AnalysisTool` values, isolates each tool failure,
+aggregates findings, and applies one canonical finding order. A failed tool produces a
+project-level `analysis.tool_failure` finding while the remaining tools continue. The
+engine and tools do not scan, read files, parse source, call adapters, use the network,
+or call an LLM.
+
+Phase 4 provides `ComplexityTool`, `StructureTool`, and `DependencyTool`.
+`ComplexityTool` reports direct method concentration per class from graph containment;
+`StructureTool` reports per-file symbol density from snapshot symbol state; and
+`DependencyTool` reports internal import cycles and high import fan-out from existing
+`IMPORTS` edges. The stable rule ids are `complexity.class_method_count`,
+`structure.symbol_density`, `dependency.cycle`, `dependency.concentration`, and the
+engine-owned `analysis.tool_failure`. Quality findings use `warning`; tool execution
+failures use `error`.
+
+`AnalysisFinding` scope conventions are: project-level findings use
+`relative_path=""`, `line=0`, and `symbol_id=None`; file-level findings use the actual
+relative path, an actual line or `0`, and `symbol_id=None`; symbol-level findings use
+`Symbol.relative_path`, `Symbol.start_line`, and `Symbol.id`. Phase 4 keeps the existing
+schema unchanged. Rule ids are deterministic, stable, lowercase machine-readable
+dotted names.
 
 `graph.py` owns the canonical graph node and edge ordering used by both
 `ProjectGraphBuilder` and `SnapshotBuilder` through `canonicalize_graph()`; it is the
@@ -125,11 +151,21 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Phase 3.3 QA L2/L3 retain the current content semantics: a class symbol's content hash
   includes its method bodies, so a method-body edit can mark both method and class as
   changed.
-- Low maintenance note: `graph.py` and `snapshot.py` currently retain duplicate
-  `_symbol_id_record` and `_node_record` implementations. This is not a current bug;
-  consider cleanup before or within Phase 4.
+- Low maintenance note: `graph.py` and `snapshot.py` retain duplicate
+  `_symbol_id_record` and `_node_record` implementations. This remains deferred and was
+  not changed by Phase 4.
 - Snapshot comparison is state comparison by file and symbol identity/content hash; it
   does not provide semantic diffs, AST edit scripts, history, repositories, or storage.
+- Function/method source size, cyclomatic complexity, oversized-file byte/line rules,
+  and source-text style rules are deferred because `ProjectSnapshot` does not retain
+  the required source ranges, file sizes, or source text. Phase 4 does not reread or
+  reparse source and does not expand the frozen Snapshot contract for these metrics.
+- Symbol-level Phase 4 findings that require `Symbol.start_line` are deferred for the
+  same reason. The implemented class-method concentration rule is reported at file
+  scope with line `0` and identifies the class in its deterministic message.
+- A Phase 4 `StyleTool` is deferred because no reliable style rule can be proved from
+  the current `ProjectSnapshot`, `FileState`, `SymbolState`, and `ProjectGraph` data
+  without reading source text.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
   incremental graph updates remain outside the current implementation.
 

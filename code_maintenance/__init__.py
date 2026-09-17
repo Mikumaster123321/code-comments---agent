@@ -1,4 +1,11 @@
 from .adapters import JavaAdapter, LanguageAdapter, PythonAdapter
+from .analysis import (
+    AnalysisEngine,
+    AnalysisTool,
+    ComplexityTool,
+    DependencyTool,
+    StructureTool,
+)
 from .domain import (
     AnalysisFinding,
     Project,
@@ -31,7 +38,11 @@ from .snapshot import (
 )
 
 __all__ = [
+    "AnalysisEngine",
     "AnalysisFinding",
+    "AnalysisTool",
+    "ComplexityTool",
+    "DependencyTool",
     "FileState",
     "GraphEdge",
     "GraphNode",
@@ -53,6 +64,7 @@ __all__ = [
     "SnapshotBuilder",
     "SnapshotDiff",
     "SnapshotMetadata",
+    "StructureTool",
     "Symbol",
     "SymbolId",
     "SymbolKind",
