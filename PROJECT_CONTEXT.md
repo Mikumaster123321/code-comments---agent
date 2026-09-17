@@ -22,6 +22,7 @@
   - Phase 4 Documentation Gate: completed
   - Phase 4.1 — Provider / BYOK Foundation: completed
   - Phase 4.1.1 — Legacy Provider Atomicity Hardening: completed
+  - Phase 4.1 Documentation Gate: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
@@ -64,8 +65,12 @@
 - Legacy Provider update contract: success atomically commits the complete active state;
   failure leaves every active scalar, client, and task-scoped provider unchanged
 - Phase 4.1 tests: `19 passed`
-- Phase 4.1 QA: awaiting DeepSeek Directed Retest
-- Next: DeepSeek Phase 4.1 Directed Retest
+- Phase 4.1 DeepSeek Directed Retest: `PASS`
+- Phase 4.1 Final QA: `PASS` (Critical 0, Medium 0; further retest not required)
+- Phase 4.1 Documentation Gate: `CLOSED`
+- BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
+  Credential/Provider-free at their respective persistence and domain boundaries
+- Next: V3.0 RC1
 
 ## Current Architecture
 
@@ -222,6 +227,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   a dedicated `TaskScopedLLMProvider` serialization guard (L2), broader `base_url`
   validation (L3), unused public Provider APIs (L4), and normalized Registry errors for
   malformed metadata instead of raw `KeyError` (L5).
+- Phase 4.1 QA note N1 remains deferred: `get_models_for_provider()` reads the custom
+  model name without acquiring the active-state lock.
 
 ## Frozen Decisions
 
@@ -241,9 +248,19 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Official releases do not include a developer API key.
 - Users configure their own Provider, Model, and Credential.
 - API keys must not enter Git, ordinary configuration files, or logs.
-- Phase 4.1 establishes the Provider/BYOK Foundation.
+- Phase 4.1 established the Provider/BYOK Foundation.
+- `ModelConfig` is immutable ordinary configuration and remains credential-free.
+- `RuntimeCredential` is runtime-only and excluded from ordinary serialization,
+  workspace persistence, and non-redacted representations.
+- `TaskScopedLLMProvider` is captured once per task; later legacy global switches do
+  not alter an already-started task.
+- Legacy Provider updates use atomic semantics: success commits the complete active
+  state, while failure performs no active-state mutation.
+- Workspace persistence remains credential-free, and `code_maintenance/` remains free
+  of Provider, Credential, OpenAI SDK, and LLM dependencies.
 - A future Router uses only providers already configured by the user.
-- The V3.4 IDE stage provides a secure credential-configuration UI.
+- No secure credential store exists in Phase 4.1; the V3.4 IDE stage provides the
+  secure credential-configuration UI.
 
 ## Collaboration
 
