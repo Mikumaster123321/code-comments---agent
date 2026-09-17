@@ -21,11 +21,12 @@
   - Phase 4.0.1 — Analysis Engine Post-QA Hardening: completed
   - Phase 4 Documentation Gate: completed
   - Phase 4.1 — Provider / BYOK Foundation: completed
+  - Phase 4.1.1 — Legacy Provider Atomicity Hardening: completed
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `123 passed`
+- Test baseline: `129 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -57,8 +58,14 @@
 - Phase 4.1 security: credentials are excluded from `ModelConfig`, ordinary
   serialization, workspace persistence, provider/client representations, and sanitized
   provider error messages
-- Phase 4.1 tests: `13 passed`
-- Next: DeepSeek Phase 4.1 Independent QA
+- Phase 4.1 Independent QA: `PASS WITH ISSUES` (M1 directed for Phase 4.1.1)
+- Phase 4.1.1: `Completed`
+- Phase 4.1.1 M1 legacy Provider atomicity: `Resolved`
+- Legacy Provider update contract: success atomically commits the complete active state;
+  failure leaves every active scalar, client, and task-scoped provider unchanged
+- Phase 4.1 tests: `19 passed`
+- Phase 4.1 QA: awaiting DeepSeek Directed Retest
+- Next: DeepSeek Phase 4.1 Directed Retest
 
 ## Current Architecture
 
@@ -211,6 +218,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   configuration state remains future work.
 - Provider clients still use the existing OpenAI-compatible SDK surface. Phase 4.1 adds
   no Provider, automatic selection, fallback policy, benchmark, model scoring, or Router.
+- Phase 4.1 QA Low issues remain deferred: preflight price-footer presentation (L1),
+  a dedicated `TaskScopedLLMProvider` serialization guard (L2), broader `base_url`
+  validation (L3), unused public Provider APIs (L4), and normalized Registry errors for
+  malformed metadata instead of raw `KeyError` (L5).
 
 ## Frozen Decisions
 

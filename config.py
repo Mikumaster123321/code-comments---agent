@@ -173,23 +173,59 @@ def _env_first(provider_key: str) -> Optional[str]:
     return None
 
 
-def _rebuild_client() -> None:
-    """按当前 _active_* 状态重建 _active_client"""
-    global _active_client, _active_llm_provider
-    p = PROVIDERS[_active_provider]
-    base_url = _active_base_url if _active_base_url else p["base_url"]
-    api_key = _active_api_key or _env_first(_active_provider) or "EMPTY_API_KEY"
+def _build_active_provider(
+    provider_key: str,
+    model: str,
+    api_key: Optional[str],
+    base_url: Optional[str],
+) -> TaskScopedLLMProvider:
+    """Build a candidate provider without mutating legacy active state."""
+    p = PROVIDERS[provider_key]
+    effective_base_url = base_url if base_url else p["base_url"]
+    effective_api_key = api_key or _env_first(provider_key) or "EMPTY_API_KEY"
     model_config = PROVIDER_REGISTRY.create_model_config(
-        _active_provider,
-        _active_model,
-        base_url,
+        provider_key,
+        model,
+        effective_base_url,
     )
-    _active_llm_provider = PROVIDER_REGISTRY.create_provider(
+    return PROVIDER_REGISTRY.create_provider(
         model_config,
-        RuntimeCredential(api_key),
+        RuntimeCredential(effective_api_key),
         openai.OpenAI,
     )
+
+
+def _commit_active_state(
+    provider_key: str,
+    model: str,
+    api_key: Optional[str],
+    base_url: Optional[str],
+    custom_model_name: Optional[str],
+    llm_provider: TaskScopedLLMProvider,
+) -> None:
+    """Commit a fully built legacy state while the caller holds ``_lock``."""
+    global _active_provider, _active_model, _active_api_key, _active_base_url
+    global _active_client, _active_llm_provider, _custom_model_name
+    _active_provider = provider_key
+    _active_model = model
+    _active_api_key = api_key
+    _active_base_url = base_url
+    _custom_model_name = custom_model_name
+    _active_llm_provider = llm_provider
     _active_client = _active_llm_provider.client
+
+
+def _rebuild_client() -> None:
+    """Rebuild client/provider from the already committed scalar state."""
+    global _active_client, _active_llm_provider
+    candidate = _build_active_provider(
+        _active_provider,
+        _active_model,
+        _active_api_key,
+        _active_base_url,
+    )
+    _active_llm_provider = candidate
+    _active_client = candidate.client
 
 
 # ---------- 初始化：按 .env 的 PROVIDER / MODEL 变量默认启动 ----------
@@ -265,35 +301,36 @@ def switch_provider(
     Returns:
         (success, message) 成功 True/False + 可读消息
     """
-    global _active_provider, _active_model, _active_api_key, _active_base_url, _custom_model_name
     with _lock:
         try:
             _validate_params(provider_key, model_key or "")
         except ValueError as e:
             return False, f"❌ {e}"
 
-        prev_provider = _active_provider
-        _active_provider = provider_key
+        candidate_model = _active_model
+        candidate_api_key = _active_api_key
+        candidate_base_url = _active_base_url
+        candidate_custom_model = _custom_model_name
 
         # 切换 Provider 且未传模型时：新 Provider 的第一个默认
-        if model_key is None and provider_key != prev_provider:
-            model_key = list(PROVIDERS[provider_key]["models"].keys())[0]
+        if model_key is None and provider_key != _active_provider:
+            candidate_model = list(PROVIDERS[provider_key]["models"].keys())[0]
         # 传了 model_key 则用；空串忽略
         if model_key:
-            _active_model = model_key
+            candidate_model = model_key
         # custom provider 的自由模型名
         if provider_key == "custom":
             if custom_model_name:
-                _custom_model_name = custom_model_name
-                _active_model = custom_model_name
+                candidate_custom_model = custom_model_name
+                candidate_model = custom_model_name
 
         # API Key 更新策略：None = 不变；'' = 重置环境变量；其他 = 覆盖
         if api_key is None:
             pass  # 保持当前
         elif api_key == "":
-            _active_api_key = None  # 下次 _rebuild_client 自动读 env
+            candidate_api_key = None
         else:
-            _active_api_key = api_key.strip() or None
+            candidate_api_key = api_key.strip() or None
 
         # Base URL 更新策略
         if PROVIDERS[provider_key]["customizable_base_url"]:
@@ -301,56 +338,86 @@ def switch_provider(
                 # 无显式参数：保持当前 _active_base_url（若无则取默认）
                 pass
             elif base_url == "":
-                _active_base_url = None  # 用 PROVIDERS 定义的默认
+                candidate_base_url = None
             else:
-                _active_base_url = base_url.strip().rstrip("/")
+                candidate_base_url = base_url.strip().rstrip("/")
         else:
             # 非 customizable：强制走 PROVIDERS 定义，忽略用户自定义
-            _active_base_url = None
+            candidate_base_url = None
 
         try:
-            _rebuild_client()
+            candidate_provider = _build_active_provider(
+                provider_key,
+                candidate_model,
+                candidate_api_key,
+                candidate_base_url,
+            )
         except Exception as e:
             return False, f"❌ 连接 client 失败：{type(e).__name__}"
+        _commit_active_state(
+            provider_key,
+            candidate_model,
+            candidate_api_key,
+            candidate_base_url,
+            candidate_custom_model,
+            candidate_provider,
+        )
 
         p_label = _provider_label(provider_key, "中文")
-        return True, f"✅ 已切换到 {p_label} → 模型 `{_active_model}`"
+        return True, f"✅ 已切换到 {p_label} → 模型 `{candidate_model}`"
 
 
 def set_api_key(api_key: str) -> tuple[bool, str]:
     """仅更新当前活动 Provider 的 API Key（不切 Provider）"""
-    global _active_api_key
-    if not api_key:
-        # 空串 → 重置为环境变量读取
-        with _lock:
-            _active_api_key = None
-            try:
-                _rebuild_client()
-            except Exception as e:
-                return False, f"❌ {type(e).__name__}"
-            return True, "✅ API Key 已重置为环境变量值"
     with _lock:
-        _active_api_key = api_key.strip()
+        candidate_api_key = api_key.strip() or None
         try:
-            _rebuild_client()
+            candidate_provider = _build_active_provider(
+                _active_provider,
+                _active_model,
+                candidate_api_key,
+                _active_base_url,
+            )
         except Exception as e:
             return False, f"❌ {type(e).__name__}"
+        _commit_active_state(
+            _active_provider,
+            _active_model,
+            candidate_api_key,
+            _active_base_url,
+            _custom_model_name,
+            candidate_provider,
+        )
+        if candidate_api_key is None:
+            return True, "✅ API Key 已重置为环境变量值"
         return True, "✅ API Key 已更新（仅运行时有效，不会写入 .env）"
 
 
 def set_custom_base_url(base_url: Optional[str]) -> tuple[bool, str]:
     """仅当当前 Provider 是 customizable 时允许更新 base_url"""
-    global _active_base_url
     with _lock:
         p = PROVIDERS[_active_provider]
         if not p["customizable_base_url"]:
             return False, f"❌ Provider `{_active_provider}` 不允许自定义 Base URL"
-        _active_base_url = base_url.strip().rstrip("/") if base_url else None
+        candidate_base_url = base_url.strip().rstrip("/") if base_url else None
         try:
-            _rebuild_client()
+            candidate_provider = _build_active_provider(
+                _active_provider,
+                _active_model,
+                _active_api_key,
+                candidate_base_url,
+            )
         except Exception as e:
             return False, f"❌ {type(e).__name__}"
-        url = _active_base_url or p["base_url"]
+        _commit_active_state(
+            _active_provider,
+            _active_model,
+            _active_api_key,
+            candidate_base_url,
+            _custom_model_name,
+            candidate_provider,
+        )
+        url = candidate_base_url or p["base_url"]
         return True, f"✅ Base URL 已更新为 `{url}`"
 
 

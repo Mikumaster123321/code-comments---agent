@@ -1,5 +1,6 @@
 import json
 import pickle
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import FrozenInstanceError
 from pathlib import Path
@@ -39,6 +40,14 @@ class StubClientFactory:
         return client
 
 
+class FailingClientFactory:
+    def __init__(self, secret):
+        self.secret = secret
+
+    def __call__(self, api_key, base_url):
+        raise RuntimeError(f"client creation failed for {self.secret}")
+
+
 @pytest.fixture
 def restore_legacy_provider_state():
     names = (
@@ -71,6 +80,35 @@ def _provider(
         RuntimeCredential(secret),
         factory,
     )
+
+
+def _legacy_state():
+    with config._lock:
+        llm_provider = config.get_active_llm_provider()
+        return (
+            config.get_active_provider(),
+            config.get_active_model(),
+            config.get_active_base_url(),
+            config._active_api_key,
+            config.get_active_client(),
+            llm_provider,
+            llm_provider.config,
+            config._custom_model_name,
+        )
+
+
+def _install_legacy_baseline(monkeypatch):
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+    ok, _message = config.switch_provider(
+        "custom",
+        "model-a",
+        api_key="test-secret-A-UNIQUE",
+        base_url="https://gateway-a.example/v1",
+        custom_model_name="model-a",
+    )
+    assert ok
+    return factory
 
 
 def test_model_config_is_immutable_deterministic_and_credential_free():
@@ -229,6 +267,217 @@ def test_legacy_switch_only_changes_future_task_context(
     assert captured_a.client is not captured_b.client
     old_result = captured_a.create_completion(messages=[]).choices[0].message.content
     assert old_result == "test-secret-A|https://api.deepseek.com|deepseek-chat"
+
+
+def test_switch_provider_failure_does_not_mutate_active_state(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    _install_legacy_baseline(monkeypatch)
+    before = _legacy_state()
+    monkeypatch.setattr(
+        config.openai,
+        "OpenAI",
+        FailingClientFactory("test-secret-B-UNIQUE"),
+    )
+
+    ok, message = config.switch_provider(
+        "deepseek",
+        "deepseek-reasoner",
+        api_key="test-secret-B-UNIQUE",
+    )
+    after = _legacy_state()
+    captured_task = config.get_active_llm_provider()
+
+    assert not ok
+    assert after == before
+    assert captured_task.config.provider_id == config.get_active_provider()
+    assert captured_task.config.model == config.get_active_model()
+    assert captured_task.config.base_url == config.get_active_base_url()
+    exposed = message + repr(captured_task) + str(captured_task)
+    assert "test-secret-A-UNIQUE" not in exposed
+    assert "test-secret-B-UNIQUE" not in exposed
+
+
+def test_set_api_key_failure_does_not_mutate_active_state(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    _install_legacy_baseline(monkeypatch)
+    before = _legacy_state()
+    monkeypatch.setattr(
+        config.openai,
+        "OpenAI",
+        FailingClientFactory("test-secret-B-UNIQUE"),
+    )
+
+    ok, message = config.set_api_key("test-secret-B-UNIQUE")
+
+    assert not ok
+    assert _legacy_state() == before
+    assert "test-secret-B-UNIQUE" not in message
+
+
+def test_set_custom_base_url_failure_does_not_mutate_active_state(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    _install_legacy_baseline(monkeypatch)
+    before = _legacy_state()
+    monkeypatch.setattr(
+        config.openai,
+        "OpenAI",
+        FailingClientFactory("test-secret-A-UNIQUE"),
+    )
+
+    ok, message = config.set_custom_base_url("https://failed.example/v1")
+
+    assert not ok
+    assert _legacy_state() == before
+    assert "test-secret-A-UNIQUE" not in message
+
+
+def test_consecutive_failed_switches_do_not_accumulate_state_drift(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    _install_legacy_baseline(monkeypatch)
+    before = _legacy_state()
+    monkeypatch.setattr(
+        config.openai,
+        "OpenAI",
+        FailingClientFactory("test-secret-B-UNIQUE"),
+    )
+
+    first = config.switch_provider(
+        "deepseek", "deepseek-reasoner", api_key="test-secret-B-UNIQUE"
+    )
+    second = config.switch_provider(
+        "custom",
+        "model-b",
+        api_key="test-secret-B-UNIQUE",
+        base_url="https://gateway-b.example/v1",
+        custom_model_name="model-b",
+    )
+
+    assert not first[0]
+    assert not second[0]
+    assert _legacy_state() == before
+
+
+def test_successful_switch_after_failure_commits_complete_state(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    success_factory = _install_legacy_baseline(monkeypatch)
+    before = _legacy_state()
+    monkeypatch.setattr(
+        config.openai,
+        "OpenAI",
+        FailingClientFactory("test-secret-B-UNIQUE"),
+    )
+    failed = config.switch_provider(
+        "deepseek", "deepseek-reasoner", api_key="test-secret-B-UNIQUE"
+    )
+    assert not failed[0]
+    assert _legacy_state() == before
+
+    monkeypatch.setattr(config.openai, "OpenAI", success_factory)
+    succeeded = config.switch_provider(
+        "deepseek", "deepseek-reasoner", api_key="test-secret-A-UNIQUE"
+    )
+    task_provider = config.get_active_llm_provider()
+
+    assert succeeded[0]
+    assert config.get_active_provider() == "deepseek"
+    assert config.get_active_model() == "deepseek-reasoner"
+    assert config.get_active_base_url() == "https://api.deepseek.com"
+    assert config.get_active_client() is task_provider.client
+    assert task_provider.config == ModelConfig(
+        "deepseek", "deepseek-reasoner", "https://api.deepseek.com"
+    )
+
+
+def test_concurrent_readers_never_observe_partial_legacy_commit(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    class SelectiveFactory(StubClientFactory):
+        def __call__(self, api_key, base_url):
+            if api_key == "test-secret-B-UNIQUE":
+                raise RuntimeError("failed test-secret-B-UNIQUE")
+            return super().__call__(api_key, base_url)
+
+    factory = SelectiveFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+    ok, _message = config.switch_provider(
+        "custom",
+        "model-a",
+        api_key="test-secret-A-UNIQUE",
+        base_url="https://gateway-a.example/v1",
+        custom_model_name="model-a",
+    )
+    assert ok
+
+    start = threading.Event()
+    stop = threading.Event()
+    observations = []
+
+    def reader():
+        start.wait()
+        while True:
+            with config._lock:
+                llm_provider = config.get_active_llm_provider()
+                observations.append(
+                    (
+                        config.get_active_provider(),
+                        config.get_active_model(),
+                        config.get_active_base_url(),
+                        config.get_active_client(),
+                        llm_provider,
+                    )
+                )
+            if stop.wait(0.0001):
+                return
+
+    def writer():
+        start.set()
+        for _ in range(50):
+            assert config.switch_provider(
+                "deepseek",
+                "deepseek-chat",
+                api_key="test-secret-A-UNIQUE",
+            )[0]
+            assert not config.switch_provider(
+                "custom",
+                "model-b",
+                api_key="test-secret-B-UNIQUE",
+                base_url="https://gateway-b.example/v1",
+                custom_model_name="model-b",
+            )[0]
+            assert config.switch_provider(
+                "custom",
+                "model-a",
+                api_key="test-secret-A-UNIQUE",
+                base_url="https://gateway-a.example/v1",
+                custom_model_name="model-a",
+            )[0]
+            stop.wait(0.0001)
+        stop.set()
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        readers = [executor.submit(reader) for _ in range(4)]
+        writer_future = executor.submit(writer)
+        writer_future.result()
+        for future in readers:
+            future.result()
+
+    assert observations
+    for provider_id, model, base_url, client, llm_provider in observations:
+        assert provider_id == llm_provider.config.provider_id
+        assert model == llm_provider.config.model
+        assert base_url == llm_provider.config.base_url
+        assert client is llm_provider.client
 
 
 def test_llm_service_explicit_provider_never_reads_legacy_active_state(monkeypatch):
