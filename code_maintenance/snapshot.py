@@ -14,6 +14,7 @@ from .graph import (
     GraphNodeKind,
     ProjectGraph,
     ProjectGraphBuilder,
+    canonicalize_graph,
 )
 
 
@@ -121,10 +122,6 @@ def _node_record(node: GraphNode) -> dict:
     return {"kind": node.kind.value, "identity": identity, "label": node.label}
 
 
-def _node_key(node: GraphNode) -> str:
-    return json.dumps(_node_record(node), sort_keys=True, separators=(",", ":"))
-
-
 def _edge_record(edge: GraphEdge) -> dict:
     return {
         "source": _node_record(edge.source),
@@ -133,21 +130,10 @@ def _edge_record(edge: GraphEdge) -> dict:
     }
 
 
-def _edge_key(edge: GraphEdge) -> str:
-    return json.dumps(_edge_record(edge), sort_keys=True, separators=(",", ":"))
-
-
-def _normalize_graph(graph: ProjectGraph) -> ProjectGraph:
-    return ProjectGraph(
-        nodes=tuple(sorted(graph.nodes, key=_node_key)),
-        edges=tuple(sorted(graph.edges, key=_edge_key)),
-    )
-
-
 def _graph_record(graph: ProjectGraph) -> dict:
     return {
-        "nodes": [_node_record(node) for node in sorted(graph.nodes, key=_node_key)],
-        "edges": [_edge_record(edge) for edge in sorted(graph.edges, key=_edge_key)],
+        "nodes": [_node_record(node) for node in graph.nodes],
+        "edges": [_edge_record(edge) for edge in graph.edges],
     }
 
 
@@ -198,7 +184,7 @@ class SnapshotBuilder:
             )
         )
         symbols = self._read_symbol_states(scan_result)
-        normalized_graph = _normalize_graph(
+        normalized_graph = canonicalize_graph(
             graph if graph is not None else self._graph_builder.build(scan_result)
         )
         self._validate_graph(scan_result, normalized_graph)
@@ -259,7 +245,7 @@ class SnapshotBuilder:
                     SymbolState(symbol.id, symbol.content_hash)
                     for symbol in adapter.parse_symbols(source_file)
                 )
-            except (OSError, SyntaxError):
+            except (OSError, SyntaxError, ValueError):
                 continue
         return tuple(sorted(states, key=lambda state: _symbol_id_key(state.id)))
 

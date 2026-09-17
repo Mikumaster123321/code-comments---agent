@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -37,16 +38,37 @@ class GraphEdge:
     relation: GraphRelationKind
 
 
-def _identity_key(identity: str | SymbolId) -> str:
-    return str(identity)
+def _symbol_id_record(symbol_id: SymbolId) -> dict:
+    return {
+        "language": symbol_id.language,
+        "relative_path": symbol_id.relative_path,
+        "qualified_name": symbol_id.qualified_name,
+        "kind": symbol_id.kind.value,
+        "semantic_disambiguator": symbol_id.semantic_disambiguator,
+        "fallback_line": symbol_id.fallback_line,
+    }
 
 
-def _node_key(node: GraphNode) -> tuple[str, str, str]:
-    return node.kind.value, _identity_key(node.identity), node.label
+def _node_record(node: GraphNode) -> dict:
+    identity = (
+        {"type": "symbol", "value": _symbol_id_record(node.identity)}
+        if isinstance(node.identity, SymbolId)
+        else {"type": "string", "value": node.identity}
+    )
+    return {"kind": node.kind.value, "identity": identity, "label": node.label}
 
 
-def _edge_key(edge: GraphEdge) -> tuple[str, tuple[str, str, str], tuple[str, str, str]]:
-    return edge.relation.value, _node_key(edge.source), _node_key(edge.target)
+def _node_key(node: GraphNode) -> str:
+    return json.dumps(_node_record(node), sort_keys=True, separators=(",", ":"))
+
+
+def _edge_key(edge: GraphEdge) -> str:
+    record = {
+        "source": _node_record(edge.source),
+        "target": _node_record(edge.target),
+        "relation": edge.relation.value,
+    }
+    return json.dumps(record, sort_keys=True, separators=(",", ":"))
 
 
 @dataclass(frozen=True)
@@ -59,6 +81,13 @@ class ProjectGraph:
 
     def edges_of_kind(self, relation: GraphRelationKind) -> tuple[GraphEdge, ...]:
         return tuple(edge for edge in self.edges if edge.relation == relation)
+
+
+def canonicalize_graph(graph: ProjectGraph) -> ProjectGraph:
+    return ProjectGraph(
+        nodes=tuple(sorted(graph.nodes, key=_node_key)),
+        edges=tuple(sorted(graph.edges, key=_edge_key)),
+    )
 
 
 def _python_imports(source: str) -> tuple[str, ...]:
@@ -191,7 +220,7 @@ class ProjectGraphBuilder:
                     source,
                 )
                 symbols = tuple(adapter.parse_symbols(source_file))
-            except (OSError, SyntaxError):
+            except (OSError, SyntaxError, ValueError):
                 continue
             sources[project_file.relative_path] = source
             symbols_by_file[project_file.relative_path] = symbols
@@ -224,7 +253,7 @@ class ProjectGraphBuilder:
                 else:
                     imports = _java_imports(sources[relative_path])
                     resolved = ((target, java_types.get(target)) for target in imports)
-            except SyntaxError:
+            except (SyntaxError, ValueError):
                 continue
             for target, internal_node in resolved:
                 target_node = internal_node
@@ -236,9 +265,11 @@ class ProjectGraphBuilder:
                     nodes.add(target_node)
                 edges.add(GraphEdge(file_node, target_node, GraphRelationKind.IMPORTS))
 
-        return ProjectGraph(
-            nodes=tuple(sorted(nodes, key=_node_key)),
-            edges=tuple(sorted(edges, key=_edge_key)),
+        return canonicalize_graph(
+            ProjectGraph(
+                nodes=tuple(nodes),
+                edges=tuple(edges),
+            )
         )
 
     @staticmethod

@@ -15,19 +15,22 @@
   - Phase 3.2 — Project Relationship Awareness / Project Graph: completed
   - Phase 3.2.1 — Graph Identity & Containment Hardening: completed
   - Phase 3.3 — Project Snapshot / State: completed
-  - Phase 4 — Project Analysis Engine: next
+  - Phase 3.3.1 — Snapshot Post-QA Hardening: completed
+  - Phase 4 — Project Analysis Engine: planned after Phase 3.3 retest
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
   - V3.4 — VS Code
-- Test baseline: `70 passed`
+- Test baseline: `78 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
 - Phase 3.2 QA: `Final PASS` (initial `PASS WITH ISSUES`; D1/D2 verified in retest)
-- Graph identity contract: `Preserved by Phase 3.3`
+- Graph identity contract: `Preserved by Phase 3.3.1`
 - Phase 3.3: `Completed`
-- Next: Phase 4 — Project Analysis Engine
+- Phase 3.3 QA: `PASS WITH ISSUES` (Critical 0; M1/M2 resolved in Phase 3.3.1)
+- Phase 3.3.1 Snapshot Post-QA Hardening: `Completed`
+- Next: Phase 3.3 DeepSeek Retest
 
 ## Current Architecture
 
@@ -71,6 +74,12 @@ hash values. `SnapshotDiff` compares snapshots from the same project root and re
 added, removed, changed, and unchanged files and symbols. Snapshot serialization is
 limited to an in-memory `to_dict()` representation; no persistence layer exists.
 
+`graph.py` owns the canonical graph node and edge ordering used by both
+`ProjectGraphBuilder` and `SnapshotBuilder`; a graph built directly from a scan is equal
+to the graph stored in its snapshot. Python parse boundaries skip file-level symbol and
+import extraction on `SyntaxError` or `ValueError`, while retaining the scanned file
+state and continuing to process other files.
+
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
 
@@ -102,8 +111,16 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   root does not provide a reliable package name.
 - `Project.id` depends on the resolved absolute project root path. The first Phase 3.3
   Snapshot version defaults to time-series comparison under the same project root.
+- Phase 3.3 QA M3 remains deferred: case-sensitive absolute-path spelling can affect
+  `Project.id`; resolving it would change the frozen project identity contract.
 - Snapshot construction reads supported source files again to capture symbol content;
-  concurrent filesystem changes during a scan/build sequence are not made atomic.
+  Phase 3.3 QA M4 remains a known limitation because concurrent filesystem changes
+  during a scan/build sequence are not made atomic.
+- Phase 3.3 QA L1 remains deferred: validation of an explicitly supplied `graph=` checks
+  its project node identity but does not exhaustively validate every node and edge.
+- Phase 3.3 QA L2/L3 retain the current content semantics: a class symbol's content hash
+  includes its method bodies, so a method-body edit can mark both method and class as
+  changed.
 - Snapshot comparison is state comparison by file and symbol identity/content hash; it
   does not provide semantic diffs, AST edit scripts, history, repositories, or storage.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
