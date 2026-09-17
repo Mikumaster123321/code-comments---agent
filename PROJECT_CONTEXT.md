@@ -16,7 +16,8 @@
   - Phase 3.2.1 — Graph Identity & Containment Hardening: completed
   - Phase 3.3 — Project Snapshot / State: completed
   - Phase 3.3.1 — Snapshot Post-QA Hardening: completed
-  - Phase 4 — Project Analysis Engine: planned after Phase 3.3 retest
+  - V3 Core Architecture Review: next
+  - Phase 4 — Project Analysis Engine: planned after architecture review
   - V3.1 — Project Intelligence / RAG
   - V3.2 — Multi-Agent
   - V3.3 — Multi-Model Router
@@ -30,7 +31,9 @@
 - Phase 3.3: `Completed`
 - Phase 3.3 QA: `PASS WITH ISSUES` (Critical 0; M1/M2 resolved in Phase 3.3.1)
 - Phase 3.3.1 Snapshot Post-QA Hardening: `Completed`
-- Next: Phase 3.3 DeepSeek Retest
+- Phase 3.3 DeepSeek directed retest: `PASS` (M1 PASS; M2 PASS; Golden Hash PASS)
+- Phase 3.3 Final QA: `PASS` (further retest not required)
+- Next: V3 Core Architecture Review
 
 ## Current Architecture
 
@@ -75,10 +78,11 @@ added, removed, changed, and unchanged files and symbols. Snapshot serialization
 limited to an in-memory `to_dict()` representation; no persistence layer exists.
 
 `graph.py` owns the canonical graph node and edge ordering used by both
-`ProjectGraphBuilder` and `SnapshotBuilder`; a graph built directly from a scan is equal
-to the graph stored in its snapshot. Python parse boundaries skip file-level symbol and
-import extraction on `SyntaxError` or `ValueError`, while retaining the scanned file
-state and continuing to process other files.
+`ProjectGraphBuilder` and `SnapshotBuilder` through `canonicalize_graph()`; it is the
+single source of truth for ProjectGraph canonical ordering. A graph built directly from
+a scan is equal to the graph stored in its snapshot. Python parse boundaries skip
+file-level symbol and import extraction on `SyntaxError` or `ValueError`, while
+retaining the scanned file state and continuing to process other files.
 
 `SourceFile.content_hash` hashes the entire file content. `Symbol.content_hash` hashes the
 source slice returned for that symbol; neither hash is part of `SymbolId`.
@@ -121,6 +125,9 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Phase 3.3 QA L2/L3 retain the current content semantics: a class symbol's content hash
   includes its method bodies, so a method-body edit can mark both method and class as
   changed.
+- Low maintenance note: `graph.py` and `snapshot.py` currently retain duplicate
+  `_symbol_id_record` and `_node_record` implementations. This is not a current bug;
+  consider cleanup before or within Phase 4.
 - Snapshot comparison is state comparison by file and symbol identity/content hash; it
   does not provide semantic diffs, AST edit scripts, history, repositories, or storage.
 - Dependency semantics beyond imports, graph persistence/databases, RAG, and
