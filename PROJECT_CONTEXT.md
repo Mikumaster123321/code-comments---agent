@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 1 Credits Domain Completed`
+- Status: `Phase 1.1 Credits Domain Post-QA Hardening Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -29,6 +29,19 @@
 - Import smoke: core runtime and V3 modules passed; direct `ui` import remains blocked
   on this Anaconda Python 3.13.5 host by the documented `gradio` segmentation fault
 - V3.0.1 Phase 1 — Credits Domain: completed
+- V3.0.1 Phase 1 Initial QA: `PASS WITH ISSUES` (Critical 0, Medium 3,
+  Low 10, Blocking 0)
+- V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed; production Credits
+  behavior unchanged
+- Phase 1.1 freezes the privileged-operation boundary (M1), idempotency payload
+  contract (M2), and Phase 2 SQLite atomic-commit requirement (M3).
+- Phase 1.1 validation: Credits `66 passed`; full suite `195 passed`; offline
+  LLM-contract smoke `6 passed`. No real API, Credential, network, Provider, LLM, UI,
+  SQLite, or `managed_access/` work was used.
+- Phase 1 QA Low findings remain deferred: `history_of` object-reference hardening,
+  transaction-ID collision enforcement, private-container exposure, integer upper
+  bounds, the global `RLock`, note normalization, hostile `str` subclasses, and
+  validation-helper duplication.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -39,7 +52,7 @@
   idempotency, and same-account debit serialization under an `RLock`.
 - Phase 1 remains fully offline and Provider-independent. It adds no Credential, LLM,
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
-- Phase 1 tests: `50 passed`; full current suite: `179 passed` with the documented
+- Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
 - Next: V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing
   (`NOT STARTED`)
@@ -69,6 +82,7 @@
   - V3.0.1 Phase 0.1 — Architecture Decision Documentation: completed
   - V3.0.1 Phase 0 — Architecture & Scope Documentation Gate: completed
   - V3.0.1 Phase 1 — Credits Domain: completed
+  - V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed
   - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
@@ -79,7 +93,7 @@
 - V3.0.0 Final Release Gate: `PASS`
 - Release Blockers: `0`
 - Medium: `0`
-- Test baseline: `179 passed`
+- Test baseline: `195 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -426,6 +440,20 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Charge and refund operations are idempotent within their operation type by
   `(account_id, request_id)`; conflicting retries fail without mutating history or the
   idempotency index. Grants and safe adjustments append new audit records.
+- `grant()`, `refund()`, and `adjust()` are privileged domain operations available only
+  to trusted server-side or admin-side orchestration. They must not be exposed directly
+  to a client, Gradio UI, Managed caller, or ordinary user-facing API; Phase 2
+  `ManagedAccessService` must not expose these methods or a ledger object.
+- Phase 1 `refund()` is a low-level positive accounting primitive. Its `request_id`
+  identifies the refund operation rather than an original `USAGE`, and Phase 1 does
+  not reconcile usage. Any Phase 2 user-facing or Managed refund must first identify
+  the original `USAGE`, authorize the refund, and prevent repeated refund against the
+  same authorized usage before internally calling `CreditLedger.refund()`.
+- Idempotency lookup identity is `(operation_type, normalized account_id, normalized
+  request_id)` for `USAGE` and `REFUND`, which have independent namespaces. A valid
+  replay must preserve amount and exact note and returns the original transaction;
+  changed amount or note raises `IdempotencyConflictError`. Note is a payload
+  consistency field, not a lookup key, and Phase 2 retries must preserve it.
 - The in-memory ledger uses an `RLock` so idempotency checks, balance prechecks, and
   appends share one critical section. All rejected operations preserve balance,
   history, and idempotency state.
@@ -439,6 +467,14 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   `PricingPolicy` and the `Decimal` cost-to-integer-Credits conversion and rounding rule.
   No ORM, distributed database, distributed transaction, or hard-coded commercial
   exchange ratio is authorized.
+- Phase 2 SQLite must atomically commit the ledger transaction append and idempotency
+  record in one SQLite transaction. Partial commit in either direction is prohibited,
+  and Phase 2 QA must verify all-or-nothing behavior with failure injection.
+- Phase 2 entry requirements are: Managed clients cannot access `grant`, `refund`, or
+  `adjust`; user-facing refunds require original-`USAGE` authorization and replay
+  prevention; SQLite transaction append and idempotency-record write are atomic; and
+  retries preserve the complete idempotency payload contract. Phase 2 remains not
+  started.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
@@ -449,6 +485,15 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - V3.0.1 is an engineering-completeness enhancement. After the
   `ADMIN_GRANT -> Managed AI -> USAGE -> Ledger` loop is complete, thesis priority moves
   to V3.1 RAG and V3.2 Multi-Agent rather than commercial expansion.
+
+### V3.0.1 Report Naming Policy
+
+- Starting with V3.0.1, new Development and QA report filenames must include the
+  version, for example `Development_Report_V3_0_1_Phase_1.md` and
+  `QA_Report_V3_0_1_Phase_1.md`.
+- Do not create unversioned V3.0.1 report names such as
+  `Development_Report_Phase_1.md` or `QA_Report_Phase_1.md`; this avoids collisions
+  with V3.0 historical phases.
 
 ## Collaboration
 

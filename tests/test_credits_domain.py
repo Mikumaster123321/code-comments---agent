@@ -2,6 +2,7 @@ import ast
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from threading import Barrier
 
@@ -125,6 +126,23 @@ def test_balance_is_the_sum_of_append_only_transaction_amounts():
     assert ledger.balance_of("account-1") == sum(item.amount for item in history) == 12
 
 
+def test_ledger_normalizes_account_id_across_all_operations_and_queries():
+    ledger = InMemoryCreditLedger()
+
+    grant = ledger.grant(" alice ", 10)
+    charge = ledger.charge("alice", "usage-1", 3)
+    refund = ledger.refund("\talice\n", "refund-1", 2)
+    adjustment = ledger.adjust(" alice ", -4)
+
+    assert ledger.balance_of("alice") == 5
+    assert ledger.balance_of(" alice ") == 5
+    assert ledger.balance_of("\talice\n") == 5
+    assert ledger.history_of("alice") == (grant, charge, refund, adjustment)
+    assert ledger.history_of(" alice ") == (grant, charge, refund, adjustment)
+    assert ledger.history_of("\talice\n") == (grant, charge, refund, adjustment)
+    assert {item.account_id for item in ledger.history_of("alice")} == {"alice"}
+
+
 def test_charge_accepts_positive_amount_and_records_negative_usage():
     ledger = InMemoryCreditLedger()
     ledger.grant("account-1", 10)
@@ -197,6 +215,50 @@ def test_charge_retry_returns_the_original_transaction_without_double_charge():
     assert len(ledger.history_of("account-1")) == 2
 
 
+def test_charge_request_id_normalization_uses_one_idempotency_identity():
+    ledger = InMemoryCreditLedger()
+    ledger.grant("account-1", 20)
+
+    original = ledger.charge("account-1", "req-1", 4, "analysis")
+    replay = ledger.charge("account-1", " req-1 ", 4, "analysis")
+
+    assert replay is original
+    with pytest.raises(IdempotencyConflictError):
+        ledger.charge("account-1", " req-1 ", 5, "analysis")
+
+
+def test_failed_charge_does_not_reserve_its_idempotency_key():
+    ledger = InMemoryCreditLedger()
+    ledger.grant("account-1", 5)
+
+    with pytest.raises(InsufficientCreditsError):
+        ledger.charge("account-1", "request-1", 10)
+
+    ledger.grant("account-1", 20)
+    transaction = ledger.charge("account-1", "request-1", 10)
+
+    assert transaction.type is TransactionType.USAGE
+    assert transaction.amount == -10
+    assert ledger.balance_of("account-1") == 15
+
+
+@pytest.mark.parametrize("operation", ["charge", "refund"])
+@pytest.mark.parametrize("retry_note", ["different note", ""])
+def test_idempotency_payload_includes_the_exact_note(operation, retry_note):
+    ledger = InMemoryCreditLedger()
+    grant = ledger.grant("account-1", 10)
+    original = getattr(ledger, operation)(
+        "account-1", "request-1", 4, "original note"
+    )
+
+    with pytest.raises(IdempotencyConflictError):
+        getattr(ledger, operation)("account-1", "request-1", 4, retry_note)
+
+    assert ledger.history_of("account-1") == (grant, original)
+    expected_balance = 6 if operation == "charge" else 14
+    assert ledger.balance_of("account-1") == expected_balance
+
+
 def test_charge_idempotency_conflict_has_no_state_or_index_change():
     ledger = InMemoryCreditLedger()
     ledger.grant("account-1", 10)
@@ -235,6 +297,42 @@ def test_refund_is_positive_and_idempotent():
     assert retry is first
     assert ledger.balance_of("account-1") == 5
     assert ledger.history_of("account-1") == (first,)
+
+
+def test_refund_request_id_normalization_uses_one_idempotency_identity():
+    ledger = InMemoryCreditLedger()
+
+    original = ledger.refund("account-1", "req-1", 4, "recovery")
+    replay = ledger.refund("account-1", " req-1 ", 4, "recovery")
+
+    assert replay is original
+    with pytest.raises(IdempotencyConflictError):
+        ledger.refund("account-1", " req-1 ", 5, "recovery")
+
+
+def test_usage_and_refund_have_independent_idempotency_namespaces():
+    ledger = InMemoryCreditLedger()
+    grant = ledger.grant("account-1", 10)
+
+    usage = ledger.charge("account-1", "request-1", 3, "usage")
+    refund = ledger.refund("account-1", "request-1", 2, "refund")
+
+    assert usage.type is TransactionType.USAGE
+    assert refund.type is TransactionType.REFUND
+    assert ledger.charge("account-1", "request-1", 3, "usage") is usage
+    assert ledger.refund("account-1", "request-1", 2, "refund") is refund
+    assert ledger.history_of("account-1") == (grant, usage, refund)
+
+
+def test_privileged_refund_primitive_intentionally_allows_no_usage_history():
+    # This freezes low-level domain behavior, not user-facing refund authorization.
+    ledger = InMemoryCreditLedger()
+
+    refund = ledger.refund("account-1", "refund-1", 5)
+
+    assert refund.type is TransactionType.REFUND
+    assert ledger.history_of("account-1") == (refund,)
+    assert ledger.balance_of("account-1") == 5
 
 
 def test_refund_idempotency_conflict_has_no_state_change():
@@ -293,6 +391,31 @@ def test_adjust_rejects_zero_and_negative_balance_without_state_change():
 
     assert ledger.history_of("account-1") == (original,)
     assert ledger.balance_of("account-1") == 5
+
+
+def test_adjust_may_reach_exactly_zero_but_not_go_below_zero():
+    ledger = InMemoryCreditLedger()
+    ledger.grant("account-1", 5)
+
+    adjustment = ledger.adjust("account-1", -5)
+
+    assert adjustment.amount == -5
+    assert ledger.balance_of("account-1") == 0
+    with pytest.raises(InsufficientCreditsError):
+        ledger.adjust("account-1", -1)
+    assert ledger.balance_of("account-1") == 0
+
+
+@pytest.mark.parametrize("operation", ["grant", "charge", "refund", "adjust"])
+def test_ledger_rejects_decimal_credit_amounts(operation):
+    ledger = InMemoryCreditLedger()
+    ledger.grant("account-1", 10)
+
+    with pytest.raises(InvalidCreditAmountError):
+        if operation in {"charge", "refund"}:
+            getattr(ledger, operation)("account-1", "request-1", Decimal("1"))
+        else:
+            getattr(ledger, operation)("account-1", Decimal("1"))
 
 
 def test_accounts_are_isolated_and_unknown_valid_account_has_zero_balance():
@@ -355,6 +478,24 @@ def test_concurrent_same_account_charges_cannot_overdraw():
     assert [
         item.type for item in ledger.history_of("account-1")
     ].count(TransactionType.USAGE) == 1
+
+
+def test_concurrent_same_refund_request_replays_one_transaction():
+    ledger = InMemoryCreditLedger()
+    barrier = Barrier(9)
+
+    def refund():
+        barrier.wait()
+        return ledger.refund("account-1", "refund-1", 5, "recovery")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(refund) for _ in range(8)]
+        barrier.wait()
+        outcomes = [future.result() for future in futures]
+
+    assert all(outcome is outcomes[0] for outcome in outcomes)
+    assert ledger.history_of("account-1") == (outcomes[0],)
+    assert ledger.balance_of("account-1") == 5
 
 
 def test_credits_package_has_no_forbidden_imports():

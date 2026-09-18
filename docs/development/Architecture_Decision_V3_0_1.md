@@ -94,6 +94,21 @@ The Phase 1 transaction amount convention is frozen as:
 
 Phase 1 must provide a domain-level `grant` operation for tests and preparation of the Managed Access demonstration. An administrative UI or command wrapper is deferred to Phase 4.
 
+`grant()`, `refund()`, and `adjust()` are privileged domain operations. They may be
+called only by trusted server-side or admin-side orchestration and must not be exposed
+directly to a client, Gradio UI, Managed caller, or ordinary user-facing API. Phase 2
+`ManagedAccessService` must not expose these ledger methods or give a Managed client a
+`CreditLedger` object. A Managed client may trigger only a controlled Managed AI
+request.
+
+Phase 1 `refund()` is intentionally a low-level positive accounting primitive. Its
+`request_id` identifies the refund operation; it does not identify or reconcile the
+original `USAGE`. Phase 1 does not implement refund authorization or original-usage
+reconciliation. Before any future user-facing or Managed refund may call
+`CreditLedger.refund()`, Phase 2 must identify the original `USAGE`, authorize the
+refund, and prevent repeated refunds against the same authorized usage. That behavior
+belongs in a server-side refund-authorization service, not in the Phase 1 ledger.
+
 ## 6. Ledger and Balance
 
 The ledger is append-only and authoritative. In Phase 1, balance is derived as:
@@ -111,13 +126,22 @@ Credits. Phase 3 `PricingPolicy` must freeze that conversion and rounding rule.
 
 ## 7. Idempotency
 
-`request_id` is the idempotency key for usage charging. A `USAGE` charge is unique by:
+Idempotency lookup identity is:
 
 ```text
-(account_id, request_id)
+(operation_type, normalized account_id, normalized request_id)
 ```
 
-Repeating a `request_id` for the same account must not deduct Credits more than once. Retries must preserve this rule.
+The idempotent operation types are `USAGE` and `REFUND`, and they have independent
+namespaces. A charge and refund with the same normalized account and request ID may
+therefore coexist and must never replay a transaction of the wrong type.
+
+A valid replay has the same operation type, normalized account ID, normalized request
+ID, amount, and exact note, and returns the original transaction. Reuse with a
+different amount or note raises `IdempotencyConflictError`. The note is a payload
+consistency field, not part of the lookup key. Phase 2 retries must preserve the
+original note as well as the other payload fields. Repeating a valid `USAGE` request
+must not deduct Credits more than once.
 
 ## 8. Charging Contract
 
@@ -140,6 +164,12 @@ Phase 1 provides:
 - an in-memory implementation.
 
 Phase 2 provides a SQLite implementation using the Python standard library `sqlite3` module.
+
+For every idempotent SQLite operation in Phase 2, the ledger transaction append and
+idempotency-record write must occur in the same SQLite transaction with all-or-nothing
+commit semantics. Neither a committed transaction without its idempotency record nor
+an idempotency record without its transaction is permitted. Phase 2 QA must verify
+this requirement with failure injection.
 
 V3.0.1 does not introduce an ORM, PostgreSQL, Redis, or a distributed database.
 
