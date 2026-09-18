@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 3.1 Pricing Determinism & Migration Hardening Completed`
+- Status: `Phase 3 Usage Metering + PricingPolicy Documentation Gate Closed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -168,6 +168,27 @@
   Credits regression **66 passed**; BYOK Provider regression **19 passed**; offline
   LLM-contract smoke **6 passed**; full suite **343 passed**. No real API, Credential,
   or network LLM request was used.
+- V3.0.1 Phase 3 DeepSeek Directed Retest: `PASS` (Product Critical 0, Product
+  Medium 0, Release Blocker 0; independent probes `137/137 passed`). M1 ambient
+  Decimal-context determinism is resolved and the previous L1-L6 observations are
+  closed. Evidence includes 11 precision settings by 8 rounding modes with zero drift,
+  9,000 reservation cases with zero invariant violation, four atomic-migration failure
+  points with complete rollback, 20 reopens with zero drift, and zero privacy-marker
+  occurrences.
+- Phase 3 Final QA: `PASS FOR PHASE 3`. No further production fix or directed retest
+  is required. L7 initialization connection-close structure and L8 proactive validation
+  of a malformed pre-existing `managed_usage` table remain Low, non-blocking, and
+  deferred for future hardening.
+- Phase 3 contracts are frozen: `UsageRecord`; `PricingPolicy`; Phase 2-compatible
+  `FlatPricingPolicy`; deterministic `TokenPricingPolicy`; local Decimal pricing with
+  `ROUND_CEILING`; reservation upper bounds; actual reconciliation;
+  `FINALIZATION_FAILED` fail-closed behavior; provider/model integrity; private usage
+  persistence; atomic finalization; atomic Phase 2-to-Phase 3 migration; and request
+  fingerprint/pricing-policy identity.
+- V3.0.1 Phase 3 Documentation Gate: `CLOSED`. The combined Phase 3 and Phase 3.1
+  reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_3.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_3.md`.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -214,6 +235,7 @@
   - V3.0.1 Phase 2 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
   - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
+  - V3.0.1 Phase 3 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 4 — Admin Operations Surface: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
@@ -327,9 +349,9 @@ the completed V3 core and BYOK foundation.
 Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
 Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, and
 Phase 3.1 hardening are completed. The Phase 2 Documentation Gate is closed with Final
-QA `PASS`; Phase 3 Initial QA returned `PASS WITH ISSUES`, its directed retest is
-pending, and its later Documentation Gate has not started. V3.0.1 is not part of the
-V3.0.0 release.
+QA `PASS`; Phase 3 Initial QA returned `PASS WITH ISSUES`, Phase 3.1 resolved M1, the
+directed retest returned `PASS`, and the Phase 3 Documentation Gate is closed with
+Final QA `PASS FOR PHASE 3`. V3.0.1 is not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
