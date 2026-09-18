@@ -6,7 +6,22 @@
 
 ## Current State
 
-- Current branch: `v3.0.0-test1`
+- Current Development Version: `V3.0.1`
+- Current branch: `v3.0.1-dev`
+- Status: `Development Started`
+- Phase 0 — Architecture & Scope Gate: in progress
+- Phase 0.0 — Development Baseline: completed
+- V3.0.0: released / frozen
+- V3.0.0 tag: annotated tag `v3.0.0` resolves to final release commit
+  `2b2b0cb103264f7ac278f35c19a1dc0b02196dc8`
+- Development baseline tests: `129 passed` with the documented current-host
+  `python -m pytest -p no:debugging` workaround; ordinary pytest reproduces the known
+  Anaconda Python 3.13.5 debugging-plugin / `rlcompleter` segmentation fault
+- Offline LLM-contract smoke: `6 passed`; no real API, credential, or network LLM
+  request was used
+- Import smoke: core runtime and V3 modules passed; direct `ui` import remains blocked
+  on this Anaconda Python 3.13.5 host by the documented `gradio` segmentation fault
+- Next: V3.0.1 Phase 0 Architecture Review
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
