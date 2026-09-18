@@ -168,7 +168,8 @@ code-comments---agent/
 ├── tests/
 ├── docs/
 │   ├── development/
-│   └── qa/
+│   ├── qa/
+│   └── release/
 └── .github/workflows/
 ```
 
@@ -226,7 +227,7 @@ Client -> Platform Backend -> Auth / Credit Check -> Server-side Provider -> LLM
 - Phase 4 — Project Analysis Engine
 - Phase 4.1 — Provider / BYOK Foundation
 
-主要更新：Engineering baseline、Stable `SymbolId`、Project Scanner、Project Graph、Project Snapshot、Deterministic Analysis Engine、BYOK 和 Task-scoped Provider isolation。
+主要更新：Engineering baseline（自动化测试与 CI）、Stable `SymbolId`、Processor 从 name-key 迁移至 `SymbolId`、Project Scanner、Project Graph、Project Snapshot / SnapshotDiff、Deterministic Project Analysis Engine、Provider / BYOK Foundation、Task-scoped Provider isolation、Legacy Provider atomic update hardening，以及 Release engineering / QA / documentation gates。
 
 Tests: **129 passed**。
 
@@ -246,4 +247,5 @@ Tests: **129 passed**。
 
 - `docs/development/`：Phase Development Reports 与 Release Engineering Gates
 - `docs/qa/`：独立 QA Reports
+- `docs/release/`：Release Notes
 - `PROJECT_CONTEXT.md`：当前架构、边界、已知债务与版本规划
