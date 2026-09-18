@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 2 Managed Access Documentation Gate Closed`
+- Status: `Phase 3 Usage Metering + PricingPolicy Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -112,6 +112,37 @@
 - Phase 2 reports are recorded as
   `docs/development/Development_Report_V3_0_1_Phase_2.md` and
   `docs/qa/QA_Report_V3_0_1_Phase_2.md`. Phase 2.1 is included in the Phase 2 reports.
+- V3.0.1 Phase 3 — Usage Metering + PricingPolicy: completed. It adds immutable,
+  Credential-free `UsageRecord`, `PricingContext`, and `ManagedProviderResponse`
+  contracts plus a minimal `PricingPolicy` Protocol for reservation quotes and actual
+  usage pricing. Zero-total-token usage is rejected; input-only and output-only usage
+  remain valid.
+- `TokenPricingPolicy` uses synthetic `Decimal` Credit rates per 1,000 tokens and
+  converts the final amount to integer Credits with `ROUND_CEILING`. Floats, `bool`,
+  negative values, NaN, Infinity, and an all-zero rate configuration are rejected.
+  Stable versioned policy identities participate in Managed request payload identity.
+- Token-priced Managed requests require an explicit provider/model/token-limit
+  `PricingContext`. The priced limits form the pre-Provider reservation upper bound.
+  Actual usage must match the provider and model, remain within the declared limits,
+  and price to `0 <= actual_credits <= reserved_credits`.
+- Provider success with missing, malformed, mismatched, over-limit, or over-reservation
+  usage transitions to `FINALIZATION_FAILED`, retains the reservation, and is never
+  automatically reinvoked. Successful reconciliation records only the actual `USAGE`
+  charge; unused reservation capacity is released without a compensating refund.
+- Phase 3 persists Credential-free usage metadata and final Credits in `managed_usage`.
+  The `USAGE` transaction, Credit idempotency record, usage metadata, final Credits,
+  and `SUCCEEDED` transition share one SQLite transaction. Phase 2 databases migrate
+  in place, preserve existing ledger/request data, and retain compatible flat-price
+  replay behavior.
+- `FlatPricingPolicy` implements the new `PricingPolicy` contract while preserving the
+  Phase 2 behavior: reservation equals final Credits, usage remains optional, and
+  legacy string Provider responses remain supported. BYOK, UI, processor, and Provider
+  foundation files remain unchanged.
+- Phase 3 validation: Usage/Pricing and Managed token flow **55 passed**; original
+  Managed Access regression **44 passed**; SQLite ledger **29 passed**; Credits
+  regression **66 passed**; BYOK Provider regression **19 passed**; offline
+  LLM-contract smoke **6 passed**; full suite **323 passed**. All tests were offline and
+  used only synthetic rates, fake credentials, and Stub Providers.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -124,7 +155,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 Phase 3 — Usage Metering + PricingPolicy. Phase 3 remains `NOT STARTED`.
+- Next: V3.0.1 Phase 4 — Admin Operations Surface. Phase 4 remains `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -156,7 +187,8 @@
   - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: completed
   - V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed
   - V3.0.1 Phase 2 Documentation Gate: closed (`PASS`)
-  - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: not started
+  - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
+  - V3.0.1 Phase 4 — Admin Operations Surface: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -167,8 +199,9 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `268 passed`
+- Current V3.0.1 development test baseline: `323 passed`
 - Current V3.0.1 Managed Access tests: `44 passed`
+- Current V3.0.1 Phase 3 Usage/Pricing and token-flow tests: `55 passed`
 - Current V3.0.1 SQLite ledger tests: `29 passed`
 - Current V3.0.1 Credits tests: `66 passed`
 - Current V3.0.1 BYOK Provider tests: `19 passed`
@@ -265,10 +298,11 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain and Phase 2 — Managed Access
-Foundation + SQLite + flat pricing are completed, and the Phase 2 Documentation Gate
-is closed with Final QA `PASS`. Phase 3 — Usage Metering + PricingPolicy has not
-started. V3.0.1 is not part of the V3.0.0 release.
+Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
+Foundation + SQLite + flat pricing, and Phase 3 — Usage Metering + PricingPolicy are
+completed. The Phase 2 Documentation Gate is closed with Final QA `PASS`; Phase 3
+independent QA and its later Documentation Gate have not started. V3.0.1 is not part
+of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -562,8 +596,9 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Phase 1 uses the minimal `CreditLedger` Protocol and in-memory implementation and defines no
   `PricingPolicy`, flat pricing, token pricing, or cost conversion. It remains completely
   offline and must not import or call LLM or Provider infrastructure. Phase 2 adds
-  standard-library SQLite and flat pricing. Phase 3 owns Provider/model/token-based
-  `PricingPolicy` and the `Decimal` cost-to-integer-Credits conversion and rounding rule.
+  standard-library SQLite and flat pricing. Phase 3 adds Provider/model/token-based
+  `PricingPolicy` and freezes `Decimal` cost-to-integer-Credits conversion with
+  `ROUND_CEILING`.
   No ORM, distributed database, distributed transaction, or hard-coded commercial
   exchange ratio is authorized.
 - Phase 2 SQLite must atomically commit the ledger transaction append and idempotency
@@ -577,12 +612,12 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phases 1 and 2 are completed; Phase 3 has
-  not started.
+  Payment Interface Reservation; then RC. Phases 1 through 3 are completed; Phase 4
+  has not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
-- Phase 3 may extend Flat Pricing into Usage Metering and `PricingPolicy`, but it must
-  preserve the Phase 2 reservation state machine, SQLite all-or-nothing atomicity,
+- Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
+  the Phase 2 reservation state machine, SQLite all-or-nothing atomicity,
   Managed request idempotency and payload identity, the server-side Credential
   boundary, and BYOK isolation from Credits and Managed Access.
 - V3.0.1 is an engineering-completeness enhancement. After the
