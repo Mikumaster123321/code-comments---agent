@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 3 Usage Metering + PricingPolicy Documentation Gate Closed`
+- Status: `Phase 4 Admin Operations Surface Completed; Independent QA Pending`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -189,6 +189,33 @@
   reports are recorded as
   `docs/development/Development_Report_V3_0_1_Phase_3.md` and
   `docs/qa/QA_Report_V3_0_1_Phase_3.md`.
+- V3.0.1 Phase 4 — Admin Operations Surface: completed. It adds a trusted
+  server-side `AdminCreditService` with immutable `AdminOperationContext` and
+  `AdminOperationRecord` values plus the minimal `GRANT` and `ADJUSTMENT`
+  `AdminOperationType` values.
+- Phase 4 administrative operation identity is `(normalized actor_id, normalized
+  operation_id)`. Exact replay returns the persisted audit record without another
+  Credit mutation, while any change to operation type, normalized account, amount,
+  or normalized non-empty reason raises `AdminOperationConflictError`.
+- Phase 4 persists normalized administrative audit metadata in
+  `admin_credit_operations`. Each `ADMIN_GRANT` or `ADJUSTMENT` Credit transaction
+  and its immutable admin audit row share one `BEGIN IMMEDIATE` SQLite transaction;
+  failure injection and commit-failure coverage prove all-or-nothing rollback and
+  safe retry.
+- `AdminCreditService.balance()` and `history()` expose only an integer balance and
+  immutable Credit transaction tuple. The service does not return a `CreditLedger`,
+  and `ManagedAccessService` continues to expose no grant, adjust, refund, ledger, or
+  Admin service capability.
+- Phase 4 validation: Admin Operations **51 passed**; Phase 3 pricing/token-flow and
+  hardening **75 passed**; Managed Access **44 passed**; SQLite ledger **29 passed**;
+  Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
+  **6 passed**; full suite **394 passed**. No real API, Credential, Provider-network,
+  or network LLM request was used.
+- Phase 4 does not expose `refund()`. Admin UI, Payment, recharge, purchase, login,
+  account systems, and a production HTTP backend remain unimplemented. Optional
+  Phase 5 is `NOT STARTED`.
+- Phase 4 Development and QA reports remain intentionally deferred until Independent
+  QA and any required hardening complete the Documentation Gate.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -201,7 +228,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 Phase 4 — Admin Operations Surface. Phase 4 remains `NOT STARTED`.
+- Next: V3.0.1 Phase 4 Independent QA. Phase 5 remains optional and `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -236,7 +263,7 @@
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
   - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
   - V3.0.1 Phase 3 Documentation Gate: closed (`PASS`)
-  - V3.0.1 Phase 4 — Admin Operations Surface: not started
+  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Independent QA pending
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -247,7 +274,8 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `343 passed`
+- Current V3.0.1 development test baseline: `394 passed`
+- Current V3.0.1 Admin Operations tests: `51 passed`
 - Current V3.0.1 Managed Access tests: `44 passed`
 - Current V3.0.1 Phase 3 Usage/Pricing, token-flow, and hardening tests: `75 passed`
 - Current V3.0.1 SQLite ledger tests: `29 passed`
@@ -347,11 +375,12 @@ the completed V3 core and BYOK foundation.
 ### V3.0.1 — Managed AI Access & Credits
 
 Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
-Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, and
-Phase 3.1 hardening are completed. The Phase 2 Documentation Gate is closed with Final
-QA `PASS`; Phase 3 Initial QA returned `PASS WITH ISSUES`, Phase 3.1 resolved M1, the
-directed retest returned `PASS`, and the Phase 3 Documentation Gate is closed with
-Final QA `PASS FOR PHASE 3`. V3.0.1 is not part of the V3.0.0 release.
+Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
+3.1 hardening, and Phase 4 — Admin Operations Surface are completed. The Phase 2
+Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
+`PASS WITH ISSUES`, Phase 3.1 resolved M1, the directed retest returned `PASS`, and the Phase
+3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Independent
+QA is pending. V3.0.1 is not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -658,11 +687,21 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   and idempotency-record write are atomic; and retries preserve the complete
   idempotency payload contract. Failure injection covers rollback on both sides of the
   transaction/idempotency boundary.
+- Phase 4 adds the trusted server-side `AdminCreditService` as the only administrative
+  Credits entrypoint in this phase. It exposes `grant`, `adjust`, `balance`, and
+  immutable Credit `history`, but no public refund and no ledger object. Admin identity
+  is `(normalized actor_id, normalized operation_id)` and the complete business payload
+  is conflict-checked on replay.
+- The Phase 4 `admin_credit_operations` audit row and corresponding Credit transaction
+  commit atomically in one SQLite transaction. `BEGIN IMMEDIATE` serializes independent
+  service connections so same-operation concurrency mutates exactly once and different
+  operations retain balance safety. The admin schema migrates and reopens idempotently
+  without changing existing ledger, Managed request, or usage data.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phases 1 through 3 are completed; Phase 4
-  has not started.
+  Payment Interface Reservation; then RC. Phases 1 through 4 are completed; Phase 4
+  Independent QA is pending and optional Phase 5 has not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
