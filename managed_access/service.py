@@ -70,7 +70,11 @@ class ManagedAccessService:
         )
         SQLiteCreditLedger._configure_connection(self._connection)
         SQLiteCreditLedger._initialize_schema(self._connection)
-        self._initialize_schema()
+        try:
+            self._initialize_schema()
+        except BaseException:
+            self._connection.close()
+            raise
 
     def __repr__(self) -> str:
         return "ManagedAccessService(<server-side provider boundary>)"
@@ -473,8 +477,8 @@ class ManagedAccessService:
             self._inject("before_request_final_status_commit")
 
     def _initialize_schema(self) -> None:
-        with self._lock:
-            self._connection.execute(
+        with self._write_transaction() as connection:
+            connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS managed_requests (
                     account_id TEXT NOT NULL,
@@ -495,7 +499,7 @@ class ManagedAccessService:
             )
             columns = {
                 str(row[1])
-                for row in self._connection.execute(
+                for row in connection.execute(
                     "PRAGMA table_info(managed_requests)"
                 )
             }
@@ -505,19 +509,25 @@ class ManagedAccessService:
                 ("max_input_tokens", "INTEGER NOT NULL DEFAULT 0"),
                 ("max_output_tokens", "INTEGER NOT NULL DEFAULT 0"),
             )
+            alteration_count = 0
             for column, definition in migrations:
                 if column not in columns:
-                    self._connection.execute(
+                    connection.execute(
                         f"ALTER TABLE managed_requests ADD COLUMN {column} {definition}"
                     )
-            self._connection.execute(
+                    alteration_count += 1
+                    if alteration_count == 1:
+                        self._inject("after_first_schema_alteration")
+            connection.execute(
                 """
                 UPDATE managed_requests
                 SET pricing_policy_id = 'flat:v1:' || reserved_credits
                 WHERE pricing_policy_id = ''
                 """
             )
-            self._connection.execute(
+            self._inject("during_migration_backfill")
+            self._inject("before_managed_usage_creation")
+            connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS managed_usage (
                     account_id TEXT NOT NULL,
@@ -545,7 +555,7 @@ class ManagedAccessService:
                 )
                 """
             )
-            self._connection.execute(
+            connection.execute(
                 """
                 INSERT OR IGNORE INTO managed_usage (
                     account_id, request_id, provider_id, model,
@@ -558,6 +568,7 @@ class ManagedAccessService:
                 """,
                 (ManagedRequestStatus.SUCCEEDED.value,),
             )
+            self._inject("during_legacy_usage_initialization")
 
     @staticmethod
     def _request_row(

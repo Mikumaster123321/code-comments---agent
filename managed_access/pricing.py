@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from decimal import ROUND_CEILING, Decimal
+from decimal import MAX_EMAX, MIN_EMIN, ROUND_CEILING, Decimal, localcontext
 from typing import Protocol, runtime_checkable
 
 from llm_provider import ModelConfig
@@ -142,11 +142,35 @@ class TokenPricingPolicy:
         return self._price(validated.input_tokens, validated.output_tokens)
 
     def _price(self, input_tokens: int, output_tokens: int) -> int:
-        amount = (
-            self._input_rate * Decimal(input_tokens)
-            + self._output_rate * Decimal(output_tokens)
-        ) / Decimal(self.TOKENS_PER_RATE_UNIT)
-        return int(amount.to_integral_value(rounding=ROUND_CEILING))
+        terms = tuple(
+            (rate, tokens)
+            for rate, tokens in (
+                (self._input_rate, input_tokens),
+                (self._output_rate, output_tokens),
+            )
+            if rate != 0 and tokens != 0
+        )
+        if not terms:
+            return 0
+
+        minimum_exponent = min(rate.as_tuple().exponent for rate, _ in terms)
+        precision = max(
+            len(rate.as_tuple().digits)
+            + self._integer_decimal_digits(tokens)
+            + rate.as_tuple().exponent
+            - minimum_exponent
+            for rate, tokens in terms
+        ) + 2
+        with localcontext() as context:
+            context.prec = precision
+            context.rounding = ROUND_CEILING
+            context.Emax = MAX_EMAX
+            context.Emin = MIN_EMIN
+            context.clamp = 0
+            amount = sum(
+                rate * Decimal(tokens) for rate, tokens in terms
+            ) / Decimal(self.TOKENS_PER_RATE_UNIT)
+            return int(amount.to_integral_value(rounding=ROUND_CEILING))
 
     @staticmethod
     def _validate_rate(value: Decimal, field_name: str) -> Decimal:
@@ -162,4 +186,23 @@ class TokenPricingPolicy:
     def _canonical_decimal(value: Decimal) -> str:
         if value == 0:
             return "0"
-        return format(value.normalize(), "f")
+        decimal_tuple = value.as_tuple()
+        digits = list(decimal_tuple.digits)
+        exponent = decimal_tuple.exponent
+        while digits[-1] == 0:
+            digits.pop()
+            exponent += 1
+        text = "".join(str(digit) for digit in digits)
+        point = len(text) + exponent
+        if point <= 0:
+            return f"0.{('0' * -point)}{text}"
+        if point < len(text):
+            return f"{text[:point]}.{text[point:]}"
+        return f"{text}{'0' * (point - len(text))}"
+
+    @staticmethod
+    def _integer_decimal_digits(value: int) -> int:
+        estimate = (value.bit_length() * 30103) // 100000 + 1
+        if value < 10 ** (estimate - 1):
+            return estimate - 1
+        return estimate

@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 3 Usage Metering + PricingPolicy Completed`
+- Status: `Phase 3.1 Pricing Determinism & Migration Hardening Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -143,6 +143,31 @@
   regression **66 passed**; BYOK Provider regression **19 passed**; offline
   LLM-contract smoke **6 passed**; full suite **323 passed**. All tests were offline and
   used only synthetic rates, fake credentials, and Stub Providers.
+- V3.0.1 Phase 3 Initial DeepSeek QA: `PASS WITH ISSUES` (Critical 0, Medium 1,
+  Release Blocker 0). M1 found that token-price arithmetic depended on the ambient
+  Decimal context and could undercharge under low precision. QA also verified that the
+  Phase 3 core architecture passed and identified the recoverable SQLite migration
+  autocommit window for immediate hardening.
+- V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed. Token
+  pricing now uses a dynamically sized local Decimal context with fixed
+  `ROUND_CEILING`, independent of caller precision and rounding, while policy identity
+  canonicalization no longer performs context-sensitive Decimal normalization.
+- Phase 3.1 places all Managed schema changes, policy-identity backfill,
+  `managed_usage` creation, and legacy usage initialization inside one
+  `BEGIN IMMEDIATE` transaction. Real SQLite failure injection after the first
+  alteration, during backfill, before usage-table creation, and during legacy usage
+  initialization proves that DDL and data changes roll back together before a normal
+  reopen completes the migration.
+- Phase 3.1 regression coverage includes ambient Decimal precision/rounding matrices,
+  large Decimal rates and token counts, a faithful Phase 2 schema fixture, five
+  idempotent migration reopens, existing usage-metadata preservation, privacy scans of
+  logical rows/dumps/database sidecars, zero-cost finalization atomicity, and Flat/Token
+  request-identity conflicts in both directions.
+- Phase 3.1 validation: Phase 3 pricing, token-flow, and hardening tests **75 passed**;
+  original Managed Access regression **44 passed**; SQLite ledger **29 passed**;
+  Credits regression **66 passed**; BYOK Provider regression **19 passed**; offline
+  LLM-contract smoke **6 passed**; full suite **343 passed**. No real API, Credential,
+  or network LLM request was used.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -188,6 +213,7 @@
   - V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed
   - V3.0.1 Phase 2 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
+  - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
   - V3.0.1 Phase 4 — Admin Operations Surface: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
@@ -199,9 +225,9 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `323 passed`
+- Current V3.0.1 development test baseline: `343 passed`
 - Current V3.0.1 Managed Access tests: `44 passed`
-- Current V3.0.1 Phase 3 Usage/Pricing and token-flow tests: `55 passed`
+- Current V3.0.1 Phase 3 Usage/Pricing, token-flow, and hardening tests: `75 passed`
 - Current V3.0.1 SQLite ledger tests: `29 passed`
 - Current V3.0.1 Credits tests: `66 passed`
 - Current V3.0.1 BYOK Provider tests: `19 passed`
@@ -299,10 +325,11 @@ the completed V3 core and BYOK foundation.
 ### V3.0.1 — Managed AI Access & Credits
 
 Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
-Foundation + SQLite + flat pricing, and Phase 3 — Usage Metering + PricingPolicy are
-completed. The Phase 2 Documentation Gate is closed with Final QA `PASS`; Phase 3
-independent QA and its later Documentation Gate have not started. V3.0.1 is not part
-of the V3.0.0 release.
+Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, and
+Phase 3.1 hardening are completed. The Phase 2 Documentation Gate is closed with Final
+QA `PASS`; Phase 3 Initial QA returned `PASS WITH ISSUES`, its directed retest is
+pending, and its later Documentation Gate has not started. V3.0.1 is not part of the
+V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
