@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 0 Completed`
+- Status: `Phase 1 Credits Domain Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -28,7 +28,21 @@
   request was used
 - Import smoke: core runtime and V3 modules passed; direct `ui` import remains blocked
   on this Anaconda Python 3.13.5 host by the documented `gradio` segmentation fault
-- Next: Phase 1 — Credits Domain (`NOT STARTED`)
+- V3.0.1 Phase 1 — Credits Domain: completed
+- V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
+  objects, the minimal `CreditLedger` protocol, and a thread-safe
+  `InMemoryCreditLedger`.
+- The Phase 1 ledger is append-only and authoritative; integer Credit balances are
+  derived from transaction records rather than a second authoritative balance store.
+- `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT` are implemented with typed domain
+  failures, failed-operation atomicity, `(account_id, request_id)` charge/refund
+  idempotency, and same-account debit serialization under an `RLock`.
+- Phase 1 remains fully offline and Provider-independent. It adds no Credential, LLM,
+  Provider, UI, SQLite, network, pricing, or managed-access dependency.
+- Phase 1 tests: `50 passed`; full current suite: `179 passed` with the documented
+  current-host `python -m pytest -p no:debugging` workaround.
+- Next: V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing
+  (`NOT STARTED`)
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -54,8 +68,9 @@
   - V3.0.1 Phase 0.0 — Development Baseline: completed
   - V3.0.1 Phase 0.1 — Architecture Decision Documentation: completed
   - V3.0.1 Phase 0 — Architecture & Scope Documentation Gate: completed
-  - V3.0.1 Phase 1 — Credits Domain: not started
-  - V3.0.1 — Managed AI Access & Credits: planned
+  - V3.0.1 Phase 1 — Credits Domain: completed
+  - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: not started
+  - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
   - V3.3 — Data-driven Model Router: planned
@@ -64,7 +79,7 @@
 - V3.0.0 Final Release Gate: `PASS`
 - Release Blockers: `0`
 - Medium: `0`
-- Test baseline: `129 passed`
+- Test baseline: `179 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -146,7 +161,7 @@
   pytest debugging-plugin issue; `python -m pytest -p no:debugging` passes all 129 tests
 - Standard-environment evidence: RC1.4 records `python -m pytest` with `129 passed`
   under standard CPython / clean venv; the host-specific issue is not a release blocker
-- Next development version: V3.0.1 — Managed AI Access & Credits (`PLANNED`)
+- Current development version: V3.0.1 — Managed AI Access & Credits (`IN DEVELOPMENT`)
 
 ## Planned Version Roadmap
 
@@ -157,8 +172,9 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **PLANNED**. This is not part of V3.0.0, and no implementation module is
-authorized by this roadmap entry.
+Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain is completed; Phase 2 — Managed
+Access Foundation + SQLite + flat pricing has not started. V3.0.1 is not part of the
+V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -171,9 +187,9 @@ API configuration to use platform-managed AI access. Planned capabilities are:
 - a `PricingPolicy` abstraction;
 - a reserved recharge/payment interface.
 
-The first implementation stage should support only `ADMIN_GRANT` and `USAGE`.
-`PURCHASE` and payment-provider integration remain interface reservations rather than
-mandatory first-stage integrations.
+Phase 1 supports `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`. `PURCHASE` and
+payment-provider integration remain outside Phase 1 and are interface reservations
+rather than mandatory V3.0.1 integrations.
 
 The platform Provider credential must never be delivered to a client or written into
 a plugin, frontend, ordinary configuration file, or client package. Managed mode must
@@ -405,10 +421,18 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   `REFUND > 0`, and `ADJUSTMENT` may be positive or negative but not zero.
 - Phase 1 transaction types are `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`;
   `PURCHASE` is excluded. User identity is only an opaque `account_id: str`.
+- Phase 1 implements immutable `CreditAccount` and `CreditTransaction` values, the
+  minimal `CreditLedger` protocol, and a thread-safe `InMemoryCreditLedger`.
+- Charge and refund operations are idempotent within their operation type by
+  `(account_id, request_id)`; conflicting retries fail without mutating history or the
+  idempotency index. Grants and safe adjustments append new audit records.
+- The in-memory ledger uses an `RLock` so idempotency checks, balance prechecks, and
+  appends share one critical section. All rejected operations preserve balance,
+  history, and idempotency state.
 - A `USAGE` charge is idempotent by `(account_id, request_id)`. The Phase 2 charging
   contract is per-account guarded charge-after-success: precheck balance, invoke the
   Provider, and charge only after success; Provider failure is not charged.
-- Phase 1 uses a Repository Protocol and in-memory implementation and defines no
+- Phase 1 uses the minimal `CreditLedger` Protocol and in-memory implementation and defines no
   `PricingPolicy`, flat pricing, token pricing, or cost conversion. It remains completely
   offline and must not import or call LLM or Provider infrastructure. Phase 2 adds
   standard-library SQLite and flat pricing. Phase 3 owns Provider/model/token-based
@@ -418,7 +442,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phase 1 has not started.
+  Payment Interface Reservation; then RC. Phase 1 is completed and Phase 2 has not
+  started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - V3.0.1 is an engineering-completeness enhancement. After the
