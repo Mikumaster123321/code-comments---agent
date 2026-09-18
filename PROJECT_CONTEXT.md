@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 1.1 Credits Domain Post-QA Hardening Completed`
+- Status: `Phase 1 Credits Domain Documentation Gate Closed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -38,6 +38,18 @@
 - Phase 1.1 validation: Credits `66 passed`; full suite `195 passed`; offline
   LLM-contract smoke `6 passed`. No real API, Credential, network, Provider, LLM, UI,
   SQLite, or `managed_access/` work was used.
+- V3.0.1 Phase 1 DeepSeek Directed Retest: `PASS WITH ISSUES` (Critical 0,
+  Medium 0, Blocking 0; 3 non-blocking Low observations; 13/13 independent probes
+  passed). M1 and M2 are closed; M3 is closed for Phase 1 and frozen as a Phase 2
+  entry contract. No further Phase 1 retest is required.
+- V3.0.1 Phase 1 Final QA: `PASS`.
+- V3.0.1 Phase 1 Documentation Gate: `CLOSED`.
+- Phase 1 reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_1.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_1.md`.
+- Directed-retest Low disposition: L1 remains a Phase 2 structural-guard requirement;
+  L2 is resolved by separating the V3.0.0 and V3.0.1 test baselines; L3 is resolved by
+  the version-qualified Development and QA reports.
 - Phase 1 QA Low findings remain deferred: `history_of` object-reference hardening,
   transaction-ID collision enforcement, private-container exposure, integer upper
   bounds, the global `RLock`, note normalization, hostile `str` subclasses, and
@@ -83,17 +95,21 @@
   - V3.0.1 Phase 0 — Architecture & Scope Documentation Gate: completed
   - V3.0.1 Phase 1 — Credits Domain: completed
   - V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed
+  - V3.0.1 Phase 1 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
   - V3.3 — Data-driven Model Router: planned
   - V3.4 — VS Code Integration + Secure Credential UI: planned
-- Version: `3.0.0`
+- Released product version: `3.0.0`
 - V3.0.0 Final Release Gate: `PASS`
 - Release Blockers: `0`
 - Medium: `0`
-- Test baseline: `195 passed`
+- V3.0.0 released test baseline: `129 passed`
+- Current V3.0.1 development test baseline: `195 passed`
+- Current V3.0.1 Credits tests: `66 passed`
+- Current offline LLM-contract smoke: `6 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
