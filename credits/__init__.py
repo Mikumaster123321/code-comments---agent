@@ -10,6 +10,7 @@ from .domain import (
     TransactionType,
 )
 from .ledger import CreditLedger, InMemoryCreditLedger
+from .sqlite_ledger import SQLiteCreditLedger
 
 __all__ = [
     "CreditAccount",
@@ -22,5 +23,6 @@ __all__ = [
     "InvalidAccountError",
     "InvalidCreditAmountError",
     "InvalidRequestIdError",
+    "SQLiteCreditLedger",
     "TransactionType",
 ]

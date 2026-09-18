@@ -508,7 +508,6 @@ def test_credits_package_has_no_forbidden_imports():
         "openai",
         "gradio",
         "code_maintenance",
-        "sqlite3",
         "requests",
         "http",
         "socket",
@@ -525,3 +524,19 @@ def test_credits_package_has_no_forbidden_imports():
                 imported_roots.add(node.module.split(".", 1)[0])
 
     assert imported_roots.isdisjoint(forbidden_roots)
+
+    sqlite_importers = []
+    for source_path in credits_directory.glob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        if any(
+            isinstance(node, (ast.Import, ast.ImportFrom))
+            and (
+                any(alias.name == "sqlite3" for alias in node.names)
+                if isinstance(node, ast.Import)
+                else node.module == "sqlite3"
+            )
+            for node in ast.walk(tree)
+        ):
+            sqlite_importers.append(source_path.name)
+
+    assert sqlite_importers == ["sqlite_ledger.py"]

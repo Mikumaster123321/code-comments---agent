@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 1 Credits Domain Documentation Gate Closed`
+- Status: `Phase 2 Managed Access Foundation Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -54,6 +54,34 @@
   transaction-ID collision enforcement, private-container exposure, integer upper
   bounds, the global `RLock`, note normalization, hostile `str` subclasses, and
   validation-helper duplication.
+- V3.0.1 Phase 2 — Managed Access Foundation: completed. It adds frozen
+  `LLMAccessMode` and credential-free `LLMAccessContext`, a small `ManagedProvider`
+  port, configurable positive-integer `FlatPricingPolicy`, SQLite-backed managed
+  request state, and `ManagedAccessService` orchestration.
+- Phase 2 request state is `RESERVED -> SUCCEEDED` on Provider and accounting success,
+  or `RESERVED -> FAILED` on a Provider failure. `FINALIZATION_FAILED` is the limited
+  reconciliation state for Provider success followed by accounting failure; its active
+  reservation is retained and replay never invokes the Provider again.
+- Managed request identity is `(normalized account_id, normalized request_id)`. A
+  SHA-256 payload fingerprint detects reuse with a different credential-free model
+  selection, prompt, or flat price. `SUCCEEDED` replay returns completion metadata but
+  does not fabricate or persist the original Provider response; `FAILED` is terminal.
+- `SQLiteCreditLedger` implements the Phase 1 `CreditLedger` contract using the Python
+  standard library. `USAGE` and `REFUND` transaction append plus idempotency identity
+  are committed in one SQLite transaction. Failure injection verifies rollback both
+  after transaction append and after idempotency write, with no orphan record.
+- Phase 2 uses active managed reservations rather than a new `TransactionType`.
+  Available Credits are derived as ledger balance minus `RESERVED` and
+  `FINALIZATION_FAILED` reservations. Provider calls run outside SQLite write
+  transactions. Final `USAGE` plus `SUCCEEDED` state is committed atomically.
+- Platform credentials remain inside the injected server-side Provider implementation.
+  They do not enter access context, managed request/result, credit transactions,
+  SQLite, logs, or public service representations. The Managed service public surface
+  exposes no ledger, `grant`, `refund`, or `adjust` operation.
+- Phase 2 validation: SQLite ledger `27 passed`; Managed Access `35 passed`; original
+  Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
+  `257 passed`; offline LLM-contract smoke `6 passed`. All Provider tests used offline
+  stubs; no real API, credential, or network request was used.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -66,8 +94,8 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing
-  (`NOT STARTED`)
+- Next: DeepSeek V3.0.1 Phase 2 Independent QA. V3.0.1 Phase 3 — Usage Metering
+  and token PricingPolicy remains `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -96,7 +124,8 @@
   - V3.0.1 Phase 1 — Credits Domain: completed
   - V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed
   - V3.0.1 Phase 1 Documentation Gate: closed (`PASS`)
-  - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: not started
+  - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: completed
+  - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -107,7 +136,7 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `195 passed`
+- Current V3.0.1 development test baseline: `257 passed`
 - Current V3.0.1 Credits tests: `66 passed`
 - Current offline LLM-contract smoke: `6 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
@@ -202,9 +231,9 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain is completed; Phase 2 — Managed
-Access Foundation + SQLite + flat pricing has not started. V3.0.1 is not part of the
-V3.0.0 release.
+Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain and Phase 2 — Managed Access
+Foundation + SQLite + flat pricing are completed. Phase 3 — Usage Metering + token
+PricingPolicy has not started. V3.0.1 is not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -391,6 +420,12 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   malformed metadata instead of raw `KeyError` (L5).
 - Phase 4.1 QA note N1 remains deferred: `get_models_for_provider()` reads the custom
   model name without acquiring the active-state lock.
+- Phase 2 persistence and locking are single-process foundations, not distributed
+  coordination. A stranded `RESERVED` request and `FINALIZATION_FAILED` request require
+  reconciliation; Phase 2 intentionally provides no automatic retry or admin recovery
+  workflow. The original Provider response is not persisted, so successful replay
+  returns metadata only. Real Usage Metering, token pricing, Payment, Admin UI, and a
+  production HTTP backend remain unimplemented.
 
 ## Frozen Decisions
 
@@ -486,16 +521,16 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - Phase 2 SQLite must atomically commit the ledger transaction append and idempotency
   record in one SQLite transaction. Partial commit in either direction is prohibited,
   and Phase 2 QA must verify all-or-nothing behavior with failure injection.
-- Phase 2 entry requirements are: Managed clients cannot access `grant`, `refund`, or
-  `adjust`; user-facing refunds require original-`USAGE` authorization and replay
-  prevention; SQLite transaction append and idempotency-record write are atomic; and
-  retries preserve the complete idempotency payload contract. Phase 2 remains not
-  started.
+- Phase 2 entry requirements are implemented: Managed clients cannot access `grant`,
+  `refund`, or `adjust`; no user-facing refund is exposed; SQLite transaction append
+  and idempotency-record write are atomic; and retries preserve the complete
+  idempotency payload contract. Failure injection covers rollback on both sides of the
+  transaction/idempotency boundary.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phase 1 is completed and Phase 2 has not
-  started.
+  Payment Interface Reservation; then RC. Phases 1 and 2 are completed; Phase 3 has
+  not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - V3.0.1 is an engineering-completeness enhancement. After the
