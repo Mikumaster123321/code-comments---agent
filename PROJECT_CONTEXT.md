@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 2.1 Managed Access Post-QA Regression Hardening Completed`
+- Status: `Phase 2 Managed Access Documentation Gate Closed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -101,6 +101,17 @@
   Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
   `268 passed`; offline LLM-contract smoke `6 passed`. All tests remained offline and
   used only fake credentials and Stub Providers.
+- V3.0.1 Phase 2 DeepSeek Directed Retest: `PASS` (Product Critical 0,
+  Product Medium 0, Release Blocker 0; independent probes `186/186 passed`). C1
+  multi-service concurrency, C2 Provider-success crash-window safety, C3 commit-boundary
+  atomicity, and L1 rowcount consistency are closed. No double charge, double Provider
+  call, partial SQLite commit, reservation loss, Credential leak, or BYOK regression
+  was found. No further production fix or directed retest is required.
+- V3.0.1 Phase 2 Final QA: `PASS`.
+- V3.0.1 Phase 2 Documentation Gate: `CLOSED`.
+- Phase 2 reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_2.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_2.md`. Phase 2.1 is included in the Phase 2 reports.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -113,9 +124,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: DeepSeek V3.0.1 Phase 2 Directed Retest, followed by the version-qualified
-  Phase 2 Documentation Gate if approved. V3.0.1 Phase 3 — Usage Metering and token
-  PricingPolicy remains `NOT STARTED`.
+- Next: V3.0.1 Phase 3 — Usage Metering + PricingPolicy. Phase 3 remains `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -146,6 +155,7 @@
   - V3.0.1 Phase 1 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: completed
   - V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed
+  - V3.0.1 Phase 2 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
@@ -158,7 +168,10 @@
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
 - Current V3.0.1 development test baseline: `268 passed`
+- Current V3.0.1 Managed Access tests: `44 passed`
+- Current V3.0.1 SQLite ledger tests: `29 passed`
 - Current V3.0.1 Credits tests: `66 passed`
+- Current V3.0.1 BYOK Provider tests: `19 passed`
 - Current offline LLM-contract smoke: `6 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
@@ -253,8 +266,9 @@ the completed V3 core and BYOK foundation.
 ### V3.0.1 — Managed AI Access & Credits
 
 Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain and Phase 2 — Managed Access
-Foundation + SQLite + flat pricing are completed. Phase 3 — Usage Metering + token
-PricingPolicy has not started. V3.0.1 is not part of the V3.0.0 release.
+Foundation + SQLite + flat pricing are completed, and the Phase 2 Documentation Gate
+is closed with Final QA `PASS`. Phase 3 — Usage Metering + PricingPolicy has not
+started. V3.0.1 is not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -455,6 +469,11 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   request volume justifies it.
 - Phase 2 QA Low L4 remains deferred with the Phase 1 integer-upper-bound observation:
   `FlatPricingPolicy` accepts any positive Python integer and has no artificial maximum.
+- Phase 2 mutation-review coverage note remains deferred: the existing defensive
+  `rowcount` guards for the `SUCCEEDED` update in `_finalize_success()` and the `FAILED`
+  update in `_mark_provider_failed()` do not have direct mutation-targeted regressions.
+  Their defensive branches are unreachable through the normal state machine and this
+  is a Low coverage observation, not a product defect.
 
 ## Frozen Decisions
 
@@ -562,6 +581,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
+- Phase 3 may extend Flat Pricing into Usage Metering and `PricingPolicy`, but it must
+  preserve the Phase 2 reservation state machine, SQLite all-or-nothing atomicity,
+  Managed request idempotency and payload identity, the server-side Credential
+  boundary, and BYOK isolation from Credits and Managed Access.
 - V3.0.1 is an engineering-completeness enhancement. After the
   `ADMIN_GRANT -> Managed AI -> USAGE -> Ledger` loop is complete, thesis priority moves
   to V3.1 RAG and V3.2 Multi-Agent rather than commercial expansion.
