@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 2 Managed Access Foundation Completed`
+- Status: `Phase 2.1 Managed Access Post-QA Regression Hardening Completed`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -82,6 +82,25 @@
   Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
   `257 passed`; offline LLM-contract smoke `6 passed`. All Provider tests used offline
   stubs; no real API, credential, or network request was used.
+- V3.0.1 Phase 2 Initial DeepSeek QA: `PASS WITH ISSUES` (Product Critical 0,
+  Product Medium 0, Release Blocker 0); full suite `257 passed`; independent probes
+  `167/167 passed`. The Phase 2 product architecture passed independent validation.
+- V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed. C1 adds
+  deterministic multi-service concurrency coverage over independent SQLite connections
+  and service locks. C2 freezes the Provider-success/process-interruption window as a
+  persistent `RESERVED` state requiring manual reconciliation and forbidding automatic
+  Provider retry. C3 exercises actual `commit()` failure for both ledger idempotency and
+  Managed finalization boundaries.
+- Phase 2.1 L1 is resolved by requiring exactly one row for
+  `RESERVED -> FINALIZATION_FAILED`; illegal transitions from `SUCCEEDED`, `FAILED`, or
+  `FINALIZATION_FAILED` now raise `ManagedAccessError` instead of succeeding silently.
+- Phase 2.1 also freezes restart behavior for terminal `FAILED` and
+  `FINALIZATION_FAILED` requests, flat-price payload conflicts, and fixed-seed
+  InMemory/SQLite ledger parity as formal regressions.
+- Phase 2.1 validation: SQLite ledger `29 passed`; Managed Access `44 passed`; original
+  Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
+  `268 passed`; offline LLM-contract smoke `6 passed`. All tests remained offline and
+  used only fake credentials and Stub Providers.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -94,8 +113,9 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: DeepSeek V3.0.1 Phase 2 Independent QA. V3.0.1 Phase 3 — Usage Metering
-  and token PricingPolicy remains `NOT STARTED`.
+- Next: DeepSeek V3.0.1 Phase 2 Directed Retest, followed by the version-qualified
+  Phase 2 Documentation Gate if approved. V3.0.1 Phase 3 — Usage Metering and token
+  PricingPolicy remains `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -125,6 +145,7 @@
   - V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed
   - V3.0.1 Phase 1 Documentation Gate: closed (`PASS`)
   - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: completed
+  - V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: not started
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
@@ -136,7 +157,7 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `257 passed`
+- Current V3.0.1 development test baseline: `268 passed`
 - Current V3.0.1 Credits tests: `66 passed`
 - Current offline LLM-contract smoke: `6 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
@@ -426,6 +447,14 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   workflow. The original Provider response is not persisted, so successful replay
   returns metadata only. Real Usage Metering, token pricing, Payment, Admin UI, and a
   production HTTP backend remain unimplemented.
+- Phase 2 QA Low L2 remains deferred: a BYOK context with `account_id=""` continues to
+  fail closed with the existing credit-domain exception type rather than a normalized
+  Managed Access exception.
+- Phase 2 QA Low L3 remains deferred: no
+  `managed_requests(account_id, status)` performance index is added until managed
+  request volume justifies it.
+- Phase 2 QA Low L4 remains deferred with the Phase 1 integer-upper-bound observation:
+  `FlatPricingPolicy` accepts any positive Python integer and has no artificial maximum.
 
 ## Frozen Decisions
 

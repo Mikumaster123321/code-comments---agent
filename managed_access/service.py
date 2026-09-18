@@ -304,7 +304,7 @@ class ManagedAccessService:
 
     def _mark_finalization_failed(self, account_id: str, request_id: str) -> None:
         with self._write_transaction() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 UPDATE managed_requests SET status = ?
                 WHERE account_id = ? AND request_id = ? AND status = ?
@@ -316,6 +316,8 @@ class ManagedAccessService:
                     ManagedRequestStatus.RESERVED.value,
                 ),
             )
+            if cursor.rowcount != 1:
+                raise ManagedAccessError("request is not reserved")
 
     def _finalize_success(self, account_id: str, request_id: str, cost: int) -> None:
         with self._write_transaction() as connection:

@@ -30,12 +30,21 @@ MODEL = ModelConfig("openai", "test-model", "https://example.invalid/v1")
 
 
 class StubProvider:
-    def __init__(self, *, error=None, entered=None, release=None, output="completion"):
+    def __init__(
+        self,
+        *,
+        error=None,
+        entered=None,
+        release=None,
+        output="completion",
+        secret=None,
+    ):
         self.calls = []
         self.error = error
         self.entered = entered
         self.release = release
         self.output = output
+        self.credential = RuntimeCredential(secret) if secret is not None else None
 
     def invoke(self, *, model_config, prompt):
         self.calls.append((model_config, prompt))
@@ -57,6 +66,33 @@ class FailOnce:
         if point == self.point and not self.triggered:
             self.triggered = True
             raise sqlite3.OperationalError("injected managed sqlite failure")
+
+
+class InterruptOnce:
+    def __init__(self, point):
+        self.point = point
+        self.triggered = False
+
+    def __call__(self, point):
+        if point == self.point and not self.triggered:
+            self.triggered = True
+            raise KeyboardInterrupt("simulated process interruption")
+
+
+class FailCommitConnection:
+    def __init__(self, connection, fail_on_commit):
+        self._connection = connection
+        self._fail_on_commit = fail_on_commit
+        self.commit_calls = 0
+
+    def __getattr__(self, name):
+        return getattr(self._connection, name)
+
+    def commit(self):
+        self.commit_calls += 1
+        if self.commit_calls == self._fail_on_commit:
+            raise sqlite3.OperationalError("injected commit failure")
+        return self._connection.commit()
 
 
 def managed_context(account_id="account-1", request_id="request-1", model=MODEL):
@@ -289,12 +325,51 @@ def test_concurrent_same_request_calls_provider_once(tmp_path):
         first = executor.submit(service.invoke, managed_context(), "prompt")
         assert entered.wait(timeout=5)
         second = executor.submit(service.invoke, managed_context(), "prompt")
-        with pytest.raises(ManagedRequestRecoveryRequiredError):
+        with pytest.raises(ManagedRequestRecoveryRequiredError) as captured:
             second.result(timeout=5)
         release.set()
         assert first.result(timeout=5).status is ManagedRequestStatus.SUCCEEDED
 
     assert len(provider.calls) == 1
+
+
+def test_two_services_concurrent_same_request_invoke_provider_exactly_once(tmp_path):
+    database, ledger = funded_database(tmp_path)
+    entered = Event()
+    release = Event()
+    first_provider = StubProvider(
+        entered=entered,
+        release=release,
+        secret="sk-fake-phase21-c1-first",
+    )
+    second_provider = StubProvider(secret="sk-fake-phase21-c1-second")
+    first_service = ManagedAccessService(
+        database, first_provider, FlatPricingPolicy(4)
+    )
+    second_service = ManagedAccessService(
+        database, second_provider, FlatPricingPolicy(4)
+    )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(first_service.invoke, managed_context(), "prompt")
+        assert entered.wait(timeout=5)
+        second = executor.submit(second_service.invoke, managed_context(), "prompt")
+        with pytest.raises(ManagedRequestRecoveryRequiredError) as captured:
+            second.result(timeout=5)
+        release.set()
+        assert first.result(timeout=5).status is ManagedRequestStatus.SUCCEEDED
+
+    assert len(first_provider.calls) + len(second_provider.calls) == 1
+    assert "sk-fake-phase21-c1" not in repr(captured.value)
+    assert ledger.balance_of("account-1") == 6
+    assert [item.type for item in ledger.history_of("account-1")].count(
+        TransactionType.USAGE
+    ) == 1
+    with sqlite3.connect(database) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM managed_requests"
+        ).fetchone()[0] == 1
+    assert b"sk-fake-phase21-c1" not in database.read_bytes()
 
 
 def test_active_reservation_prevents_concurrent_overspend(tmp_path):
@@ -433,6 +508,138 @@ def test_failure_after_reservation_commit_keeps_visible_non_retriable_state(tmp_
     assert provider.calls == []
 
 
+def test_provider_success_process_interruption_leaves_reserved_manual_reconciliation(
+    tmp_path,
+):
+    database, ledger = funded_database(tmp_path, amount=4)
+    provider = StubProvider(secret="sk-fake-phase21-c2-before-restart")
+    service = ManagedAccessService(
+        database,
+        provider,
+        FlatPricingPolicy(4),
+        fault_injector=InterruptOnce("before_usage_append"),
+    )
+
+    with pytest.raises(KeyboardInterrupt, match="process interruption"):
+        service.invoke(managed_context(), "prompt")
+
+    assert len(provider.calls) == 1
+    assert service.get_request("account-1", "request-1").status is ManagedRequestStatus.RESERVED
+    assert ledger.balance_of("account-1") == 4
+    assert [item.type for item in ledger.history_of("account-1")].count(
+        TransactionType.USAGE
+    ) == 0
+    service.close()
+    ledger.close()
+
+    reopened_ledger = SQLiteCreditLedger(database)
+    replay_provider = StubProvider(secret="sk-fake-phase21-c2-after-restart")
+    reopened_service = ManagedAccessService(
+        database, replay_provider, FlatPricingPolicy(4)
+    )
+
+    # Provider success is possible before process interruption, so manual
+    # reconciliation is required and automatic retry is permanently forbidden.
+    with pytest.raises(ManagedRequestRecoveryRequiredError) as captured:
+        reopened_service.invoke(managed_context(), "prompt")
+    with pytest.raises(InsufficientCreditsError):
+        reopened_service.invoke(
+            managed_context(request_id="request-2"), "different prompt"
+        )
+
+    assert replay_provider.calls == []
+    assert "sk-fake-phase21-c2" not in repr(captured.value)
+    assert reopened_ledger.balance_of("account-1") == 4
+    assert len(reopened_ledger.history_of("account-1")) == 1
+    assert b"sk-fake-phase21-c2" not in database.read_bytes()
+
+
+def test_managed_finalize_commit_failure_rolls_back_and_blocks_reinvoke(tmp_path):
+    database, ledger = funded_database(tmp_path)
+    provider = StubProvider(secret="sk-fake-phase21-c3-finalize")
+    service = ManagedAccessService(database, provider, FlatPricingPolicy(4))
+    service._connection = FailCommitConnection(
+        service._connection,
+        fail_on_commit=2,
+    )
+
+    with pytest.raises(ManagedFinalizationError) as captured:
+        service.invoke(managed_context(), "prompt")
+
+    assert "injected commit failure" not in str(captured.value)
+    assert len(provider.calls) == 1
+    assert (
+        service.get_request("account-1", "request-1").status
+        is ManagedRequestStatus.FINALIZATION_FAILED
+    )
+    assert ledger.balance_of("account-1") == 10
+    assert [item.type for item in ledger.history_of("account-1")].count(
+        TransactionType.USAGE
+    ) == 0
+    with sqlite3.connect(database) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM credit_idempotency"
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM managed_requests WHERE status = 'SUCCEEDED'"
+        ).fetchone()[0] == 0
+    service.close()
+
+    replay_provider = StubProvider(secret="sk-fake-phase21-c3-replay")
+    reopened = ManagedAccessService(
+        database, replay_provider, FlatPricingPolicy(4)
+    )
+    with pytest.raises(
+        ManagedFinalizationError, match="already succeeded"
+    ) as replay_error:
+        reopened.invoke(managed_context(), "prompt")
+
+    assert replay_provider.calls == []
+    assert "sk-fake-phase21-c3" not in repr(replay_error.value)
+    assert b"sk-fake-phase21-c3" not in database.read_bytes()
+
+
+@pytest.mark.parametrize(
+    "terminal_status",
+    [
+        ManagedRequestStatus.SUCCEEDED,
+        ManagedRequestStatus.FAILED,
+        ManagedRequestStatus.FINALIZATION_FAILED,
+    ],
+)
+def test_finalization_failed_transition_rejects_non_reserved_status(
+    tmp_path, terminal_status
+):
+    database, _ledger = funded_database(tmp_path)
+    if terminal_status is ManagedRequestStatus.SUCCEEDED:
+        service = ManagedAccessService(
+            database, StubProvider(), FlatPricingPolicy(4)
+        )
+        service.invoke(managed_context(), "prompt")
+    elif terminal_status is ManagedRequestStatus.FAILED:
+        service = ManagedAccessService(
+            database,
+            StubProvider(error=RuntimeError("provider failure")),
+            FlatPricingPolicy(4),
+        )
+        with pytest.raises(ManagedProviderError):
+            service.invoke(managed_context(), "prompt")
+    else:
+        service = ManagedAccessService(
+            database,
+            StubProvider(),
+            FlatPricingPolicy(4),
+            fault_injector=FailOnce("before_usage_append"),
+        )
+        with pytest.raises(ManagedFinalizationError):
+            service.invoke(managed_context(), "prompt")
+
+    with pytest.raises(ManagedAccessError, match="request is not reserved"):
+        service._mark_finalization_failed("account-1", "request-1")
+
+    assert service.get_request("account-1", "request-1").status is terminal_status
+
+
 def test_succeeded_request_replays_after_service_restart(tmp_path):
     database, ledger = funded_database(tmp_path)
     first_provider = StubProvider()
@@ -447,6 +654,68 @@ def test_succeeded_request_replays_after_service_restart(tmp_path):
     assert replay.replayed is True
     assert replay.content is None
     assert second_provider.calls == []
+    assert ledger.balance_of("account-1") == 6
+
+
+def test_failed_request_remains_terminal_after_restart(tmp_path):
+    database, ledger = funded_database(tmp_path)
+    first = ManagedAccessService(
+        database,
+        StubProvider(error=RuntimeError("provider failure")),
+        FlatPricingPolicy(4),
+    )
+    with pytest.raises(ManagedProviderError):
+        first.invoke(managed_context(), "prompt")
+    first.close()
+    ledger.close()
+
+    replay_provider = StubProvider()
+    reopened = ManagedAccessService(
+        database, replay_provider, FlatPricingPolicy(4)
+    )
+    with pytest.raises(ManagedRequestFailedError, match="terminal"):
+        reopened.invoke(managed_context(), "prompt")
+
+    assert replay_provider.calls == []
+
+
+def test_finalization_failed_request_remains_terminal_after_restart(tmp_path):
+    database, ledger = funded_database(tmp_path)
+    first = ManagedAccessService(
+        database,
+        StubProvider(),
+        FlatPricingPolicy(4),
+        fault_injector=FailOnce("before_usage_append"),
+    )
+    with pytest.raises(ManagedFinalizationError):
+        first.invoke(managed_context(), "prompt")
+    first.close()
+    ledger.close()
+
+    replay_provider = StubProvider()
+    reopened = ManagedAccessService(
+        database, replay_provider, FlatPricingPolicy(4)
+    )
+    with pytest.raises(ManagedFinalizationError, match="already succeeded"):
+        reopened.invoke(managed_context(), "prompt")
+
+    assert replay_provider.calls == []
+
+
+def test_same_request_id_with_different_flat_price_conflicts_after_restart(tmp_path):
+    database, ledger = funded_database(tmp_path)
+    first = ManagedAccessService(database, StubProvider(), FlatPricingPolicy(4))
+    first.invoke(managed_context(), "prompt")
+    first.close()
+
+    replay_provider = StubProvider()
+    repriced = ManagedAccessService(
+        database, replay_provider, FlatPricingPolicy(5)
+    )
+    with pytest.raises(ManagedRequestConflictError):
+        repriced.invoke(managed_context(), "prompt")
+
+    assert replay_provider.calls == []
     assert ledger.balance_of("account-1") == 6
 
 

@@ -1,4 +1,5 @@
 import sqlite3
+from random import Random
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import FrozenInstanceError
 from decimal import Decimal
@@ -9,6 +10,7 @@ import pytest
 from credits import (
     CreditTransaction,
     IdempotencyConflictError,
+    InMemoryCreditLedger,
     InsufficientCreditsError,
     InvalidAccountError,
     InvalidCreditAmountError,
@@ -27,6 +29,21 @@ class FailOnce:
         if point == self.point and not self.triggered:
             self.triggered = True
             raise sqlite3.OperationalError("injected sqlite failure")
+
+
+class FailCommitConnection:
+    def __init__(self, connection):
+        self._connection = connection
+        self._failed = False
+
+    def __getattr__(self, name):
+        return getattr(self._connection, name)
+
+    def commit(self):
+        if not self._failed:
+            self._failed = True
+            raise sqlite3.OperationalError("injected commit failure")
+        return self._connection.commit()
 
 
 def table_count(database, table):
@@ -292,3 +309,76 @@ def test_concurrent_overspend_is_prevented_across_connections(tmp_path):
     assert [item.type for item in first.history_of("account-1")].count(
         TransactionType.USAGE
     ) == 1
+
+
+def test_commit_failure_rolls_back_transaction_and_idempotency_record(tmp_path):
+    database = tmp_path / "credits.sqlite3"
+    ledger = SQLiteCreditLedger(database)
+    grant = ledger.grant("account-1", 10)
+    ledger._connection = FailCommitConnection(ledger._connection)
+
+    with pytest.raises(sqlite3.OperationalError, match="commit failure"):
+        ledger.charge("account-1", "usage-1", 4, "usage")
+
+    assert ledger.history_of("account-1") == (grant,)
+    assert ledger.balance_of("account-1") == 10
+    assert table_count(database, "credit_transactions") == 1
+    assert table_count(database, "credit_idempotency") == 0
+
+
+def test_in_memory_and_sqlite_ledgers_have_fixed_seed_short_sequence_parity(
+    tmp_path,
+):
+    random = Random(301)
+    memory = InMemoryCreditLedger()
+    sqlite_ledger = SQLiteCreditLedger(tmp_path / "credits.sqlite3")
+    ledgers = (memory, sqlite_ledger)
+
+    for ledger in ledgers:
+        ledger.grant("account-1", 50, "initial")
+
+    for index in range(24):
+        operation = random.choice(("grant", "charge", "refund", "adjust"))
+        if operation == "grant":
+            amount = random.randint(1, 7)
+            for ledger in ledgers:
+                ledger.grant("account-1", amount, f"grant-{index}")
+        elif operation == "charge":
+            amount = random.randint(1, min(memory.balance_of("account-1"), 7))
+            for ledger in ledgers:
+                ledger.charge(
+                    "account-1", f"usage-{index}", amount, f"charge-{index}"
+                )
+        elif operation == "refund":
+            amount = random.randint(1, 5)
+            for ledger in ledgers:
+                ledger.refund(
+                    "account-1", f"refund-{index}", amount, f"refund-{index}"
+                )
+        else:
+            if random.choice((True, False)):
+                amount = random.randint(1, 5)
+            else:
+                amount = -random.randint(
+                    1, min(memory.balance_of("account-1"), 5)
+                )
+            for ledger in ledgers:
+                ledger.adjust("account-1", amount, f"adjust-{index}")
+
+        assert memory.balance_of("account-1") == sqlite_ledger.balance_of(
+            "account-1"
+        )
+
+    def semantic_history(ledger):
+        return tuple(
+            (
+                transaction.account_id,
+                transaction.type,
+                transaction.amount,
+                transaction.request_id,
+                transaction.note,
+            )
+            for transaction in ledger.history_of("account-1")
+        )
+
+    assert semantic_history(memory) == semantic_history(sqlite_ledger)
