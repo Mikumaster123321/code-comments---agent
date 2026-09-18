@@ -8,12 +8,16 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Development Started`
-- Phase 0 — Architecture & Scope Gate: in progress
+- Status: `Phase 0 Completed`
+- Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
 - V3.0.1 Architecture Decision: frozen
 - Phase 0.1 — Architecture Decision Documentation: completed
+- DeepSeek Phase 0 Architecture Consistency Review: `PASS WITH ISSUES`
+  (Critical 0, Medium 0, Low 4, Blocking 0)
+- Phase 0 Documentation Hardening: completed (O-1 through O-4 resolved)
+- Phase 0 Final Documentation Gate: `CLOSED`
 - V3.0.0: released / frozen
 - V3.0.0 tag: annotated tag `v3.0.0` resolves to final release commit
   `2b2b0cb103264f7ac278f35c19a1dc0b02196dc8`
@@ -24,7 +28,7 @@
   request was used
 - Import smoke: core runtime and V3 modules passed; direct `ui` import remains blocked
   on this Anaconda Python 3.13.5 host by the documented `gradio` segmentation fault
-- Next: V3.0.1 Phase 0 Documentation Gate
+- Next: Phase 1 — Credits Domain (`NOT STARTED`)
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -49,6 +53,8 @@
   - V3.0.0 — released
   - V3.0.1 Phase 0.0 — Development Baseline: completed
   - V3.0.1 Phase 0.1 — Architecture Decision Documentation: completed
+  - V3.0.1 Phase 0 — Architecture & Scope Documentation Gate: completed
+  - V3.0.1 Phase 1 — Credits Domain: not started
   - V3.0.1 — Managed AI Access & Credits: planned
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -374,15 +380,20 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 
 ### V3.0.1 Managed AI Access & Credits
 
-- The access modes are `BYOK` and `MANAGED`. A future minimal `LLMAccessContext` may
-  carry mode, credential-free model configuration, opaque account identity, and request
-  identity, but it never owns a client, Provider, or `RuntimeCredential`.
+- The access modes are `BYOK` and `MANAGED`. The frozen minimum contract for a future
+  `LLMAccessContext` contains `mode: LLMAccessMode`, `model_config: ModelConfig`,
+  `account_id`, and `request_id`. `account_id` and `request_id` are optional for BYOK
+  and required for MANAGED. The context never owns a client, Provider,
+  `TaskScopedLLMProvider`, `RuntimeCredential`, or any credential.
 - The V3.0 BYOK architecture remains unchanged and independent of Credits: BYOK does
   not check or deduct Credits.
 - Managed mode uses a process-local, backend-facing `ManagedAccessService`; V3.0.1 does
   not establish a production HTTP backend. The platform credential remains server-side
   and must not enter UI state, workspace data, ordinary configuration, credit records,
   logs, or `LLMAccessContext`.
+- A Managed client or UI caller must never receive the platform `RuntimeCredential`,
+  platform `TaskScopedLLMProvider`, raw Provider client, or platform API key. A future
+  `ManagedAccessService` may return only safe results and safe usage/accounting metadata.
 - `credits/` and `managed_access/` are new top-level peers of `code_maintenance/`.
   `managed_access/` may depend on `credits/` and existing Provider infrastructure.
   Reverse dependencies into `credits/`, dependencies from `code_maintenance/` to either
@@ -390,15 +401,20 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The credit ledger is append-only and authoritative. Phase 1 derives balance from the
   transaction sum, uses integer Credit units, and uses `Decimal` rather than `float` for
   real monetary values or costs.
+- Every transaction amount is a nonzero integer: `ADMIN_GRANT > 0`, `USAGE < 0`,
+  `REFUND > 0`, and `ADJUSTMENT` may be positive or negative but not zero.
 - Phase 1 transaction types are `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`;
   `PURCHASE` is excluded. User identity is only an opaque `account_id: str`.
 - A `USAGE` charge is idempotent by `(account_id, request_id)`. The Phase 2 charging
   contract is per-account guarded charge-after-success: precheck balance, invoke the
   Provider, and charge only after success; Provider failure is not charged.
-- Phase 1 uses a Repository Protocol and in-memory implementation. Phase 2 adds standard-
-  library SQLite and flat pricing. Token-aware pricing is deferred to Phase 3. No ORM,
-  distributed database, distributed transaction, or hard-coded commercial exchange
-  ratio is authorized.
+- Phase 1 uses a Repository Protocol and in-memory implementation and defines no
+  `PricingPolicy`, flat pricing, token pricing, or cost conversion. It remains completely
+  offline and must not import or call LLM or Provider infrastructure. Phase 2 adds
+  standard-library SQLite and flat pricing. Phase 3 owns Provider/model/token-based
+  `PricingPolicy` and the `Decimal` cost-to-integer-Credits conversion and rounding rule.
+  No ORM, distributed database, distributed transaction, or hard-coded commercial
+  exchange ratio is authorized.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5

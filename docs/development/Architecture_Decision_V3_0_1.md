@@ -26,14 +26,16 @@ LLMAccessMode
 └── MANAGED
 ```
 
-The future minimum `LLMAccessContext` has these candidate fields:
+The frozen minimum contract for a future `LLMAccessContext` is:
 
-- `mode`
-- `model_config`
-- `account_id`
-- `request_id`
+- `mode: LLMAccessMode`;
+- `model_config: ModelConfig`;
+- `account_id`: optional for `BYOK`, required for `MANAGED`;
+- `request_id`: optional for `BYOK`, required for `MANAGED`.
 
-Credentials must never enter `LLMAccessContext`. The context must not own a client, Provider, or `RuntimeCredential`.
+Credentials are not part of `LLMAccessContext`. The context must not hold a client,
+Provider, `TaskScopedLLMProvider`, or `RuntimeCredential`. Phase 0 freezes this contract
+but does not implement the enum, context, or any other type.
 
 ## 3. BYOK Boundary
 
@@ -59,6 +61,11 @@ Managed mode will pass through `ManagedAccessService`, a process-local, backend-
 
 The platform credential is server-side only. It must never enter the UI, Gradio State, workspace data, ordinary configuration, credit records, logs, or `LLMAccessContext`.
 
+In Managed mode, a client or UI caller must never receive the platform
+`RuntimeCredential`, platform `TaskScopedLLMProvider`, raw Provider client, or platform
+API key. A future `ManagedAccessService` may return only a safe result and safe
+usage/accounting metadata; it must never return a Credential or Provider object.
+
 ## 5. Credit Domain
 
 Phase 1 adds a top-level `credits/` package containing the domain concepts:
@@ -76,6 +83,15 @@ The frozen `TransactionType` values for Phase 1 are:
 
 `PURCHASE` is not part of the Phase 1 enum.
 
+The Phase 1 transaction amount convention is frozen as:
+
+- `amount: int`;
+- `ADMIN_GRANT`: `amount > 0`;
+- `USAGE`: `amount < 0`;
+- `REFUND`: `amount > 0`;
+- `ADJUSTMENT`: positive or negative, but never zero;
+- every transaction: `amount != 0`.
+
 Phase 1 must provide a domain-level `grant` operation for tests and preparation of the Managed Access demonstration. An administrative UI or command wrapper is deferred to Phase 4.
 
 ## 6. Ledger and Balance
@@ -89,6 +105,9 @@ balance = sum(transactions)
 Phase 1 must not introduce a cached authoritative balance.
 
 Credits use integer units. Real monetary amounts and real costs use `Decimal`; `float` must not be used for real money or cost calculations.
+
+Phase 0 does not define how a future `Decimal` cost is rounded or converted to integer
+Credits. Phase 3 `PricingPolicy` must freeze that conversion and rounding rule.
 
 ## 7. Idempotency
 
@@ -126,9 +145,13 @@ V3.0.1 does not introduce an ORM, PostgreSQL, Redis, or a distributed database.
 
 ## 10. Pricing
 
-Phase 1 may define only a minimal `PricingPolicy` contract or flat policy if the Phase 1 domain loop actually requires it. Phase 1 must not implement token-based pricing.
+Phase 1 establishes only the Credits Domain. It must not define or implement
+`PricingPolicy`, `FlatPricingPolicy`, token pricing, or cost conversion.
 
-Phase 3 introduces Provider-, model-, and token-based `PricingPolicy` behavior. No commercial exchange ratio may be hard-coded into the architecture.
+Phase 2 owns the minimal flat-pricing behavior needed to complete the first Managed
+Access call loop. Phase 3 introduces Provider-, model-, and token-based
+`PricingPolicy` behavior and freezes the `Decimal` cost-to-integer-Credits conversion
+and rounding rule. No commercial exchange ratio may be hard-coded into the architecture.
 
 ## 11. User Identity
 
@@ -160,6 +183,10 @@ Provider infrastructure -> credits/
 ```
 
 `credits/` and `managed_access/` are peers of `code_maintenance/`. Existing V3.0 files are not moved.
+
+Phase 1 Credits Domain code **MUST NOT** import or call `llm_provider`, `llm_service`, the
+Provider infrastructure in `config`, the OpenAI client, or any LLM Provider. Phase 1
+must remain completely offline and Provider-independent.
 
 ## 13. Failure Model
 
@@ -218,4 +245,3 @@ V3.0.1 is an engineering-completeness enhancement, not the thesis's core algorit
 - Idempotent usage charging and per-account serialization define the minimum correctness boundary.
 - The architecture can evolve from in-memory storage to SQLite without introducing production infrastructure prematurely.
 - Known ambiguity at the Provider/accounting boundary is accepted and documented for V3.0.1.
-
