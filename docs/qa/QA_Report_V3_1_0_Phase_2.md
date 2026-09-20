@@ -9,10 +9,13 @@
 - Product Critical: **0**
 - Product Medium: **1 initially**
 - M1: **BM25Index public config mutability — RESOLVED BY PHASE 2.1**
+- L1: **Optional sentinel tie-key collision — RESOLVED BY PHASE 2.1**
 - Phase 2.1 hardening: **COMPLETED**
-- Directed Retest: **PENDING**
-- Final Phase 2 Verdict: **PENDING**
-- Documentation Gate: **OPEN**
+- Directed Retest: **PASS WITH LOW NOTES**
+- Final Phase 2 Verdict: **PASS FOR PHASE 2 WITH LOW NOTES**
+- Final Product Critical / Medium: **0 / 0**
+- Phase 2.2: **NOT REQUIRED**
+- Documentation Gate: **CLOSED**
 
 ## Scope Checked
 
@@ -50,8 +53,47 @@ No protected `docs/thesis/` content was modified, moved, staged, or committed.
 The current validation snapshot is 14 lexical tests, 41 Phase 1 corpus tests, 6
 offline LLM-contract tests, and 469 tests in the complete suite. A real current-tree
 corpus smoke indexed 913 documents and answered the representative maintenance
-queries without any network or Provider path. These are implementation/hardening
-evidence only; the independent directed retest remains required.
+queries without any network or Provider path. These are smoke evidence only, not a
+retrieval-quality claim.
+
+## Final Directed Retest Evidence
+
+The independent read-only Directed Retest re-executed the original M1 attacks,
+nested `BM25Config` mutation, public authoritative-state mutation attempts, and
+100 repeated searches. All rebinding/mutation attempts were blocked and all
+identity/rank/score triples remained stable.
+
+The L1 collision pair (`None` versus `""`, `None` versus `-1`) produced equal BM25
+scores and identical ranking under forward and reversed corpus order. A real
+current-tree corpus contained 913 unique documents; representative maintenance
+queries were finite and deterministic, and normal production ties were stable.
+
+Additional independent evidence included 100 random corpus permutations with one
+result digest, 1,000 repeated searches, table-level length/df/avgdl checks, the
+hand-calculated BM25 oracle, `b=0`/`b=1`, extreme valid `k1`, rejected NaN/Infinity,
+zero-token and adversarial text cases, and tokenizer/version regression checks.
+
+The Directed Retest found no new Critical or Medium issue. Remaining Low findings
+are accepted baseline limitations: no NFC/NFD normalization, coarse CJK/Japanese
+tokenization, operator tokens, transitive parser-stack coupling, and linear query
+scanning without postings optimization.
+
+## Test Evolution and Gate Decision
+
+The evidence count is deliberately separated by stage:
+
+| Stage | Evidence |
+| --- | ---: |
+| V3.0.1 release baseline | 414 passed |
+| Phase 1 final | 455 passed |
+| Phase 2 initial implementation | 463 passed |
+| Phase 2 final | 469 passed |
+| Phase 2 lexical | 14 passed |
+| Phase 1 corpus regression | 41 passed |
+| Offline LLM smoke | 6 passed |
+
+The Phase 2 Documentation Gate is **CLOSED**. Phase 3 is **ALLOWED BUT NOT
+STARTED**; its semantic model selection and evidence boundary remain mandatory.
 
 ## Deferred Scope
 

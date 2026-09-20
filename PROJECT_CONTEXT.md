@@ -41,8 +41,12 @@
   remain deferred
 - V3.1.0 Phase 2 Independent QA: `PASS WITH ISSUES`; Critical `0`; Medium `1 initially`
 - V3.1.0 Phase 2 M1 public config mutability: `RESOLVED BY PHASE 2.1`
-- V3.1.0 Phase 2 Directed Retest: `PENDING`
-- V3.1.0 Phase 2 Documentation Gate: `OPEN`
+- V3.1.0 Phase 2 Directed Retest: `PASS WITH LOW NOTES`
+- V3.1.0 Phase 2 Final QA: `PASS FOR PHASE 2 WITH LOW NOTES`; Final Critical / Medium `0 / 0`
+- V3.1.0 Phase 2.2: `NOT REQUIRED`
+- V3.1.0 Phase 2 Documentation Gate: `CLOSED`
+- V3.1.0 Phase 2 tokenizer: `code-lexical-v1`; BM25 `k1=1.5`, `b=0.75`
+- V3.1.0 Phase 2 lexical input: exactly one `qualified_name` plus one `source_text`
 - V3.1.0 BM25: `IMPLEMENTED / DETERMINISTIC / OFFLINE`
 - V3.1.0 Embedding: `NOT STARTED`
 - V3.1.0 Graph Retrieval: `NOT STARTED`
@@ -58,6 +62,9 @@
   tree smoke only; not a retrieval-quality claim)
 - V3.1.0 RQ2 fairness entry contract: lexical and future embedding retrieval use the
   same text input, exactly one `qualified_name` plus one `source_text`
+- V3.1.0 Phase 3 entry contract: fake/hash embeddings are tests-only; formal semantic
+  comparison requires a separately reviewed real model with fixed version, dimension,
+  normalization, license, reproducibility, and runtime/hardware evidence
 - Released version metadata remains `3.0.1` until later RC Release Engineering.
 - Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
@@ -89,7 +96,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 3 — Embedding (`NOT STARTED; blocked until Phase 2 directed retest and Documentation Gate closure`)
+- Next: V3.1.0 Phase 3 — Embedding Port & Semantic Retrieval Foundation (`ALLOWED BUT NOT STARTED`)
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed

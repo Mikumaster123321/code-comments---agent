@@ -3,12 +3,16 @@
 ## Status
 
 - Implementation: **COMPLETED**
+- Phase objective: **Deterministic BM25 Lexical Baseline**
 - Independent QA: **PASS WITH ISSUES**
 - Phase 2.1 hardening: **COMPLETED**
 - M1: **RESOLVED BY PHASE 2.1**
-- Directed retest: **PENDING**
-- Final QA: **PENDING DIRECTED RETEST**
-- Documentation Gate: **OPEN**
+- L1: **RESOLVED BY PHASE 2.1**
+- Directed retest: **PASS WITH LOW NOTES**
+- Final QA: **PASS FOR PHASE 2 WITH LOW NOTES**
+- Final Product Critical / Medium: **0 / 0**
+- Phase 2.2: **NOT REQUIRED**
+- Documentation Gate: **CLOSED**
 - Scope: deterministic, offline lexical retrieval over the Phase 1 symbol corpus
 - Dependencies: Python standard library only; `requirements.txt` unchanged
 - Retrieval unit: Phase 1 `RetrievalDocument` / `code_maintenance.SymbolId`
@@ -21,6 +25,16 @@ Phase 2 adds only `project_intelligence.lexical`. `BM25Index` consumes an immuta
 sequence of Phase 1 `RetrievalDocument` values and does not scan files, build a
 snapshot, call a Provider or LLM, write a cache, or access the network. Duplicate
 `SymbolId` values fail closed. No second document identity is introduced.
+
+The Phase 1 Corpus Builder is the sole corpus producer for this phase. Phase 2
+does not scan the filesystem or parse source independently; it consumes the
+immutable symbol-level `RetrievalDocument` tuple and reuses its authoritative
+`code_maintenance.SymbolId` identity.
+
+The objective is a minimal, standard, explainable lexical reference for future
+RQ2 lexical-versus-semantic comparison and the lexical component of RQ4 hybrid
+retrieval. This phase does not claim a new BM25 algorithm or a retrieval-quality
+winner.
 
 The public Phase 2 contracts are the immutable `BM25Config`, `LexicalHit`, and
 `BM25Index` values, plus the frozen tokenizer version `code-lexical-v1`. `BM25Index`
@@ -62,7 +76,8 @@ separate query-term-frequency weight is introduced.
 Only finite, positive scores are returned. Hits are ordered by descending score and
 then by the canonical `SymbolId` tuple (language, relative path, qualified name,
 kind, semantic disambiguator, fallback line), independent of input order or hash
-seed. Unknown-only and empty queries return an empty tuple. `top_k` must be an
+seed (`PYTHONHASHSEED` included). Unknown-only and empty queries return an empty
+tuple. `top_k` must be an
 actual positive `int`; `bool`, floats, strings, zero, and negative values are
 rejected.
 
@@ -125,3 +140,48 @@ Documentation Gate decision.
 
 The 913-document smoke count includes the current working tree after adding the
 hardening tests and reports; it is a smoke check only, not a retrieval-quality claim.
+
+## 8. Phase Timeline and Final QA
+
+The Phase 2 evidence sequence is:
+
+1. implementation of the standard deterministic BM25 baseline;
+2. implementation-side provisional self-check (not independent QA);
+3. Independent QA: **PASS WITH ISSUES**, Product Critical 0, Product Medium 1;
+4. Phase 2.1 hardening: public configuration immutability, Optional-preserving
+   tie-key ordering, and tokenizer-version validation;
+5. Directed Retest: **PASS WITH LOW NOTES**;
+6. Final Phase 2 QA: **PASS FOR PHASE 2 WITH LOW NOTES**.
+
+The original M1 was a public writable `BM25Index.config` attribute. Phase 2.1
+stores the authoritative object in `_config`, exposes it through a read-only
+property, and retains frozen `BM25Config` fields. Directed Retest blocked both
+whole-object rebinding and nested mutation; 100 repeated searches remained stable.
+
+The original L1 was a non-injective secondary key caused by flattening `None` to
+`""` and `-1`. The hardened key retains Optional type information without changing
+the frozen `SymbolId` contract. Synthetic collision identities and normal corpus
+ties remain deterministic under reversed input.
+
+The implementation phase previously generated provisional reports before
+Independent QA. Those reports were subsequently reclassified as self-check/draft
+evidence; only Independent QA and the Directed Retest support this final gate.
+
+## 9. Thesis Relevance and Phase Boundary
+
+Phase 2 provides the RQ2 lexical baseline and an RQ4 hybrid component: a standard
+BM25 mathematical reference, a reproducible `code-lexical-v1` tokenizer, stable
+SymbolId ranking, and an explainable deterministic comparison anchor. It does not
+claim that BM25 outperforms embeddings and does not present retrieval-quality
+results as a thesis conclusion.
+
+The RQ2/RQ4 fairness entry contract is frozen: any formal future lexical-versus-
+embedding comparison must give both strategies exactly one `qualified_name` plus
+one `source_text`. Fake or hash embeddings remain limited to architecture,
+regression, and failure tests; formal semantic claims require a separately reviewed
+real model with fixed version, dimension, normalization, license, reproducibility,
+and runtime characteristics.
+
+Phase 3 — Embedding Port & Semantic Retrieval Foundation is **allowed but not
+started**. It must begin with a Semantic Embedding Selection Review and may not
+silently select a remote API as the thesis semantic baseline.
