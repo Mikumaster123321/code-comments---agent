@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 4.1 Admin Identity & Persistence Hardening Completed; Directed Retest Pending`
+- Status: `Phase 4 Documentation Gate Closed; Ready for V3.0.1 RC / Release Engineering`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -232,15 +232,34 @@
   Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
   **6 passed**; full suite **414 passed**. All validation remained offline and used no
   real API, Credential, Provider-network, or network LLM request.
-- Phase 4.1 resolves M-1 pending DeepSeek Directed Retest. L-1 SQLite integer-range
-  validation is hardened; L-2 close-after-use exception wrapping remains deferred;
-  L-3 account/reason hostile-string handling is covered locally at the Admin boundary
-  without changing the Credits domain.
-- Phase 4 does not expose `refund()`. Admin UI, Payment, recharge, purchase, login,
-  account systems, and a production HTTP backend remain unimplemented. Optional
-  Phase 5 is `NOT STARTED`.
-- Phase 4 Development and QA reports remain intentionally deferred until Independent
-  QA and any required hardening complete the Documentation Gate.
+- V3.0.1 Phase 4 DeepSeek Directed Retest: `PASS` (Product Critical 0, Product
+  Medium 0, Release Blocker 0; independent assertions `159 passed`; full suite
+  `414 passed`). M-1 is resolved: hostile actor/operation subclasses are rejected
+  before caller-defined identity behavior, with zero additional writes and zero
+  hostile-method executions. Exactly-once replay, multi-service concurrency, restart,
+  foreign-key enforcement, five atomic rollback boundaries, and Credential privacy
+  passed independent validation. No further production fix or directed retest is
+  required.
+- Phase 4.1 resolves M-1 and hardens L-1 SQLite integer-range validation. L-2
+  close-after-use exception wrapping remains deferred. Cumulative SQLite `SUM(amount)`
+  overflow from multiple individually valid transactions remains a non-blocking member
+  of the existing integer-upper-bound technical-debt family; it can make the affected
+  account query fail but does not corrupt data, duplicate a Grant, break atomicity, or
+  affect other accounts.
+- Phase 4 contracts are frozen: `AdminOperationContext`, `AdminOperationType`,
+  `AdminOperationRecord`, `AdminCreditService`, exact built-in string identity,
+  `(actor_id, operation_id)` idempotency, Credit plus audit atomicity, foreign-key
+  enforcement, grant/adjustment semantics, the Managed privileged boundary, refund
+  non-exposure, and the Admin SQLite signed-64 amount guard.
+- V3.0.1 Phase 4 Final QA: `PASS FOR PHASE 4` (Critical 0, Medium 0, Release
+  Blocker 0). Phase 4 Documentation Gate: `CLOSED`. The combined Phase 4 and Phase 4.1
+  reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_4.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_4.md`.
+- Phase 4 does not expose `refund()`. Admin UI is `SKIPPED FOR V3.0.1` and remains a
+  possible future enhancement. Optional Phase 5 Payment Interface Reservation is
+  `SKIPPED FOR V3.0.1`; Payment, recharge, and `PURCHASE` remain unimplemented and may
+  be reconsidered for V3.0.2 or a future commercial enhancement.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -253,8 +272,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 Phase 4.1 DeepSeek Directed Retest. Phase 5 remains optional and
-  `NOT STARTED`.
+- Next: V3.0.1 RC / Release Engineering. RC work has not started.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -289,9 +307,9 @@
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
   - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
   - V3.0.1 Phase 3 Documentation Gate: closed (`PASS`)
-  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Initial QA `PASS WITH ISSUES`
-  - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed;
-    Directed Retest pending
+  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Final QA `PASS FOR PHASE 4`
+  - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed
+  - V3.0.1 Phase 4 Documentation Gate: closed (`PASS`)
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -409,8 +427,9 @@ Persistence Hardening are completed. The Phase 2
 Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
 `PASS WITH ISSUES`, Phase 3.1 resolved M1, the directed retest returned `PASS`, and the Phase
 3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Initial QA
-returned `PASS WITH ISSUES`; Phase 4.1 resolves M-1 pending directed retest. V3.0.1 is
-not part of the V3.0.0 release.
+returned `PASS WITH ISSUES`; Phase 4.1 resolved M-1, the directed retest returned
+`PASS`, and the Phase 4 Documentation Gate is closed with Final QA
+`PASS FOR PHASE 4`. V3.0.1 is not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -734,8 +753,9 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phases 1 through 4.1 are completed; Phase
-  4.1 Directed Retest is pending and optional Phase 5 has not started.
+  Payment Interface Reservation; then RC. Phases 1 through 4.1 and the Phase 4
+  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC /
+  Release Engineering is next and has not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
