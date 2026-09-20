@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
-from credits.domain import normalize_account_id, validate_integer_amount
+from credits.domain import (
+    InvalidAccountError,
+    normalize_account_id,
+    validate_integer_amount,
+)
 
 
 class AdminOperationError(Exception):
@@ -25,7 +29,7 @@ class AdminOperationType(str, Enum):
 
 
 def _normalize_identity(value: str, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
+    if type(value) is not str or not value.strip():
         raise InvalidAdminOperationContextError(
             f"{field_name} must be a non-empty string"
         )
@@ -33,11 +37,17 @@ def _normalize_identity(value: str, field_name: str) -> str:
 
 
 def _normalize_reason(reason: str) -> str:
-    if not isinstance(reason, str) or not reason.strip():
+    if type(reason) is not str or not reason.strip():
         raise InvalidAdminOperationContextError(
             "reason must be a non-empty string"
         )
     return reason.strip()
+
+
+def normalize_admin_account_id(account_id: str) -> str:
+    if type(account_id) is not str:
+        raise InvalidAccountError("account_id must be a non-empty string")
+    return normalize_account_id(account_id)
 
 
 @dataclass(frozen=True)
@@ -80,7 +90,9 @@ class AdminOperationRecord:
         )
         if not isinstance(self.operation_type, AdminOperationType):
             raise AdminOperationError("operation_type must be an AdminOperationType")
-        object.__setattr__(self, "account_id", normalize_account_id(self.account_id))
+        object.__setattr__(
+            self, "account_id", normalize_admin_account_id(self.account_id)
+        )
         validate_integer_amount(self.amount)
         if self.operation_type is AdminOperationType.GRANT and self.amount < 0:
             raise AdminOperationError("GRANT amount must be positive")

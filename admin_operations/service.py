@@ -9,7 +9,6 @@ from typing import Callable
 from credits import CreditTransaction, InsufficientCreditsError, TransactionType
 from credits.domain import (
     InvalidCreditAmountError,
-    normalize_account_id,
     validate_integer_amount,
 )
 from credits.sqlite_ledger import SQLiteCreditLedger
@@ -19,10 +18,13 @@ from .domain import (
     AdminOperationContext,
     AdminOperationRecord,
     AdminOperationType,
+    normalize_admin_account_id,
 )
 
 
 FaultInjector = Callable[[str], None]
+_SQLITE_INTEGER_MIN = -(2**63)
+_SQLITE_INTEGER_MAX = 2**63 - 1
 
 
 class AdminCreditService:
@@ -70,7 +72,7 @@ class AdminCreditService:
         amount: int,
     ) -> AdminOperationRecord:
         context = self._validate_context(context)
-        account_id = normalize_account_id(account_id)
+        account_id = normalize_admin_account_id(account_id)
         self._validate_positive_amount(amount)
         return self._apply(
             context=context,
@@ -86,8 +88,8 @@ class AdminCreditService:
         amount: int,
     ) -> AdminOperationRecord:
         context = self._validate_context(context)
-        account_id = normalize_account_id(account_id)
-        validate_integer_amount(amount)
+        account_id = normalize_admin_account_id(account_id)
+        self._validate_sqlite_amount(amount)
         return self._apply(
             context=context,
             operation_type=AdminOperationType.ADJUSTMENT,
@@ -96,12 +98,12 @@ class AdminCreditService:
         )
 
     def balance(self, account_id: str) -> int:
-        account_id = normalize_account_id(account_id)
+        account_id = normalize_admin_account_id(account_id)
         with self._lock:
             return SQLiteCreditLedger._balance(self._connection, account_id)
 
     def history(self, account_id: str) -> tuple[CreditTransaction, ...]:
-        account_id = normalize_account_id(account_id)
+        account_id = normalize_admin_account_id(account_id)
         with self._lock:
             rows = self._connection.execute(
                 """
@@ -315,6 +317,14 @@ class AdminCreditService:
 
     @staticmethod
     def _validate_positive_amount(amount: int) -> None:
-        validate_integer_amount(amount)
+        AdminCreditService._validate_sqlite_amount(amount)
         if amount < 0:
             raise InvalidCreditAmountError("amount must be positive")
+
+    @staticmethod
+    def _validate_sqlite_amount(amount: int) -> None:
+        validate_integer_amount(amount)
+        if not _SQLITE_INTEGER_MIN <= amount <= _SQLITE_INTEGER_MAX:
+            raise InvalidCreditAmountError(
+                "amount must fit SQLite's signed 64-bit INTEGER range"
+            )

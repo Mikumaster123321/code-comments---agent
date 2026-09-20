@@ -19,6 +19,7 @@ from admin_operations import (
 from credits import (
     CreditTransaction,
     InsufficientCreditsError,
+    InvalidAccountError,
     InvalidCreditAmountError,
     SQLiteCreditLedger,
     TransactionType,
@@ -63,6 +64,23 @@ class StubProvider:
         return "safe completion"
 
 
+class HostileString(str):
+    def strip(self):
+        raise AssertionError("caller-defined strip must not run")
+
+    def __str__(self):
+        raise AssertionError("caller-defined string conversion must not run")
+
+    def __repr__(self):
+        raise AssertionError("caller-defined representation must not run")
+
+    def __eq__(self, _other):
+        raise AssertionError("caller-defined equality must not run")
+
+    def __hash__(self):
+        raise AssertionError("caller-defined hash must not run")
+
+
 def context(actor="admin", operation="op-1", reason="manual grant"):
     return AdminOperationContext(actor, operation, reason)
 
@@ -99,8 +117,80 @@ def test_context_normalizes_identity_and_reason_and_is_immutable():
     operation_context = AdminOperationContext(" admin ", " op-1 ", " correction ")
 
     assert operation_context == AdminOperationContext("admin", "op-1", "correction")
+    assert type(operation_context.actor_id) is str
+    assert type(operation_context.operation_id) is str
+    assert type(operation_context.reason) is str
     with pytest.raises(FrozenInstanceError):
         operation_context.reason = "changed"
+
+
+@pytest.mark.parametrize("actor", [" admin ", "admin", "\tadmin\n"])
+@pytest.mark.parametrize("operation", [" op-1 ", "op-1", "\top-1\n"])
+def test_builtin_identity_whitespace_normalization_is_unchanged(actor, operation):
+    operation_context = context(actor=actor, operation=operation)
+
+    assert operation_context.actor_id == "admin"
+    assert operation_context.operation_id == "op-1"
+
+
+def test_hostile_actor_subclass_cannot_create_a_second_grant(tmp_path):
+    database = tmp_path / "admin.sqlite3"
+    service = AdminCreditService(database)
+    service.grant(context(), "account-1", 7)
+
+    with pytest.raises(InvalidAdminOperationContextError) as captured:
+        service.grant(context(actor=HostileString(" admin ")), "account-1", 7)
+
+    assert str(captured.value) == "actor_id must be a non-empty string"
+    assert service.balance("account-1") == 7
+    assert table_count(database, "credit_transactions") == 1
+    assert table_count(database, "admin_credit_operations") == 1
+
+
+def test_hostile_operation_subclass_cannot_create_a_second_grant(tmp_path):
+    database = tmp_path / "admin.sqlite3"
+    service = AdminCreditService(database)
+    service.grant(context(), "account-1", 7)
+
+    with pytest.raises(InvalidAdminOperationContextError) as captured:
+        service.grant(context(operation=HostileString(" op-1 ")), "account-1", 7)
+
+    assert str(captured.value) == "operation_id must be a non-empty string"
+    assert service.balance("account-1") == 7
+    assert table_count(database, "credit_transactions") == 1
+    assert table_count(database, "admin_credit_operations") == 1
+
+
+@pytest.mark.parametrize("field", ["actor", "operation"])
+def test_hostile_identity_rejection_does_not_leak_object_data(tmp_path, field):
+    database = tmp_path / "admin.sqlite3"
+    service = AdminCreditService(database)
+    marker = "TEST_ADMIN_HOSTILE_SECRET_UNIQUE"
+    values = {field: HostileString(marker)}
+
+    with pytest.raises(InvalidAdminOperationContextError) as captured:
+        service.grant(context(**values), "account-1", 7)
+
+    assert marker not in str(captured.value)
+    assert "HostileString" not in str(captured.value)
+    assert marker not in database_dump(database)
+    assert marker.encode() not in database.read_bytes()
+
+
+def test_hostile_account_and_reason_subclasses_are_rejected_at_admin_boundary(
+    tmp_path,
+):
+    database = tmp_path / "admin.sqlite3"
+    service = AdminCreditService(database)
+
+    with pytest.raises(InvalidAccountError):
+        service.grant(context(), HostileString(" account-1 "), 7)
+    with pytest.raises(InvalidAdminOperationContextError):
+        service.grant(context(reason=HostileString(" reason ")), "account-1", 7)
+
+    assert service.balance("account-1") == 0
+    assert table_count(database, "credit_transactions") == 0
+    assert table_count(database, "admin_credit_operations") == 0
 
 
 def test_context_contains_no_authentication_or_runtime_objects():
@@ -141,6 +231,15 @@ def test_record_is_normalized_and_immutable():
     assert record.operation_id == "op-1"
     assert record.account_id == "alice"
     assert record.reason == "test grant"
+    assert all(
+        type(value) is str
+        for value in (
+            record.actor_id,
+            record.operation_id,
+            record.account_id,
+            record.reason,
+        )
+    )
     with pytest.raises(FrozenInstanceError):
         record.amount = 4
 
@@ -200,6 +299,53 @@ def test_grant_requires_a_positive_integer(tmp_path, amount):
 
     with pytest.raises(InvalidCreditAmountError):
         service.grant(context(), "account-1", amount)
+
+    assert service.balance("account-1") == 0
+
+
+def test_sqlite_maximum_integer_grant_is_accepted(tmp_path):
+    service = AdminCreditService(tmp_path / "admin.sqlite3")
+
+    record = service.grant(context(), "account-1", 2**63 - 1)
+
+    assert record.amount == 2**63 - 1
+    assert service.balance("account-1") == 2**63 - 1
+
+
+@pytest.mark.parametrize(
+    ("method", "amount"),
+    [
+        ("grant", 2**63),
+        ("adjust", 2**63),
+        ("adjust", -(2**63) - 1),
+    ],
+)
+def test_sqlite_out_of_range_amount_is_atomic_and_operation_can_retry(
+    tmp_path, method, amount
+):
+    database = tmp_path / "admin.sqlite3"
+    service = AdminCreditService(database)
+    operation_context = context(operation="range-check")
+
+    with pytest.raises(InvalidCreditAmountError, match="signed 64-bit"):
+        getattr(service, method)(operation_context, "account-1", amount)
+
+    assert service.balance("account-1") == 0
+    assert table_count(database, "credit_transactions") == 0
+    assert table_count(database, "admin_credit_operations") == 0
+
+    record = getattr(service, method)(operation_context, "account-1", 1)
+    assert record.amount == 1
+    assert service.balance("account-1") == 1
+    assert table_count(database, "credit_transactions") == 1
+    assert table_count(database, "admin_credit_operations") == 1
+
+
+def test_sqlite_minimum_integer_adjustment_passes_range_guard(tmp_path):
+    service = AdminCreditService(tmp_path / "admin.sqlite3")
+
+    with pytest.raises(InsufficientCreditsError):
+        service.adjust(context(), "account-1", -(2**63))
 
     assert service.balance("account-1") == 0
 
@@ -332,11 +478,14 @@ def test_account_actor_and_operation_normalization_cannot_bypass_idempotency(tmp
     assert row == ("admin", "op-1", "alice")
 
 
-def test_one_hundred_replays_create_exactly_one_credit_and_admin_row(tmp_path):
+@pytest.mark.parametrize("replay_count", [100, 1000])
+def test_replays_create_exactly_one_credit_and_admin_row(tmp_path, replay_count):
     database = tmp_path / "admin.sqlite3"
     service = AdminCreditService(database)
 
-    records = [service.grant(context(), "account-1", 9) for _ in range(100)]
+    records = [
+        service.grant(context(), "account-1", 9) for _ in range(replay_count)
+    ]
 
     assert len(set(records)) == 1
     assert service.balance("account-1") == 9
@@ -519,20 +668,18 @@ def test_admin_schema_migration_failure_rolls_back_and_reopen_recovers(tmp_path)
 def test_admin_audit_foreign_key_rejects_missing_credit_transaction(tmp_path):
     database = tmp_path / "admin.sqlite3"
     service = AdminCreditService(database)
-    service.close()
 
-    with sqlite3.connect(database) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        with pytest.raises(sqlite3.IntegrityError):
-            connection.execute(
-                """
-                INSERT INTO admin_credit_operations (
-                    actor_id, operation_id, operation_type, account_id,
-                    amount, reason, credit_transaction_id, created_at
-                ) VALUES ('admin', 'op-1', 'GRANT', 'account-1', 1,
-                          'reason', 'missing', '2026-01-01T00:00:00+00:00')
-                """
-            )
+    assert service._connection.execute("PRAGMA foreign_keys").fetchone() == (1,)
+    with pytest.raises(sqlite3.IntegrityError):
+        service._connection.execute(
+            """
+            INSERT INTO admin_credit_operations (
+                actor_id, operation_id, operation_type, account_id,
+                amount, reason, credit_transaction_id, created_at
+            ) VALUES ('admin', 'op-1', 'GRANT', 'account-1', 1,
+                      'reason', 'missing', '2026-01-01T00:00:00+00:00')
+            """
+        )
 
     assert table_count(database, "admin_credit_operations") == 0
 

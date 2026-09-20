@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 4 Admin Operations Surface Completed; Independent QA Pending`
+- Status: `Phase 4.1 Admin Identity & Persistence Hardening Completed; Directed Retest Pending`
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -211,6 +211,31 @@
   Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
   **6 passed**; full suite **394 passed**. No real API, Credential, Provider-network,
   or network LLM request was used.
+- Phase 4 Initial DeepSeek QA: `PASS WITH ISSUES` (Critical 0, Medium 1, Low 3,
+  Release Blocker 0). M-1 demonstrated that hostile `str` subclasses could bypass
+  Admin actor/operation normalization and create a duplicate Grant. The Phase 4 core
+  idempotency, atomicity, audit, foreign-key, concurrency, restart, migration, and
+  Credential-boundary behavior passed independent validation.
+- V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed. The Admin
+  boundary now accepts only exact built-in strings before trimming actor ID,
+  operation ID, account ID, and reason, so caller-defined `strip`, equality, hash,
+  string conversion, and representation behavior cannot influence Admin identity,
+  replay comparison, or SQLite keys. Normal built-in whitespace normalization is
+  unchanged.
+- Phase 4.1 adds an Admin persistence guard for SQLite signed 64-bit Credit amounts.
+  Out-of-range grants and adjustments raise `InvalidCreditAmountError` before any
+  write and leave the operation identity reusable. Executable regression coverage
+  also verifies `PRAGMA foreign_keys = 1` on the service connection and rejects an
+  audit row whose Credit transaction does not exist.
+- Phase 4.1 validation: Admin Operations **71 passed**; Phase 3 pricing/token-flow and
+  hardening **75 passed**; Managed Access **44 passed**; SQLite ledger **29 passed**;
+  Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
+  **6 passed**; full suite **414 passed**. All validation remained offline and used no
+  real API, Credential, Provider-network, or network LLM request.
+- Phase 4.1 resolves M-1 pending DeepSeek Directed Retest. L-1 SQLite integer-range
+  validation is hardened; L-2 close-after-use exception wrapping remains deferred;
+  L-3 account/reason hostile-string handling is covered locally at the Admin boundary
+  without changing the Credits domain.
 - Phase 4 does not expose `refund()`. Admin UI, Payment, recharge, purchase, login,
   account systems, and a production HTTP backend remain unimplemented. Optional
   Phase 5 is `NOT STARTED`.
@@ -228,7 +253,8 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 Phase 4 Independent QA. Phase 5 remains optional and `NOT STARTED`.
+- Next: V3.0.1 Phase 4.1 DeepSeek Directed Retest. Phase 5 remains optional and
+  `NOT STARTED`.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -263,7 +289,9 @@
   - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
   - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
   - V3.0.1 Phase 3 Documentation Gate: closed (`PASS`)
-  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Independent QA pending
+  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Initial QA `PASS WITH ISSUES`
+  - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed;
+    Directed Retest pending
   - V3.0.1 — Managed AI Access & Credits: in development
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -274,8 +302,8 @@
 - Release Blockers: `0`
 - Medium: `0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `394 passed`
-- Current V3.0.1 Admin Operations tests: `51 passed`
+- Current V3.0.1 development test baseline: `414 passed`
+- Current V3.0.1 Admin Operations tests: `71 passed`
 - Current V3.0.1 Managed Access tests: `44 passed`
 - Current V3.0.1 Phase 3 Usage/Pricing, token-flow, and hardening tests: `75 passed`
 - Current V3.0.1 SQLite ledger tests: `29 passed`
@@ -376,11 +404,13 @@ the completed V3 core and BYOK foundation.
 
 Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
 Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
-3.1 hardening, and Phase 4 — Admin Operations Surface are completed. The Phase 2
+3.1 hardening, Phase 4 — Admin Operations Surface, and Phase 4.1 Admin Identity &
+Persistence Hardening are completed. The Phase 2
 Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
 `PASS WITH ISSUES`, Phase 3.1 resolved M1, the directed retest returned `PASS`, and the Phase
-3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Independent
-QA is pending. V3.0.1 is not part of the V3.0.0 release.
+3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Initial QA
+returned `PASS WITH ISSUES`; Phase 4.1 resolves M-1 pending directed retest. V3.0.1 is
+not part of the V3.0.0 release.
 
 V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
 API configuration to use platform-managed AI access. Planned capabilities are:
@@ -692,6 +722,10 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   immutable Credit `history`, but no public refund and no ledger object. Admin identity
   is `(normalized actor_id, normalized operation_id)` and the complete business payload
   is conflict-checked on replay.
+- Phase 4.1 freezes the Admin identity boundary to exact built-in strings before
+  normalization and persistence. It also rejects amounts outside SQLite's signed
+  64-bit INTEGER range before opening an Admin write and formally verifies that the
+  service connection enforces the Admin audit foreign key.
 - The Phase 4 `admin_credit_operations` audit row and corresponding Credit transaction
   commit atomically in one SQLite transaction. `BEGIN IMMEDIATE` serializes independent
   service connections so same-operation concurrency mutates exactly once and different
@@ -700,8 +734,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
-  Payment Interface Reservation; then RC. Phases 1 through 4 are completed; Phase 4
-  Independent QA is pending and optional Phase 5 has not started.
+  Payment Interface Reservation; then RC. Phases 1 through 4.1 are completed; Phase
+  4.1 Directed Retest is pending and optional Phase 5 has not started.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
