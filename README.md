@@ -1,14 +1,12 @@
 # Code Comments Agent
 
-**当前版本：V3.0.0（`3.0.0`）— Stable Release**
+**当前版本：V3.0.1（`3.0.1`）— Stable Release**
 
-Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.0 的定位是 **Project-level Maintenance Core Foundation**：在保留 V2 用户能力的同时，提供稳定的项目扫描、关系图、快照、确定性分析和 BYOK Provider 基础。
+Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.1 在 V3 项目级维护核心上增加可选的 Managed AI Access 与 Credits 基础设施，同时完整保留 BYOK。当前版本是正式稳定版。
 
-V3.0.0 已正式发布，但不是完整的 Autonomous Multi-Agent IDE。
+## Available Features
 
-## Available Now
-
-### 用户能力
+### 用户与开发者能力
 
 - Python / Java 注释生成与注释翻译
 - Markdown API 文档生成
@@ -24,53 +22,61 @@ V3.0.0 已正式发布，但不是完整的 Autonomous Multi-Agent IDE。
 - **Project Scanner**：确定性发现项目文件、语言、忽略规则和内容哈希
 - **Project Graph**：构建项目、文件、符号和外部模块的包含及导入关系
 - **Project Snapshot**：以不可变状态表示文件、符号和项目图，并支持快照比较
-- **Deterministic Analysis Engine**：基于现有 Snapshot / Graph 执行结构、复杂度和依赖分析；不调用 LLM
-- **BYOK Provider Foundation**：无凭据的模型配置、仅运行时凭据、只读 Registry 和任务级 Provider 隔离
+- **Deterministic Analysis Engine**：基于 Snapshot / Graph 执行结构、复杂度和依赖分析；不调用 LLM
+- **Task-scoped Provider isolation**：任务开始时固定 Provider / Client，避免运行时配置变化影响已开始任务
 
-当前 V3 Core 是底层能力。既有 Gradio 用户流程继续通过 legacy-compatible Processor 工作。
+### V3.0.1：Optional Managed AI Access
 
-## Architecture
+- Append-only Credits ledger 与标准库 `sqlite3` 持久化
+- Managed request reservation、幂等与失败状态管理
+- Provider、Model、输入/输出 Token 与最终 Credits 的 Usage Metering
+- Flat / token-based `PricingPolicy`，支持确定性预留与实际用量结算
+- Trusted server-side `AdminCreditService`，支持 Grant、Adjustment、Balance 与 History
+- Platform Credential 隔离在可信服务端运行时
 
-```text
-Gradio UI
-   |
-Legacy-compatible Processor
-   |
-   +---- LLM Provider / BYOK
-   |
-   +---- V3 Core
-          |
-          +-- Domain / SymbolId
-          +-- Project Scanner
-          +-- Project Graph
-          +-- Project Snapshot
-          +-- Analysis Engine
-```
-
-`AnalysisEngine` 是确定性、只读且不调用 LLM 的服务。`code_maintenance/` 不依赖 Provider 或 Credential；Provider 层位于 V3 Core 外部。
+Managed AI Access 是软件维护平台的 AI access infrastructure，不是独立 Billing、Payment 或 SaaS 产品。
 
 ## BYOK
 
-**BYOK = Bring Your Own Key。** V3.0.0 的正式产品原则是：项目不内置开发者自己的第三方 API Key。用户自行选择 Provider、Model 和 Credential。
+**BYOK = Bring Your Own Key。** BYOK 仍是一等能力。用户可以配置自己的 Provider、Model 和 Credential；BYOK 不需要 Credits、不扣除 Credits，也不依赖 Admin Operations。
 
-当前 Registry 支持：
+当前 Registry 支持 DeepSeek、OpenAI、Azure OpenAI、DashScope、Moonshot 和 Custom OpenAI-compatible Provider。
 
-- DeepSeek
-- OpenAI
-- Azure OpenAI
-- DashScope
-- Moonshot
-- Custom OpenAI-compatible
-
-安全边界：
+BYOK 安全边界：
 
 - `ModelConfig` 只保存 Provider、Model 和 Base URL，不含 Credential。
 - `RuntimeCredential` 只用于运行时 Provider 构造，不支持普通序列化。
 - Workspace 持久化白名单不保存 Credential。
-- Task 开始时会固定其 Provider / Client；之后切换 legacy 全局 Provider 只影响未来 Task，不改变已经开始的 Task。
-- `.env` 是本地配置文件，已被 Git 忽略；Gradio 中输入的 API Key 只覆盖当前运行时设置。
+- Task 开始时固定 Provider / Client；之后切换全局 Provider 只影响未来 Task。
+- `.env` 是已被 Git 忽略的本地配置；Gradio 中输入的 API Key 只覆盖当前运行时设置。
 
-V3.0.0 未实现 OS Keychain、Vault 或 VS Code SecretStorage。
+## Managed AI Access
+
+Managed AI Access 是 BYOK 之外的可选路径：可信服务端 Provider 可代表用户执行 LLM 请求，并配合 Credits、Reservation、Usage Metering 和 Pricing 完成结算。Platform Credential 只存在于 server-side runtime，不进入 Client、Workspace、普通配置、SQLite billing records 或 Logs。
+
+Credits 由不可变 `CreditAccount`、append-only `CreditLedger` 和 `ADMIN_GRANT`、`USAGE`、`REFUND`、`ADJUSTMENT` 交易类型构成。当前可信 Admin surface 只开放 Grant 与 Adjustment，以及 Balance / History 查询；底层 `REFUND` 是会计原语，用户退款流程尚未实现。
+
+Managed Usage 可持久化 Provider、Model、Input Tokens、Output Tokens 和 Final Credits；不会记录 Prompt、Completion、Raw Response 或 Credential。`TokenPricingPolicy` 使用 `Decimal`、`ROUND_CEILING`、Reservation upper bound 和 actual usage reconciliation。Rates 是定价抽象，不是任何厂商的商业价格表。
+
+V3.0.1 提供本地、进程内的服务边界，未实现 production HTTP backend。
+
+## Architecture Overview
+
+以下为逻辑关系，不代表真实部署网络架构：
+
+```text
+BYOK Path
+User Credential -> Task-scoped Provider -> LLM
+
+Managed Path
+Trusted Admin Grant -> Credits -> Managed Request -> Reservation
+                    -> Provider -> Usage -> Pricing -> USAGE Ledger
+
+Project Maintenance Core
+Scanner -> Graph -> Snapshot -> Analysis Engine
+```
+
+`code_maintenance/` 不依赖 Provider、Credential、Credits 或 Managed Access。Managed Access 可以使用 Credits 与既有 Provider 基础设施；BYOK 路径与 Credits 相互独立。
 
 ## Installation
 
@@ -102,17 +108,15 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-某些 Anaconda Python 3.13 主机可能遇到 Gradio / IPython 兼容问题；这不是已确认的 Python 3.13 产品不兼容。遇到此问题时，请改用标准 CPython 和独立 `venv`。干净的 CPython 3.13.7 环境已通过安装、启动和测试验证。
+SQLite 由 Python 标准库 `sqlite3` 提供，不需要单独安装数据库。某些 Anaconda Python 3.13 主机可能遇到 Gradio / IPython 兼容问题；遇到时请使用标准 CPython 与独立 `venv`。
 
 ## Configuration
 
-复制环境变量示例，并用占位值替换为自己的配置：
+复制环境变量示例，并用自己的 BYOK 配置替换占位值：
 
 ```bash
 cp .env.example .env
 ```
-
-最小示例：
 
 ```env
 PROVIDER=deepseek
@@ -120,31 +124,32 @@ MODEL=deepseek-chat
 DEEPSEEK_API_KEY=your-api-key-here
 ```
 
-`.env.example` 列出了各 Provider 的变量名以及 Azure / Custom 的 Base URL 配置。也可以在 Gradio 的运行时 Provider 设置中选择 Provider、Model、API Key 和允许自定义的 Base URL。项目当前没有账户系统、数据库或 Secure Credential Store。
+`.env.example` 列出了各 Provider 的变量名以及 Azure / Custom Base URL 配置。也可以在 Gradio 运行时设置中选择 Provider、Model、API Key 和允许自定义的 Base URL。
+
+BYOK Credential 属于用户运行时配置；platform-managed Credential 属于可信 server-side runtime，两者是不同安全边界。Platform Credential 不应写入普通 `.env` 示例、Workspace 或 SQLite billing data。项目不提供 Secure Credential Store。
 
 ## Quick Start
 
-1. Clone 仓库。
-2. 创建并激活 `.venv`。
-3. 运行 `python -m pip install -r requirements.txt`。
-4. 通过 `.env` 或 Gradio 运行时设置配置 Provider / API Key。
-5. 启动：
+1. Clone 仓库并创建、激活 `.venv`。
+2. 运行 `python -m pip install -r requirements.txt`。
+3. 通过 `.env` 或 Gradio 运行时设置配置 BYOK Provider / API Key。
+4. 启动：
 
 ```bash
 python main.py
 ```
 
-默认访问地址为 `http://127.0.0.1:7860`。
+默认访问地址为 `http://127.0.0.1:7860`。当前 Gradio UI 没有 Managed Credits 或 Admin 操作入口。
 
 ## Testing
 
-当前 V3.0.0 稳定版基线：**129 passed**。
+当前 V3.0.1 Stable Release 基线：**414 passed**。
 
 ```bash
 python -m pytest
 ```
 
-`python -m pytest -p no:debugging` 仅用于 RC1.1 已记录的特定 Anaconda Python 3.13.5 主机问题，不是标准测试命令。测试不会调用真实 LLM Provider，也不需要真实 API Key。
+`python -m pytest -p no:debugging` 仅是已记录的 Anaconda Python 3.13.5 主机专用 workaround，不是标准测试命令。测试不会调用真实 LLM Provider，也不需要真实 API Key。
 
 ## Directory Structure
 
@@ -155,61 +160,62 @@ code-comments---agent/
 ├── processor.py
 ├── config.py
 ├── llm_service.py
-├── llm_provider.py
-├── Py/
-├── Java/
-├── code_maintenance/
+├── code_maintenance/       # V3 project maintenance core
+├── credits/
 │   ├── domain.py
-│   ├── adapters.py
-│   ├── scanner.py
-│   ├── graph.py
-│   ├── snapshot.py
-│   └── analysis.py
+│   ├── ledger.py
+│   └── sqlite_ledger.py
+├── managed_access/
+│   ├── domain.py
+│   ├── pricing.py
+│   └── service.py
+├── admin_operations/
+│   ├── domain.py
+│   └── service.py
+├── Py/                     # legacy-compatible Python processor modules
+├── Java/                   # legacy-compatible Java processor modules
 ├── tests/
-├── docs/
-│   ├── development/
-│   ├── qa/
-│   └── release/
-└── .github/workflows/
+└── docs/
+    ├── development/
+    ├── qa/
+    └── release/
 ```
 
-`Py/` 和 `Java/` 仍是 legacy-compatible Processor 与 V3 Adapter 使用的生产模块，并未被 `code_maintenance/` 替代。
+## Not Included in V3.0.1
+
+- Admin UI、Authentication / RBAC、Login、Password 或 OAuth
+- Payment、Recharge、`PURCHASE` 或用户 Refund workflow
+- Production SaaS / HTTP backend
+- RAG、Multi-Agent、Router 或 VS Code Integration
 
 ## Roadmap / Planned
 
-以下能力均为 **Planned**，不属于 V3.0.0 的已实现功能。
-
-### V3.0.1 — Managed AI Access & Credits
-
-**Status: Planned**
-
-V3.0.0 默认支持 BYOK。V3.0.1 计划在保留 BYOK 的同时，为不希望自行配置第三方 API 的用户增加可选的 Platform-managed AI access：
-
-- Credit account
-- Credit ledger
-- Admin credit grants
-- Usage metering
-- Pricing policy abstraction
-- Recharge / payment interface reservation
-
-平台 Provider / API Credential 将只存在于服务端，不下发到客户端，不写入插件、前端或普通用户配置：
-
-```text
-Client -> Platform Backend -> Auth / Credit Check -> Server-side Provider -> LLM
-```
-
-以上均未在 V3.0.0 实现。
-
-### Later Planned Versions
-
-- **V3.1 — Project Intelligence / RAG** — Planned
-- **V3.2 — Controlled Multi-Agent Collaboration** — Planned
-- **V3.3 — Data-driven Multi-Model Router** — Planned
-- **V3.4 — VS Code Integration + Secure Credential UI** — Planned
+- **V3.0.1 — Managed AI Access & Credits**：Released / Stable Release
+- **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
+- **V3.1 — Project Intelligence / RAG**：Planned，论文主线优先
+- **V3.2 — Controlled Multi-Agent Collaboration**：Planned，论文主线优先
+- **V3.3 — Data-driven Multi-Model Router**：Planned
+- **V3.4 — VS Code Integration**：Planned
 
 ## Version History
 
-从 V3 开始，README 保留简洁的永久版本记录。正式的 Major / Minor 版本条目可列出主要 Phase、Capability、Main changes 和 Tests；Patch 版本只记录主要修复、小功能和 Tests。完整过程继续保存在 Development Reports、QA Reports 和 Release Notes 中。
+从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+
+### V3.0.1
+
+**Managed AI Access & Credits — Released / Stable Release（`3.0.1`）**
+
+Phase Summary：
+
+- Phase 0 — Architecture & Scope
+- Phase 1 — Credits Domain
+- Phase 2 — Managed Access Foundation
+- Phase 3 — Usage Metering & PricingPolicy
+- Phase 4 — Admin Operations Surface
+
+Major Updates：Optional Managed AI Access、Credits ledger、SQLite persistence、Reservation / Idempotency、Usage Metering、Token Pricing、Admin Grant / Adjustment、BYOK preservation 与 Credential isolation。
+
+Tests: **414 passed**。
 
 V2 及更早版本按当时的更新日志逐版本完整保留，并标注发布日期与版本类型。**V2 的测试数字均为当时记录，不代表当前 V3 基线**；V2 开发期自测脚本已在 `7a232c0`（2026-09-08）移除，当前测试统一位于 `tests/`。
 
@@ -273,7 +279,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 | V3.0.0 — Release | 2026-09-17 | `c1f8b98` |
 | V3.0.0 — README 定稿 | 2026-09-18 | `2b2b0cb` |
 
-主要更新：Engineering baseline（自动化测试与 CI）、Stable `SymbolId`、Processor 从 name-key 迁移至 `SymbolId`、Project Scanner、Project Graph、Project Snapshot / SnapshotDiff、Deterministic Project Analysis Engine、Provider / BYOK Foundation、Task-scoped Provider isolation、Legacy Provider atomic update hardening，以及 Release engineering / QA / documentation gates。
+主要更新：Engineering baseline、Stable `SymbolId`、Processor 的 `SymbolId` 迁移、Project Scanner、Project Graph、Project Snapshot / SnapshotDiff、Deterministic Project Analysis Engine、Provider / BYOK Foundation、Task-scoped Provider isolation，以及 release engineering / QA / documentation gates。
 
 Tests: **129 passed**（开发环境与仓库外干净 venv 一致）。Release Blockers: 0；Medium: 0。
 

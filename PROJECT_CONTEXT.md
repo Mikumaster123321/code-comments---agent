@@ -6,7 +6,320 @@
 
 ## Current State
 
-- Current branch: `v3.0.0-test1`
+- Current Version: `3.0.1`
+- Current branch: `v3.0.1-dev`
+- V3.0.1: `RELEASED`
+- Status: `V3.0.1 Final / Stable Release`
+- V3.0.1 Final Release Gate: `PASS`
+- V3.0.1 Core Feature Freeze: `COMPLETED`
+- V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
+- V3.0.1 RC1.1 Release Blockers: `0`
+- V3.0.1 RC1.2 — Repository Hygiene Audit: completed
+  (`PASS WITH CLEANUP RECOMMENDED`)
+- V3.0.1 RC1.2 Release Blockers: `0`
+- V3.0.1 Final baseline: `414 passed`
+- V3.0.1 RC1.3 — Product Documentation: completed
+- Product Documentation: `UPDATED`
+- README: `V3.0.1 Stable Release`
+- Release Notes: `docs/release/Release_Notes_V3_0_1.md`
+- V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
+- V3.0.1 RC1.4 Release Blockers: `0`
+- V3.0.1 RC1.4 Product Critical / Product Medium: `0 / 0`
+- V3.0.1 RC1.4 clean-environment baseline: `414 passed` under CPython 3.10.20
+- V3.0.1 RC1.4 QA artifact:
+  `docs/qa/QA_Report_V3_0_1_RC1_4_Full_System_Release.md`
+- V3.0.1 RC1.5 — Claude Final Release Review: completed
+  (`APPROVE WITH NON-BLOCKING NOTES`)
+- V3.0.1 RC1.5 Release Blockers: `0`
+- V3.0.1 Final Release Blockers: `0`
+- V3.0.1 Product Critical / Product Medium: `0 / 0`
+- Admin UI: `SKIPPED FOR V3.0.1`
+- Phase 5: `SKIPPED FOR V3.0.1`
+- V3.0.2 commercial track: `DEFERRED`
+- No release fix or directed retest is required.
+- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started)
+- Phase 0 — Architecture & Scope Gate: completed
+- Phase 0.0 — Development Baseline: completed
+- Claude Phase 0 Architecture Review: completed
+- V3.0.1 Architecture Decision: frozen
+- Phase 0.1 — Architecture Decision Documentation: completed
+- DeepSeek Phase 0 Architecture Consistency Review: `PASS WITH ISSUES`
+  (Critical 0, Medium 0, Low 4, Blocking 0)
+- Phase 0 Documentation Hardening: completed (O-1 through O-4 resolved)
+- Phase 0 Final Documentation Gate: `CLOSED`
+- V3.0.0: released / frozen
+- V3.0.0 tag: annotated tag `v3.0.0` resolves to final release commit
+  `2b2b0cb103264f7ac278f35c19a1dc0b02196dc8`
+- Development baseline tests: `129 passed` with the documented current-host
+  `python -m pytest -p no:debugging` workaround; ordinary pytest reproduces the known
+  Anaconda Python 3.13.5 debugging-plugin / `rlcompleter` segmentation fault
+- Offline LLM-contract smoke: `6 passed`; no real API, credential, or network LLM
+  request was used
+- Import smoke: core runtime and V3 modules passed; direct `ui` import remains blocked
+  on this Anaconda Python 3.13.5 host by the documented `gradio` segmentation fault
+- V3.0.1 Phase 1 — Credits Domain: completed
+- V3.0.1 Phase 1 Initial QA: `PASS WITH ISSUES` (Critical 0, Medium 3,
+  Low 10, Blocking 0)
+- V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed; production Credits
+  behavior unchanged
+- Phase 1.1 freezes the privileged-operation boundary (M1), idempotency payload
+  contract (M2), and Phase 2 SQLite atomic-commit requirement (M3).
+- Phase 1.1 validation: Credits `66 passed`; full suite `195 passed`; offline
+  LLM-contract smoke `6 passed`. No real API, Credential, network, Provider, LLM, UI,
+  SQLite, or `managed_access/` work was used.
+- V3.0.1 Phase 1 DeepSeek Directed Retest: `PASS WITH ISSUES` (Critical 0,
+  Medium 0, Blocking 0; 3 non-blocking Low observations; 13/13 independent probes
+  passed). M1 and M2 are closed; M3 is closed for Phase 1 and frozen as a Phase 2
+  entry contract. No further Phase 1 retest is required.
+- V3.0.1 Phase 1 Final QA: `PASS`.
+- V3.0.1 Phase 1 Documentation Gate: `CLOSED`.
+- Phase 1 reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_1.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_1.md`.
+- Directed-retest Low disposition: L1 remains a Phase 2 structural-guard requirement;
+  L2 is resolved by separating the V3.0.0 and V3.0.1 test baselines; L3 is resolved by
+  the version-qualified Development and QA reports.
+- Phase 1 QA Low findings remain deferred: `history_of` object-reference hardening,
+  transaction-ID collision enforcement, private-container exposure, integer upper
+  bounds, the global `RLock`, note normalization, hostile `str` subclasses, and
+  validation-helper duplication.
+- V3.0.1 Phase 2 — Managed Access Foundation: completed. It adds frozen
+  `LLMAccessMode` and credential-free `LLMAccessContext`, a small `ManagedProvider`
+  port, configurable positive-integer `FlatPricingPolicy`, SQLite-backed managed
+  request state, and `ManagedAccessService` orchestration.
+- Phase 2 request state is `RESERVED -> SUCCEEDED` on Provider and accounting success,
+  or `RESERVED -> FAILED` on a Provider failure. `FINALIZATION_FAILED` is the limited
+  reconciliation state for Provider success followed by accounting failure; its active
+  reservation is retained and replay never invokes the Provider again.
+- Managed request identity is `(normalized account_id, normalized request_id)`. A
+  SHA-256 payload fingerprint detects reuse with a different credential-free model
+  selection, prompt, or flat price. `SUCCEEDED` replay returns completion metadata but
+  does not fabricate or persist the original Provider response; `FAILED` is terminal.
+- `SQLiteCreditLedger` implements the Phase 1 `CreditLedger` contract using the Python
+  standard library. `USAGE` and `REFUND` transaction append plus idempotency identity
+  are committed in one SQLite transaction. Failure injection verifies rollback both
+  after transaction append and after idempotency write, with no orphan record.
+- Phase 2 uses active managed reservations rather than a new `TransactionType`.
+  Available Credits are derived as ledger balance minus `RESERVED` and
+  `FINALIZATION_FAILED` reservations. Provider calls run outside SQLite write
+  transactions. Final `USAGE` plus `SUCCEEDED` state is committed atomically.
+- Platform credentials remain inside the injected server-side Provider implementation.
+  They do not enter access context, managed request/result, credit transactions,
+  SQLite, logs, or public service representations. The Managed service public surface
+  exposes no ledger, `grant`, `refund`, or `adjust` operation.
+- Phase 2 validation: SQLite ledger `27 passed`; Managed Access `35 passed`; original
+  Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
+  `257 passed`; offline LLM-contract smoke `6 passed`. All Provider tests used offline
+  stubs; no real API, credential, or network request was used.
+- V3.0.1 Phase 2 Initial DeepSeek QA: `PASS WITH ISSUES` (Product Critical 0,
+  Product Medium 0, Release Blocker 0); full suite `257 passed`; independent probes
+  `167/167 passed`. The Phase 2 product architecture passed independent validation.
+- V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed. C1 adds
+  deterministic multi-service concurrency coverage over independent SQLite connections
+  and service locks. C2 freezes the Provider-success/process-interruption window as a
+  persistent `RESERVED` state requiring manual reconciliation and forbidding automatic
+  Provider retry. C3 exercises actual `commit()` failure for both ledger idempotency and
+  Managed finalization boundaries.
+- Phase 2.1 L1 is resolved by requiring exactly one row for
+  `RESERVED -> FINALIZATION_FAILED`; illegal transitions from `SUCCEEDED`, `FAILED`, or
+  `FINALIZATION_FAILED` now raise `ManagedAccessError` instead of succeeding silently.
+- Phase 2.1 also freezes restart behavior for terminal `FAILED` and
+  `FINALIZATION_FAILED` requests, flat-price payload conflicts, and fixed-seed
+  InMemory/SQLite ledger parity as formal regressions.
+- Phase 2.1 validation: SQLite ledger `29 passed`; Managed Access `44 passed`; original
+  Credits regression `66 passed`; BYOK Provider regression `19 passed`; full suite
+  `268 passed`; offline LLM-contract smoke `6 passed`. All tests remained offline and
+  used only fake credentials and Stub Providers.
+- V3.0.1 Phase 2 DeepSeek Directed Retest: `PASS` (Product Critical 0,
+  Product Medium 0, Release Blocker 0; independent probes `186/186 passed`). C1
+  multi-service concurrency, C2 Provider-success crash-window safety, C3 commit-boundary
+  atomicity, and L1 rowcount consistency are closed. No double charge, double Provider
+  call, partial SQLite commit, reservation loss, Credential leak, or BYOK regression
+  was found. No further production fix or directed retest is required.
+- V3.0.1 Phase 2 Final QA: `PASS`.
+- V3.0.1 Phase 2 Documentation Gate: `CLOSED`.
+- Phase 2 reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_2.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_2.md`. Phase 2.1 is included in the Phase 2 reports.
+- V3.0.1 Phase 3 — Usage Metering + PricingPolicy: completed. It adds immutable,
+  Credential-free `UsageRecord`, `PricingContext`, and `ManagedProviderResponse`
+  contracts plus a minimal `PricingPolicy` Protocol for reservation quotes and actual
+  usage pricing. Zero-total-token usage is rejected; input-only and output-only usage
+  remain valid.
+- `TokenPricingPolicy` uses synthetic `Decimal` Credit rates per 1,000 tokens and
+  converts the final amount to integer Credits with `ROUND_CEILING`. Floats, `bool`,
+  negative values, NaN, Infinity, and an all-zero rate configuration are rejected.
+  Stable versioned policy identities participate in Managed request payload identity.
+- Token-priced Managed requests require an explicit provider/model/token-limit
+  `PricingContext`. The priced limits form the pre-Provider reservation upper bound.
+  Actual usage must match the provider and model, remain within the declared limits,
+  and price to `0 <= actual_credits <= reserved_credits`.
+- Provider success with missing, malformed, mismatched, over-limit, or over-reservation
+  usage transitions to `FINALIZATION_FAILED`, retains the reservation, and is never
+  automatically reinvoked. Successful reconciliation records only the actual `USAGE`
+  charge; unused reservation capacity is released without a compensating refund.
+- Phase 3 persists Credential-free usage metadata and final Credits in `managed_usage`.
+  The `USAGE` transaction, Credit idempotency record, usage metadata, final Credits,
+  and `SUCCEEDED` transition share one SQLite transaction. Phase 2 databases migrate
+  in place, preserve existing ledger/request data, and retain compatible flat-price
+  replay behavior.
+- `FlatPricingPolicy` implements the new `PricingPolicy` contract while preserving the
+  Phase 2 behavior: reservation equals final Credits, usage remains optional, and
+  legacy string Provider responses remain supported. BYOK, UI, processor, and Provider
+  foundation files remain unchanged.
+- Phase 3 validation: Usage/Pricing and Managed token flow **55 passed**; original
+  Managed Access regression **44 passed**; SQLite ledger **29 passed**; Credits
+  regression **66 passed**; BYOK Provider regression **19 passed**; offline
+  LLM-contract smoke **6 passed**; full suite **323 passed**. All tests were offline and
+  used only synthetic rates, fake credentials, and Stub Providers.
+- V3.0.1 Phase 3 Initial DeepSeek QA: `PASS WITH ISSUES` (Critical 0, Medium 1,
+  Release Blocker 0). M1 found that token-price arithmetic depended on the ambient
+  Decimal context and could undercharge under low precision. QA also verified that the
+  Phase 3 core architecture passed and identified the recoverable SQLite migration
+  autocommit window for immediate hardening.
+- V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed. Token
+  pricing now uses a dynamically sized local Decimal context with fixed
+  `ROUND_CEILING`, independent of caller precision and rounding, while policy identity
+  canonicalization no longer performs context-sensitive Decimal normalization.
+- Phase 3.1 places all Managed schema changes, policy-identity backfill,
+  `managed_usage` creation, and legacy usage initialization inside one
+  `BEGIN IMMEDIATE` transaction. Real SQLite failure injection after the first
+  alteration, during backfill, before usage-table creation, and during legacy usage
+  initialization proves that DDL and data changes roll back together before a normal
+  reopen completes the migration.
+- Phase 3.1 regression coverage includes ambient Decimal precision/rounding matrices,
+  large Decimal rates and token counts, a faithful Phase 2 schema fixture, five
+  idempotent migration reopens, existing usage-metadata preservation, privacy scans of
+  logical rows/dumps/database sidecars, zero-cost finalization atomicity, and Flat/Token
+  request-identity conflicts in both directions.
+- Phase 3.1 validation: Phase 3 pricing, token-flow, and hardening tests **75 passed**;
+  original Managed Access regression **44 passed**; SQLite ledger **29 passed**;
+  Credits regression **66 passed**; BYOK Provider regression **19 passed**; offline
+  LLM-contract smoke **6 passed**; full suite **343 passed**. No real API, Credential,
+  or network LLM request was used.
+- V3.0.1 Phase 3 DeepSeek Directed Retest: `PASS` (Product Critical 0, Product
+  Medium 0, Release Blocker 0; independent probes `137/137 passed`). M1 ambient
+  Decimal-context determinism is resolved and the previous L1-L6 observations are
+  closed. Evidence includes 11 precision settings by 8 rounding modes with zero drift,
+  9,000 reservation cases with zero invariant violation, four atomic-migration failure
+  points with complete rollback, 20 reopens with zero drift, and zero privacy-marker
+  occurrences.
+- Phase 3 Final QA: `PASS FOR PHASE 3`. No further production fix or directed retest
+  is required. L7 initialization connection-close structure and L8 proactive validation
+  of a malformed pre-existing `managed_usage` table remain Low, non-blocking, and
+  deferred for future hardening.
+- Phase 3 contracts are frozen: `UsageRecord`; `PricingPolicy`; Phase 2-compatible
+  `FlatPricingPolicy`; deterministic `TokenPricingPolicy`; local Decimal pricing with
+  `ROUND_CEILING`; reservation upper bounds; actual reconciliation;
+  `FINALIZATION_FAILED` fail-closed behavior; provider/model integrity; private usage
+  persistence; atomic finalization; atomic Phase 2-to-Phase 3 migration; and request
+  fingerprint/pricing-policy identity.
+- V3.0.1 Phase 3 Documentation Gate: `CLOSED`. The combined Phase 3 and Phase 3.1
+  reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_3.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_3.md`.
+- V3.0.1 Phase 4 — Admin Operations Surface: completed. It adds a trusted
+  server-side `AdminCreditService` with immutable `AdminOperationContext` and
+  `AdminOperationRecord` values plus the minimal `GRANT` and `ADJUSTMENT`
+  `AdminOperationType` values.
+- Phase 4 administrative operation identity is `(normalized actor_id, normalized
+  operation_id)`. Exact replay returns the persisted audit record without another
+  Credit mutation, while any change to operation type, normalized account, amount,
+  or normalized non-empty reason raises `AdminOperationConflictError`.
+- Phase 4 persists normalized administrative audit metadata in
+  `admin_credit_operations`. Each `ADMIN_GRANT` or `ADJUSTMENT` Credit transaction
+  and its immutable admin audit row share one `BEGIN IMMEDIATE` SQLite transaction;
+  failure injection and commit-failure coverage prove all-or-nothing rollback and
+  safe retry.
+- `AdminCreditService.balance()` and `history()` expose only an integer balance and
+  immutable Credit transaction tuple. The service does not return a `CreditLedger`,
+  and `ManagedAccessService` continues to expose no grant, adjust, refund, ledger, or
+  Admin service capability.
+- Phase 4 validation: Admin Operations **51 passed**; Phase 3 pricing/token-flow and
+  hardening **75 passed**; Managed Access **44 passed**; SQLite ledger **29 passed**;
+  Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
+  **6 passed**; full suite **394 passed**. No real API, Credential, Provider-network,
+  or network LLM request was used.
+- Phase 4 Initial DeepSeek QA: `PASS WITH ISSUES` (Critical 0, Medium 1, Low 3,
+  Release Blocker 0). M-1 demonstrated that hostile `str` subclasses could bypass
+  Admin actor/operation normalization and create a duplicate Grant. The Phase 4 core
+  idempotency, atomicity, audit, foreign-key, concurrency, restart, migration, and
+  Credential-boundary behavior passed independent validation.
+- V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed. The Admin
+  boundary now accepts only exact built-in strings before trimming actor ID,
+  operation ID, account ID, and reason, so caller-defined `strip`, equality, hash,
+  string conversion, and representation behavior cannot influence Admin identity,
+  replay comparison, or SQLite keys. Normal built-in whitespace normalization is
+  unchanged.
+- Phase 4.1 adds an Admin persistence guard for SQLite signed 64-bit Credit amounts.
+  Out-of-range grants and adjustments raise `InvalidCreditAmountError` before any
+  write and leave the operation identity reusable. Executable regression coverage
+  also verifies `PRAGMA foreign_keys = 1` on the service connection and rejects an
+  audit row whose Credit transaction does not exist.
+- Phase 4.1 validation: Admin Operations **71 passed**; Phase 3 pricing/token-flow and
+  hardening **75 passed**; Managed Access **44 passed**; SQLite ledger **29 passed**;
+  Credits **66 passed**; BYOK Provider **19 passed**; offline LLM-contract smoke
+  **6 passed**; full suite **414 passed**. All validation remained offline and used no
+  real API, Credential, Provider-network, or network LLM request.
+- V3.0.1 Phase 4 DeepSeek Directed Retest: `PASS` (Product Critical 0, Product
+  Medium 0, Release Blocker 0; independent assertions `159 passed`; full suite
+  `414 passed`). M-1 is resolved: hostile actor/operation subclasses are rejected
+  before caller-defined identity behavior, with zero additional writes and zero
+  hostile-method executions. Exactly-once replay, multi-service concurrency, restart,
+  foreign-key enforcement, five atomic rollback boundaries, and Credential privacy
+  passed independent validation. No further production fix or directed retest is
+  required.
+- Phase 4.1 resolves M-1 and hardens L-1 SQLite integer-range validation. L-2
+  close-after-use exception wrapping remains deferred. Cumulative SQLite `SUM(amount)`
+  overflow from multiple individually valid transactions remains a non-blocking member
+  of the existing integer-upper-bound technical-debt family; it can make the affected
+  account query fail but does not corrupt data, duplicate a Grant, break atomicity, or
+  affect other accounts.
+- Phase 4 contracts are frozen: `AdminOperationContext`, `AdminOperationType`,
+  `AdminOperationRecord`, `AdminCreditService`, exact built-in string identity,
+  `(actor_id, operation_id)` idempotency, Credit plus audit atomicity, foreign-key
+  enforcement, grant/adjustment semantics, the Managed privileged boundary, refund
+  non-exposure, and the Admin SQLite signed-64 amount guard.
+- V3.0.1 Phase 4 Final QA: `PASS FOR PHASE 4` (Critical 0, Medium 0, Release
+  Blocker 0). Phase 4 Documentation Gate: `CLOSED`. The combined Phase 4 and Phase 4.1
+  reports are recorded as
+  `docs/development/Development_Report_V3_0_1_Phase_4.md` and
+  `docs/qa/QA_Report_V3_0_1_Phase_4.md`.
+- Phase 4 does not expose `refund()`. Admin UI is `SKIPPED FOR V3.0.1` and remains a
+  possible future enhancement. Optional Phase 5 Payment Interface Reservation is
+  `SKIPPED FOR V3.0.1`; Payment, recharge, and `PURCHASE` remain unimplemented and may
+  be reconsidered for V3.0.2 or a future commercial enhancement.
+- V3.0.1 RC1.2 Repository Hygiene Audit: `PASS WITH CLEANUP RECOMMENDED` with
+  Release Blockers `0`; no tracked generated artifact, secret, local-path leak, empty
+  file, byte-duplicate file, dead source module, or DELETE/MOVE candidate was found.
+  Top-level `credits/`, `managed_access/`, and `admin_operations/` placement and all
+  frozen dependency boundaries remain valid. Seven unused import bindings are a
+  non-blocking P1 cleanup recommendation; canonical helper duplication, large source
+  and test files, and continued `PROJECT_CONTEXT.md` growth remain P2 maintenance.
+  No cleanup, README, Release Notes, business-code, test, package, tag, or push action
+  was performed by the audit.
+- V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
+  objects, the minimal `CreditLedger` protocol, and a thread-safe
+  `InMemoryCreditLedger`.
+- The Phase 1 ledger is append-only and authoritative; integer Credit balances are
+  derived from transaction records rather than a second authoritative balance store.
+- `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT` are implemented with typed domain
+  failures, failed-operation atomicity, `(account_id, request_id)` charge/refund
+  idempotency, and same-account debit serialization under an `RLock`.
+- Phase 1 remains fully offline and Provider-independent. It adds no Credential, LLM,
+  Provider, UI, SQLite, network, pricing, or managed-access dependency.
+- Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
+  current-host `python -m pytest -p no:debugging` workaround.
+- V3.0.1 RC1.3 Product Documentation: completed. README records V3.0.1
+  product capabilities and boundaries, and the release notes are recorded at
+  `docs/release/Release_Notes_V3_0_1.md`.
+- V3.0.1 RC1.4 Full-System Release QA: completed (`PASS`) with Release Blockers `0`,
+  Product Critical `0`, Product Medium `0`, and a clean-environment baseline of
+  `414 passed` under CPython 3.10.20. No release fix or directed retest is required.
+- V3.0.1 RC1.5 Claude Final Release Review: completed
+  (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
+- V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
+- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started).
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -29,16 +342,48 @@
   - V3.0 RC1.4 — Full-System Release QA: completed (`PASS`)
   - V3.0 RC1.5 — Claude Final Release Review: completed (`APPROVE WITH NON-BLOCKING NOTES`)
   - V3.0.0 — released
-  - V3.0.1 — Managed AI Access & Credits: planned
+  - V3.0.1 Phase 0.0 — Development Baseline: completed
+  - V3.0.1 Phase 0.1 — Architecture Decision Documentation: completed
+  - V3.0.1 Phase 0 — Architecture & Scope Documentation Gate: completed
+  - V3.0.1 Phase 1 — Credits Domain: completed
+  - V3.0.1 Phase 1.1 — Credits Domain Post-QA Hardening: completed
+  - V3.0.1 Phase 1 Documentation Gate: closed (`PASS`)
+  - V3.0.1 Phase 2 — Managed Access Foundation + SQLite + flat pricing: completed
+  - V3.0.1 Phase 2.1 — Managed Access Post-QA Regression Hardening: completed
+  - V3.0.1 Phase 2 Documentation Gate: closed (`PASS`)
+  - V3.0.1 Phase 3 — Usage Metering + token PricingPolicy: completed
+  - V3.0.1 Phase 3.1 — Pricing Determinism & Migration Hardening: completed
+  - V3.0.1 Phase 3 Documentation Gate: closed (`PASS`)
+  - V3.0.1 Phase 4 — Admin Operations Surface: completed; Final QA `PASS FOR PHASE 4`
+  - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed
+  - V3.0.1 Phase 4 Documentation Gate: closed (`PASS`)
+  - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
+  - V3.0.1 RC1.2 — Repository Hygiene Audit: completed
+    (`PASS WITH CLEANUP RECOMMENDED`)
+  - V3.0.1 RC1.3 — Product Documentation: completed
+  - V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
+  - V3.0.1 RC1.5 — Claude Final Release Review: completed
+    (`APPROVE WITH NON-BLOCKING NOTES`)
+  - V3.0.1 Final Release Gate: completed (`PASS`)
+  - V3.0.1 — Managed AI Access & Credits: released / stable
+  - V3.0.2 — Commercial infrastructure enhancement track: deferred / optional
   - V3.1 — Project Intelligence / RAG: planned
-  - V3.2 — Multi-Agent: planned
-  - V3.3 — Data-driven Model Router: planned
-  - V3.4 — VS Code Integration + Secure Credential UI: planned
-- Version: `3.0.0`
+  - V3.2 — Controlled Multi-Agent Collaboration: planned
+  - V3.3 — Data-driven Multi-Model Router: planned
+  - V3.4 — VS Code Integration: planned
+- Released product version: `3.0.1`
 - V3.0.0 Final Release Gate: `PASS`
-- Release Blockers: `0`
-- Medium: `0`
-- Test baseline: `129 passed`
+- V3.0.1 Release Blockers: `0`
+- V3.0.1 Product Critical / Product Medium: `0 / 0`
+- V3.0.0 released test baseline: `129 passed`
+- V3.0.1 final test baseline: `414 passed`
+- Current V3.0.1 Admin Operations tests: `71 passed`
+- Current V3.0.1 Managed Access tests: `44 passed`
+- Current V3.0.1 Phase 3 Usage/Pricing, token-flow, and hardening tests: `75 passed`
+- Current V3.0.1 SQLite ledger tests: `29 passed`
+- Current V3.0.1 Credits tests: `66 passed`
+- Current V3.0.1 BYOK Provider tests: `19 passed`
+- Current offline LLM-contract smoke: `6 passed`
 - Phase 3.1 QA: `PASS` (Critical 0, Medium 0, Low observations 8; 12 independent probes passed)
 - Phase 3.2: `Completed`
 - Phase 3.2.1 hardening: `Completed`
@@ -81,7 +426,7 @@
 - Phase 4.1 Documentation Gate: `CLOSED`
 - BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
   Credential/Provider-free at their respective persistence and domain boundaries
-- Release metadata source: `code_maintenance.__version__ = "3.0.0"`
+- Release metadata source: `code_maintenance.__version__ = "3.0.1"`
 - Python support: minimum and recommended `3.10`; CI validates Python 3.10
 - RC1.1 clean install: `PASS` in a repository-external Python 3.13.7 virtual
   environment; install, import, startup, dependency, and 129-test gates passed
@@ -120,7 +465,7 @@
   pytest debugging-plugin issue; `python -m pytest -p no:debugging` passes all 129 tests
 - Standard-environment evidence: RC1.4 records `python -m pytest` with `129 passed`
   under standard CPython / clean venv; the host-specific issue is not a release blocker
-- Next development version: V3.0.1 — Managed AI Access & Credits (`PLANNED`)
+- Current version: V3.0.1 — Managed AI Access & Credits (`RELEASED`; stable)
 
 ## Planned Version Roadmap
 
@@ -131,23 +476,33 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **PLANNED**. This is not part of V3.0.0, and no implementation module is
-authorized by this roadmap entry.
+Status: **RELEASED / STABLE**. Core Feature Freeze is completed and the Final Release
+Gate passed.
+Phase 1 — Credits Domain, Phase 2 — Managed Access Foundation + SQLite + flat
+pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
+3.1 hardening, Phase 4 — Admin Operations Surface, and Phase 4.1 Admin Identity &
+Persistence Hardening are completed. The Phase 2
+Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
+`PASS WITH ISSUES`, Phase 3.1 resolved M1, the directed retest returned `PASS`, and the Phase
+3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Initial QA
+returned `PASS WITH ISSUES`; Phase 4.1 resolved M-1, the directed retest returned
+`PASS`, and the Phase 4 Documentation Gate is closed with Final QA
+`PASS FOR PHASE 4`. RC1.5 approved the release with non-blocking notes and Release
+Blockers `0`.
 
-V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
-API configuration to use platform-managed AI access. Planned capabilities are:
+V3.0.1 preserves BYOK while optionally allowing users without their own API
+configuration to use platform-managed AI access. Released capabilities are:
 
 - BYOK mode remains available;
 - optional platform-managed AI access;
 - `CreditAccount` and `CreditLedger` concepts;
 - administrative credit grants;
 - usage metering;
-- a `PricingPolicy` abstraction;
-- a reserved recharge/payment interface.
+- a `PricingPolicy` abstraction.
 
-The first implementation stage should support only `ADMIN_GRANT` and `USAGE`.
-`PURCHASE` and payment-provider integration remain interface reservations rather than
-mandatory first-stage integrations.
+Phase 1 supports `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`. `PURCHASE` and
+payment-provider integration remain outside Phase 1 and are interface reservations
+rather than mandatory V3.0.1 integrations.
 
 The platform Provider credential must never be delivered to a client or written into
 a plugin, frontend, ordinary configuration file, or client package. Managed mode must
@@ -157,10 +512,11 @@ use this server-side boundary:
 
 ### Later Planned Versions
 
+- V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
 - V3.1 — Project Intelligence / RAG: **PLANNED**
-- V3.2 — Multi-Agent: **PLANNED**
-- V3.3 — Data-driven Model Router: **PLANNED**
-- V3.4 — VS Code Integration + Secure Credential UI: **PLANNED**
+- V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
+- V3.3 — Data-driven Multi-Model Router: **PLANNED**
+- V3.4 — VS Code Integration: **PLANNED**
 
 ## Current Architecture
 
@@ -319,6 +675,25 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   malformed metadata instead of raw `KeyError` (L5).
 - Phase 4.1 QA note N1 remains deferred: `get_models_for_provider()` reads the custom
   model name without acquiring the active-state lock.
+- Phase 2 persistence and locking are single-process foundations, not distributed
+  coordination. A stranded `RESERVED` request and `FINALIZATION_FAILED` request require
+  reconciliation; Phase 2 intentionally provides no automatic retry or admin recovery
+  workflow. The original Provider response is not persisted, so successful replay
+  returns metadata only. Payment, Admin UI, and a production HTTP backend remain
+  unimplemented.
+- Phase 2 QA Low L2 remains deferred: a BYOK context with `account_id=""` continues to
+  fail closed with the existing credit-domain exception type rather than a normalized
+  Managed Access exception.
+- Phase 2 QA Low L3 remains deferred: no
+  `managed_requests(account_id, status)` performance index is added until managed
+  request volume justifies it.
+- Phase 2 QA Low L4 remains deferred with the Phase 1 integer-upper-bound observation:
+  `FlatPricingPolicy` accepts any positive Python integer and has no artificial maximum.
+- Phase 2 mutation-review coverage note remains deferred: the existing defensive
+  `rowcount` guards for the `SUCCEEDED` update in `_finalize_success()` and the `FAILED`
+  update in `_mark_provider_failed()` do not have direct mutation-targeted regressions.
+  Their defensive branches are unreachable through the normal state machine and this
+  is a Low coverage observation, not a product defect.
 
 ## Frozen Decisions
 
@@ -351,6 +726,113 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - A future Router uses only providers already configured by the user.
 - No secure credential store exists in Phase 4.1; the V3.4 IDE stage provides the
   secure credential-configuration UI.
+
+### V3.0.1 Managed AI Access & Credits
+
+- The access modes are `BYOK` and `MANAGED`. The frozen minimum contract for a future
+  `LLMAccessContext` contains `mode: LLMAccessMode`, `model_config: ModelConfig`,
+  `account_id`, and `request_id`. `account_id` and `request_id` are optional for BYOK
+  and required for MANAGED. The context never owns a client, Provider,
+  `TaskScopedLLMProvider`, `RuntimeCredential`, or any credential.
+- The V3.0 BYOK architecture remains unchanged and independent of Credits: BYOK does
+  not check or deduct Credits.
+- Managed mode uses a process-local, backend-facing `ManagedAccessService`; V3.0.1 does
+  not establish a production HTTP backend. The platform credential remains server-side
+  and must not enter UI state, workspace data, ordinary configuration, credit records,
+  logs, or `LLMAccessContext`.
+- A Managed client or UI caller must never receive the platform `RuntimeCredential`,
+  platform `TaskScopedLLMProvider`, raw Provider client, or platform API key. A future
+  `ManagedAccessService` may return only safe results and safe usage/accounting metadata.
+- `credits/` and `managed_access/` are new top-level peers of `code_maintenance/`.
+  `managed_access/` may depend on `credits/` and existing Provider infrastructure.
+  Reverse dependencies into `credits/`, dependencies from `code_maintenance/` to either
+  new package, and Provider-infrastructure dependencies on `credits/` are prohibited.
+- The credit ledger is append-only and authoritative. Phase 1 derives balance from the
+  transaction sum, uses integer Credit units, and uses `Decimal` rather than `float` for
+  real monetary values or costs.
+- Every transaction amount is a nonzero integer: `ADMIN_GRANT > 0`, `USAGE < 0`,
+  `REFUND > 0`, and `ADJUSTMENT` may be positive or negative but not zero.
+- Phase 1 transaction types are `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`;
+  `PURCHASE` is excluded. User identity is only an opaque `account_id: str`.
+- Phase 1 implements immutable `CreditAccount` and `CreditTransaction` values, the
+  minimal `CreditLedger` protocol, and a thread-safe `InMemoryCreditLedger`.
+- Charge and refund operations are idempotent within their operation type by
+  `(account_id, request_id)`; conflicting retries fail without mutating history or the
+  idempotency index. Grants and safe adjustments append new audit records.
+- `grant()`, `refund()`, and `adjust()` are privileged domain operations available only
+  to trusted server-side or admin-side orchestration. They must not be exposed directly
+  to a client, Gradio UI, Managed caller, or ordinary user-facing API; Phase 2
+  `ManagedAccessService` must not expose these methods or a ledger object.
+- Phase 1 `refund()` is a low-level positive accounting primitive. Its `request_id`
+  identifies the refund operation rather than an original `USAGE`, and Phase 1 does
+  not reconcile usage. Any Phase 2 user-facing or Managed refund must first identify
+  the original `USAGE`, authorize the refund, and prevent repeated refund against the
+  same authorized usage before internally calling `CreditLedger.refund()`.
+- Idempotency lookup identity is `(operation_type, normalized account_id, normalized
+  request_id)` for `USAGE` and `REFUND`, which have independent namespaces. A valid
+  replay must preserve amount and exact note and returns the original transaction;
+  changed amount or note raises `IdempotencyConflictError`. Note is a payload
+  consistency field, not a lookup key, and Phase 2 retries must preserve it.
+- The in-memory ledger uses an `RLock` so idempotency checks, balance prechecks, and
+  appends share one critical section. All rejected operations preserve balance,
+  history, and idempotency state.
+- A `USAGE` charge is idempotent by `(account_id, request_id)`. The Phase 2 charging
+  contract is per-account guarded charge-after-success: precheck balance, invoke the
+  Provider, and charge only after success; Provider failure is not charged.
+- Phase 1 uses the minimal `CreditLedger` Protocol and in-memory implementation and defines no
+  `PricingPolicy`, flat pricing, token pricing, or cost conversion. It remains completely
+  offline and must not import or call LLM or Provider infrastructure. Phase 2 adds
+  standard-library SQLite and flat pricing. Phase 3 adds Provider/model/token-based
+  `PricingPolicy` and freezes `Decimal` cost-to-integer-Credits conversion with
+  `ROUND_CEILING`.
+  No ORM, distributed database, distributed transaction, or hard-coded commercial
+  exchange ratio is authorized.
+- Phase 2 SQLite must atomically commit the ledger transaction append and idempotency
+  record in one SQLite transaction. Partial commit in either direction is prohibited,
+  and Phase 2 QA must verify all-or-nothing behavior with failure injection.
+- Phase 2 entry requirements are implemented: Managed clients cannot access `grant`,
+  `refund`, or `adjust`; no user-facing refund is exposed; SQLite transaction append
+  and idempotency-record write are atomic; and retries preserve the complete
+  idempotency payload contract. Failure injection covers rollback on both sides of the
+  transaction/idempotency boundary.
+- Phase 4 adds the trusted server-side `AdminCreditService` as the only administrative
+  Credits entrypoint in this phase. It exposes `grant`, `adjust`, `balance`, and
+  immutable Credit `history`, but no public refund and no ledger object. Admin identity
+  is `(normalized actor_id, normalized operation_id)` and the complete business payload
+  is conflict-checked on replay.
+- Phase 4.1 freezes the Admin identity boundary to exact built-in strings before
+  normalization and persistence. It also rejects amounts outside SQLite's signed
+  64-bit INTEGER range before opening an Admin write and formally verifies that the
+  service connection enforces the Admin audit foreign key.
+- The Phase 4 `admin_credit_operations` audit row and corresponding Credit transaction
+  commit atomically in one SQLite transaction. `BEGIN IMMEDIATE` serializes independent
+  service connections so same-operation concurrency mutates exactly once and different
+  operations retain balance safety. The admin schema migrates and reopens idempotently
+  without changing existing ledger, Managed request, or usage data.
+- The frozen V3.0.1 sequence is Phase 0 Architecture & Scope; Phase 1 Credits Domain and
+  domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
+  Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
+  Payment Interface Reservation; then RC. Phases 1 through 4.1 and the Phase 4
+  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC1.1
+  through RC1.5 and the Final Release Gate are completed, and V3.0.1 is released.
+- The timeout case where a Provider succeeded but the caller observed a timeout remains
+  an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
+- Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
+  the Phase 2 reservation state machine, SQLite all-or-nothing atomicity,
+  Managed request idempotency and payload identity, the server-side Credential
+  boundary, and BYOK isolation from Credits and Managed Access.
+- V3.0.1 is an engineering-completeness enhancement. After the
+  `ADMIN_GRANT -> Managed AI -> USAGE -> Ledger` loop is complete, thesis priority moves
+  to V3.1 RAG and V3.2 Multi-Agent rather than commercial expansion.
+
+### V3.0.1 Report Naming Policy
+
+- Starting with V3.0.1, new Development and QA report filenames must include the
+  version, for example `Development_Report_V3_0_1_Phase_1.md` and
+  `QA_Report_V3_0_1_Phase_1.md`.
+- Do not create unversioned V3.0.1 report names such as
+  `Development_Report_Phase_1.md` or `QA_Report_Phase_1.md`; this avoids collisions
+  with V3.0 historical phases.
 
 ## Collaboration
 
