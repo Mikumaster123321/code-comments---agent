@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `V3.0.1 RC1.3 Product Documentation Completed`
+- Status: `V3.0.1 RC1.4 Full-System Release QA Completed`
 - V3.0.1 Core Feature Freeze: `ACTIVE`
 - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
 - V3.0.1 RC1.1 Release Blockers: `0`
@@ -20,7 +20,14 @@
 - Product Documentation: `UPDATED`
 - README: `V3.0.1 RC1`
 - Release Notes: `docs/release/Release_Notes_V3_0_1.md`
-- Next: V3.0.1 RC1.4 — Full-System Release QA
+- V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
+- V3.0.1 RC1.4 Release Blockers: `0`
+- V3.0.1 RC1.4 Product Critical / Product Medium: `0 / 0`
+- V3.0.1 RC1.4 clean-environment baseline: `414 passed` under CPython 3.10.20
+- V3.0.1 RC1.4 QA artifact:
+  `docs/qa/QA_Report_V3_0_1_RC1_4_Full_System_Release.md`
+- No release fix or directed retest is required.
+- Next: V3.0.1 RC1.5 — Final Release Review
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -296,7 +303,10 @@
 - V3.0.1 RC1.3 Product Documentation: completed. README records V3.0.1 RC1
   product capabilities and boundaries, and the RC1 release notes are recorded at
   `docs/release/Release_Notes_V3_0_1.md`.
-- Next: V3.0.1 RC1.4 — Full-System Release QA. RC1.4 has not started.
+- V3.0.1 RC1.4 Full-System Release QA: completed (`PASS`) with Release Blockers `0`,
+  Product Critical `0`, Product Medium `0`, and a clean-environment baseline of
+  `414 passed` under CPython 3.10.20. No release fix or directed retest is required.
+- Next: V3.0.1 RC1.5 — Final Release Review.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -338,7 +348,8 @@
   - V3.0.1 RC1.2 — Repository Hygiene Audit: completed
     (`PASS WITH CLEANUP RECOMMENDED`)
   - V3.0.1 RC1.3 — Product Documentation: completed
-  - V3.0.1 RC1.4 — Full-System Release QA: next; not started
+  - V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
+  - V3.0.1 RC1.5 — Final Release Review: next; not started
   - V3.0.1 — Managed AI Access & Credits: release candidate; not released
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
