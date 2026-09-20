@@ -1,6 +1,7 @@
 # V3.0.1 Release Notes
 
-**Status:** Release Candidate 1  
+**Status:** Release Candidate 1
+
 **Version:** `3.0.1-rc1`
 
 V3.0.1 RC1 is a release candidate, not a final or stable release.
