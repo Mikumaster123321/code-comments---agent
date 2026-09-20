@@ -11,7 +11,13 @@
 - V3.1.0: `DEVELOPMENT STARTED`
 - V3.1.0 theme: Project Intelligence / RAG
 - V3.1.0 Phase 0.0 — Development Baseline Gate: `COMPLETED`
-- V3.1.0 Phase 0 — Architecture & Research Review: `NOT STARTED`
+- V3.1.0 Phase 0 — Architecture & Research Design: `COMPLETED`
+- V3.1.0 Architecture: `FROZEN`
+- V3.1.0 Research Methodology: `FROZEN`
+- V3.1.0 Phase 0 Documentation Gate: `CLOSED`
+- V3.1.0 Phase 0 Blocking Issues: `0`
+- V3.1.0 Core Research Questions: RQ1–RQ4
+- V3.1.0 Phase 1 — Corpus & Symbol Content Model: `NOT STARTED`
 - V3.1.0 branch base / synchronized `main`: `381708bb5cd57f9c15a8755416434ede5a337824`
 - V3.1.0 baseline: `414 passed`; offline LLM-contract smoke: `6 passed`
 - Released version metadata remains `3.0.1` until later RC Release Engineering.
@@ -45,7 +51,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 0 Architecture & Research Review
+- Next: V3.1.0 Phase 1 — Corpus & Symbol Content Model
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -331,7 +337,7 @@
 - V3.0.1 RC1.5 Claude Final Release Review: completed
   (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
 - V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
-- Next: V3.1.0 Phase 0 Architecture & Research Review (`NOT STARTED`).
+- Next: V3.1.0 Phase 1 — Corpus & Symbol Content Model (`NOT STARTED`).
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -525,8 +531,8 @@ use this server-side boundary:
 ### Later Planned Versions
 
 - V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
-- V3.1.0 — Project Intelligence / RAG: **DEVELOPMENT STARTED**; Phase 0.0 Development
-  Baseline Gate completed; Phase 0 Architecture & Research Review not started
+- V3.1.0 — Project Intelligence / RAG: **DEVELOPMENT STARTED**; Phase 0 Architecture
+  and Research Methodology frozen; Documentation Gate closed; Phase 1 not started
 - V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
 - V3.3 — Data-driven Multi-Model Router: **PLANNED**
 - V3.4 — VS Code Integration: **PLANNED**
@@ -770,6 +776,99 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 - The tracked V3.0.0 report is a Documentation Backlog item. The tracked V3.0.1 report
   is also pending; a pre-existing untracked local candidate must be handled only by a
   separate Documentation Task.
+
+### V3.1.0 Frozen Architecture and Research Methodology
+
+- V3.1.0 is a Project Intelligence / Retrieval-Augmented Context Layer for software
+  maintenance, not a generic chatbot, document-QA demo, embedding wrapper, or Agent
+  runtime.
+- Core research questions are frozen as RQ1 File/Symbol/Chunk retrieval units, RQ2
+  lexical versus semantic retrieval, RQ3 `CONTAINS`/`IMPORTS` graph contribution, and
+  RQ4 Lexical + Embedding + Graph hybrid retrieval and signal ablation.
+- The primary retrieval unit is Symbol and must reuse `code_maintenance.SymbolId`.
+  File is secondary; Chunk is fallback only for oversized symbols,
+  unsupported/no-symbol files, and documentation. Fixed-token chunking is not the
+  default code unit.
+- `ProjectSnapshot` remains a state/identity boundary and does not store source text.
+  A separate Corpus Builder reads source through the project root and existing
+  adapters, constructs future `RetrievalDocument` values, and must compare actual
+  content hashes with snapshot-recorded hashes. Stale or missing content fails closed
+  or requests a rebuild.
+- BM25-style lexical retrieval is the deterministic, offline, explainable formal
+  baseline and should prefer a standard-library implementation with no new retrieval
+  dependency.
+- Embeddings use an independent future `EmbeddingProvider` Protocol rather than
+  `LLMProvider` or `TaskScopedLLMProvider`. Deterministic fake embeddings are permitted
+  only for offline architecture/regression tests. Formal semantic RQ2/RQ4 experiments
+  require a fixed real semantic model selected by a separate Phase 3 review, with
+  version, dimension, normalization, license, feasibility, cost, and fingerprint
+  recorded. Remote source-code embedding is never silently enabled.
+- FAISS, Chroma, and a dedicated Vector DB are not required in V3.1. Exact similarity
+  search with in-memory or lightweight local persistence is preferred. A future scale
+  justification requires a new Architecture Review.
+- Future `RetrievalIndexIdentity` includes project ID, snapshot content hash,
+  retrieval-config hash, and optional embedding fingerprint. Any identity change
+  invalidates silent reuse.
+- `SnapshotDiff` maps added/add, removed/delete, changed/replace, and unchanged/reuse.
+  Incremental results must equal a full rebuild. Incremental indexing is a secondary
+  engineering performance experiment, not a core RQ.
+- Graph-aware retrieval reads only frozen `CONTAINS` and `IMPORTS` relations. Expansion
+  has hop, relation, per-seed, and global node budgets; unbounded traversal is
+  prohibited. `max_hops = 1` is an implementation candidate, not a frozen numeric
+  default.
+- Weighted score fusion is the primary hybrid strategy for explainability and
+  ablation. RRF is an optional comparison. Learned, LLM, and cross-encoder rerankers
+  are deferred.
+- Retrieval is separate from `ContextBuilder`, which owns deduplication, ordering,
+  bounded graph context, snippets, and model-agnostic budget truncation. It does not
+  own prompt templates, few-shot examples, or Agent planning.
+- Future V3.2 code consumes `RetrievalService` and `ContextPackage`, not index,
+  lexical, embedding, or graph internals. V3.2 and V3.3 remain not started.
+- The future top-level production package is `project_intelligence/`. Allowed
+  dependency direction is `project_intelligence -> code_maintenance`; the reverse is
+  prohibited, and Project Intelligence does not strongly depend on Credits, Managed
+  Access, or Admin Operations. Phase 0 creates no production package.
+- `AnalysisEngine` remains deterministic analysis. `AnalysisFinding` may be retrieval
+  metadata, but RAG does not control the engine lifecycle.
+- Core tests remain offline with fake embeddings, fixture projects, fixed queries, and
+  fixed ground truth. No real API, Credential, network embedding, or network LLM is
+  used in regression tests.
+- The primary benchmark combines this repository with manually constructed fixtures;
+  an external open-source project is optional generalization evidence. Python is the
+  main experiment language and Java is coverage validation.
+- Benchmark queries cover symbol lookup, feature localization, dependency questions,
+  bug localization, maintenance tasks, and cross-file understanding. Human annotation
+  is primary ground truth; evaluated retrievers cannot generate their own truth.
+- Primary metrics are Recall@K and MRR. Secondary metrics are nDCG@K, Precision@K, and
+  Hit Rate@K. All strategies use the same dataset, query set, ground truth, `top_k`,
+  and metric definitions.
+- Core ablation is capped at Lexical only, Embedding only, Hybrid without Graph,
+  Hybrid with Graph, and a Graph-focused variant. Deterministic retrieval is not
+  repeated for meaningless variance statistics.
+- Reproducibility records dataset/query/truth/config versions and hashes, embedding
+  fingerprint, applicable seed, index identity, code commit, and output. Raw outputs,
+  summaries, and paper-ready figures remain distinct; large indexes and caches are not
+  committed.
+- Engineering performance records full build time, incremental update time, query
+  latency, index size, and context size with environment and dataset scope.
+- Failure behavior is stale content -> reject/rebuild, embedding failure -> lexical
+  fallback, corrupt index -> rebuild, missing source -> fail closed, and snapshot
+  mismatch -> reject/rebuild. V3.1 does not create a complex retry framework.
+- Frozen phase plan: Phase 0 Architecture & Research Design; Phase 1 Corpus & Symbol
+  Content Model; Phase 2 Lexical BM25; Phase 3 Embedding Port & Semantic Retrieval;
+  Phase 4 Graph-aware Retrieval + Index Identity + Incremental Indexing; Phase 5
+  Hybrid Retrieval + Context Builder + RetrievalService; Phase 6 Evaluation Benchmark
+  + Ablation + Reproducible Results; then RC.
+- V3.1 explicitly defers Multi-Agent runtime/planner/memory/collaboration, Router/model
+  routing, VS Code integration, LLM/cross-encoder reranking, autonomous patch and
+  test-pass loops, required Vector DB infrastructure, Payment, Recharge, Admin UI,
+  Auth/RBAC, and a production SaaS backend.
+- V3.1 thesis contribution is the systematic maintenance-oriented integration and
+  evaluation of stable symbol identity, project structure, hybrid retrieval, and
+  context construction. It does not claim a new BM25, embedding, or graph algorithm.
+- V3.1.0 Phase 0 Architecture and Research Methodology are frozen with no blocker. The
+  Documentation Gate is closed. Phase 1 is allowed as a separate task and remains not
+  started.
 
 ### Phase 3.3 Graph Identity Contract
 
