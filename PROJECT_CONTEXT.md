@@ -8,12 +8,15 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `V3.0.1 RC1 Started; RC1.1 Release Engineering Gate Completed (PASS)`
+- Status: `V3.0.1 RC1.2 Repository Hygiene Audit Completed (PASS WITH CLEANUP RECOMMENDED)`
 - V3.0.1 Core Feature Freeze: `ACTIVE`
 - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
 - V3.0.1 RC1.1 Release Blockers: `0`
+- V3.0.1 RC1.2 — Repository Hygiene Audit: completed
+  (`PASS WITH CLEANUP RECOMMENDED`)
+- V3.0.1 RC1.2 Release Blockers: `0`
 - Current V3.0.1 RC baseline: `414 passed`
-- Next: V3.0.1 RC1.2 — Repository Hygiene Audit
+- Next: V3.0.1 RC1.3 — Product Documentation
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -265,6 +268,15 @@
   possible future enhancement. Optional Phase 5 Payment Interface Reservation is
   `SKIPPED FOR V3.0.1`; Payment, recharge, and `PURCHASE` remain unimplemented and may
   be reconsidered for V3.0.2 or a future commercial enhancement.
+- V3.0.1 RC1.2 Repository Hygiene Audit: `PASS WITH CLEANUP RECOMMENDED` with
+  Release Blockers `0`; no tracked generated artifact, secret, local-path leak, empty
+  file, byte-duplicate file, dead source module, or DELETE/MOVE candidate was found.
+  Top-level `credits/`, `managed_access/`, and `admin_operations/` placement and all
+  frozen dependency boundaries remain valid. Seven unused import bindings are a
+  non-blocking P1 cleanup recommendation; canonical helper duplication, large source
+  and test files, and continued `PROJECT_CONTEXT.md` growth remain P2 maintenance.
+  No cleanup, README, Release Notes, business-code, test, package, tag, or push action
+  was performed by the audit.
 - V3.0.1 Phase 1 provides immutable `CreditAccount` and `CreditTransaction` domain
   objects, the minimal `CreditLedger` protocol, and a thread-safe
   `InMemoryCreditLedger`.
@@ -277,7 +289,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 RC1.2 — Repository Hygiene Audit. RC1.1 is completed.
+- Next: V3.0.1 RC1.3 — Product Documentation. RC1.2 is completed.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -316,6 +328,8 @@
   - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed
   - V3.0.1 Phase 4 Documentation Gate: closed (`PASS`)
   - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
+  - V3.0.1 RC1.2 — Repository Hygiene Audit: completed
+    (`PASS WITH CLEANUP RECOMMENDED`)
   - V3.0.1 — Managed AI Access & Credits: release candidate; not released
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
@@ -762,7 +776,7 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
   Payment Interface Reservation; then RC. Phases 1 through 4.1 and the Phase 4
   Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC1 has
-  started, RC1.1 is completed, and RC1.2 Repository Hygiene Audit is next.
+  started, RC1.1 and RC1.2 are completed, and RC1.3 Product Documentation is next.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
