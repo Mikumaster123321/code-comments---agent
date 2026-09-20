@@ -1,8 +1,8 @@
 # Code Comments Agent
 
-**当前版本：V3.0.1 RC1（`3.0.1-rc1`）— Release Candidate**
+**当前版本：V3.0.1（`3.0.1`）— Stable Release**
 
-Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.1 在 V3 项目级维护核心上增加可选的 Managed AI Access 与 Credits 基础设施，同时完整保留 BYOK。当前版本是候选发布版，不是 Stable Release 或 Final Release。
+Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.1 在 V3 项目级维护核心上增加可选的 Managed AI Access 与 Credits 基础设施，同时完整保留 BYOK。当前版本是正式稳定版。
 
 ## Available Features
 
@@ -143,7 +143,7 @@ python main.py
 
 ## Testing
 
-当前 V3.0.1 RC1 基线：**414 passed**。
+当前 V3.0.1 Stable Release 基线：**414 passed**。
 
 ```bash
 python -m pytest
@@ -190,8 +190,8 @@ code-comments---agent/
 
 ## Roadmap / Planned
 
-- **V3.0.1 — Managed AI Access & Credits**：Current RC
-- **V3.0.2 — Commercial infrastructure enhancement track**：Admin UI、Payment interface、Recharge、Auth / RBAC 均仅为 Planned，且该路线可延后
+- **V3.0.1 — Managed AI Access & Credits**：Released / Stable Release
+- **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
 - **V3.1 — Project Intelligence / RAG**：Planned，论文主线优先
 - **V3.2 — Controlled Multi-Agent Collaboration**：Planned，论文主线优先
 - **V3.3 — Data-driven Multi-Model Router**：Planned
@@ -199,11 +199,11 @@ code-comments---agent/
 
 ## Version History
 
-从 V3 开始，README 为每个正式版本及当前 RC 保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
 
-### V3.0.1 RC1
+### V3.0.1
 
-**Managed AI Access & Credits — Release Candidate（`3.0.1-rc1`）**
+**Managed AI Access & Credits — Released / Stable Release（`3.0.1`）**
 
 Phase Summary：
 

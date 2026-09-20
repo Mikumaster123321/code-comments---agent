@@ -6,19 +6,21 @@
 
 ## Current State
 
-- Current Development Version: `V3.0.1`
+- Current Version: `3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `V3.0.1 RC1.4 Full-System Release QA Completed`
-- V3.0.1 Core Feature Freeze: `ACTIVE`
+- V3.0.1: `RELEASED`
+- Status: `V3.0.1 Final / Stable Release`
+- V3.0.1 Final Release Gate: `PASS`
+- V3.0.1 Core Feature Freeze: `COMPLETED`
 - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
 - V3.0.1 RC1.1 Release Blockers: `0`
 - V3.0.1 RC1.2 — Repository Hygiene Audit: completed
   (`PASS WITH CLEANUP RECOMMENDED`)
 - V3.0.1 RC1.2 Release Blockers: `0`
-- Current V3.0.1 RC baseline: `414 passed`
+- V3.0.1 Final baseline: `414 passed`
 - V3.0.1 RC1.3 — Product Documentation: completed
 - Product Documentation: `UPDATED`
-- README: `V3.0.1 RC1`
+- README: `V3.0.1 Stable Release`
 - Release Notes: `docs/release/Release_Notes_V3_0_1.md`
 - V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
 - V3.0.1 RC1.4 Release Blockers: `0`
@@ -26,8 +28,16 @@
 - V3.0.1 RC1.4 clean-environment baseline: `414 passed` under CPython 3.10.20
 - V3.0.1 RC1.4 QA artifact:
   `docs/qa/QA_Report_V3_0_1_RC1_4_Full_System_Release.md`
+- V3.0.1 RC1.5 — Claude Final Release Review: completed
+  (`APPROVE WITH NON-BLOCKING NOTES`)
+- V3.0.1 RC1.5 Release Blockers: `0`
+- V3.0.1 Final Release Blockers: `0`
+- V3.0.1 Product Critical / Product Medium: `0 / 0`
+- Admin UI: `SKIPPED FOR V3.0.1`
+- Phase 5: `SKIPPED FOR V3.0.1`
+- V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.0.1 RC1.5 — Final Release Review
+- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started)
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -300,13 +310,16 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- V3.0.1 RC1.3 Product Documentation: completed. README records V3.0.1 RC1
-  product capabilities and boundaries, and the RC1 release notes are recorded at
+- V3.0.1 RC1.3 Product Documentation: completed. README records V3.0.1
+  product capabilities and boundaries, and the release notes are recorded at
   `docs/release/Release_Notes_V3_0_1.md`.
 - V3.0.1 RC1.4 Full-System Release QA: completed (`PASS`) with Release Blockers `0`,
   Product Critical `0`, Product Medium `0`, and a clean-environment baseline of
   `414 passed` under CPython 3.10.20. No release fix or directed retest is required.
-- Next: V3.0.1 RC1.5 — Final Release Review.
+- V3.0.1 RC1.5 Claude Final Release Review: completed
+  (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
+- V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
+- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started).
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -349,18 +362,21 @@
     (`PASS WITH CLEANUP RECOMMENDED`)
   - V3.0.1 RC1.3 — Product Documentation: completed
   - V3.0.1 RC1.4 — Full-System Release QA: completed (`PASS`)
-  - V3.0.1 RC1.5 — Final Release Review: next; not started
-  - V3.0.1 — Managed AI Access & Credits: release candidate; not released
+  - V3.0.1 RC1.5 — Claude Final Release Review: completed
+    (`APPROVE WITH NON-BLOCKING NOTES`)
+  - V3.0.1 Final Release Gate: completed (`PASS`)
+  - V3.0.1 — Managed AI Access & Credits: released / stable
+  - V3.0.2 — Commercial infrastructure enhancement track: deferred / optional
   - V3.1 — Project Intelligence / RAG: planned
-  - V3.2 — Multi-Agent: planned
-  - V3.3 — Data-driven Model Router: planned
-  - V3.4 — VS Code Integration + Secure Credential UI: planned
-- Released product version: `3.0.0`
+  - V3.2 — Controlled Multi-Agent Collaboration: planned
+  - V3.3 — Data-driven Multi-Model Router: planned
+  - V3.4 — VS Code Integration: planned
+- Released product version: `3.0.1`
 - V3.0.0 Final Release Gate: `PASS`
-- Release Blockers: `0`
-- Medium: `0`
+- V3.0.1 Release Blockers: `0`
+- V3.0.1 Product Critical / Product Medium: `0 / 0`
 - V3.0.0 released test baseline: `129 passed`
-- Current V3.0.1 development test baseline: `414 passed`
+- V3.0.1 final test baseline: `414 passed`
 - Current V3.0.1 Admin Operations tests: `71 passed`
 - Current V3.0.1 Managed Access tests: `44 passed`
 - Current V3.0.1 Phase 3 Usage/Pricing, token-flow, and hardening tests: `75 passed`
@@ -410,7 +426,7 @@
 - Phase 4.1 Documentation Gate: `CLOSED`
 - BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
   Credential/Provider-free at their respective persistence and domain boundaries
-- Release metadata source: `code_maintenance.__version__ = "3.0.1-rc1"`
+- Release metadata source: `code_maintenance.__version__ = "3.0.1"`
 - Python support: minimum and recommended `3.10`; CI validates Python 3.10
 - RC1.1 clean install: `PASS` in a repository-external Python 3.13.7 virtual
   environment; install, import, startup, dependency, and 129-test gates passed
@@ -449,7 +465,7 @@
   pytest debugging-plugin issue; `python -m pytest -p no:debugging` passes all 129 tests
 - Standard-environment evidence: RC1.4 records `python -m pytest` with `129 passed`
   under standard CPython / clean venv; the host-specific issue is not a release blocker
-- Current development version: V3.0.1 — Managed AI Access & Credits (`RELEASE CANDIDATE`; not released)
+- Current version: V3.0.1 — Managed AI Access & Credits (`RELEASED`; stable)
 
 ## Planned Version Roadmap
 
@@ -460,7 +476,8 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **RELEASE CANDIDATE**. Core Feature Freeze is active and RC1.1 passed.
+Status: **RELEASED / STABLE**. Core Feature Freeze is completed and the Final Release
+Gate passed.
 Phase 1 — Credits Domain, Phase 2 — Managed Access Foundation + SQLite + flat
 pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
 3.1 hardening, Phase 4 — Admin Operations Surface, and Phase 4.1 Admin Identity &
@@ -470,18 +487,18 @@ Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
 3 Documentation Gate is closed with Final QA `PASS FOR PHASE 3`. Phase 4 Initial QA
 returned `PASS WITH ISSUES`; Phase 4.1 resolved M-1, the directed retest returned
 `PASS`, and the Phase 4 Documentation Gate is closed with Final QA
-`PASS FOR PHASE 4`. V3.0.1 is not part of the V3.0.0 release.
+`PASS FOR PHASE 4`. RC1.5 approved the release with non-blocking notes and Release
+Blockers `0`.
 
-V3.0.1 is intended to preserve BYOK while optionally allowing users without their own
-API configuration to use platform-managed AI access. Planned capabilities are:
+V3.0.1 preserves BYOK while optionally allowing users without their own API
+configuration to use platform-managed AI access. Released capabilities are:
 
 - BYOK mode remains available;
 - optional platform-managed AI access;
 - `CreditAccount` and `CreditLedger` concepts;
 - administrative credit grants;
 - usage metering;
-- a `PricingPolicy` abstraction;
-- a reserved recharge/payment interface.
+- a `PricingPolicy` abstraction.
 
 Phase 1 supports `ADMIN_GRANT`, `USAGE`, `REFUND`, and `ADJUSTMENT`. `PURCHASE` and
 payment-provider integration remain outside Phase 1 and are interface reservations
@@ -495,10 +512,11 @@ use this server-side boundary:
 
 ### Later Planned Versions
 
+- V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
 - V3.1 — Project Intelligence / RAG: **PLANNED**
-- V3.2 — Multi-Agent: **PLANNED**
-- V3.3 — Data-driven Model Router: **PLANNED**
-- V3.4 — VS Code Integration + Secure Credential UI: **PLANNED**
+- V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
+- V3.3 — Data-driven Multi-Model Router: **PLANNED**
+- V3.4 — VS Code Integration: **PLANNED**
 
 ## Current Architecture
 
@@ -795,8 +813,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
   Payment Interface Reservation; then RC. Phases 1 through 4.1 and the Phase 4
-  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC1 has
-  started, RC1.1 and RC1.2 are completed, and RC1.3 Product Documentation is next.
+  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC1.1
+  through RC1.5 and the Final Release Gate are completed, and V3.0.1 is released.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving

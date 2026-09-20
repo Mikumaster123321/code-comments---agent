@@ -1,10 +1,10 @@
 # V3.0.1 Release Notes
 
-**Status:** Release Candidate 1
+**Status:** Final / Stable Release
 
-**Version:** `3.0.1-rc1`
+**Version:** `3.0.1`
 
-V3.0.1 RC1 is a release candidate, not a final or stable release.
+V3.0.1 is the final stable release of Managed AI Access and Credits.
 
 ## Overview
 
@@ -124,6 +124,6 @@ The Admin schema is an additive, idempotent migration. V3.0.1 does not claim sup
 
 ## Roadmap
 
-- V3.0.2 may provide a deferred commercial-infrastructure track for Admin UI, Payment interfaces, Recharge, and Auth / RBAC; all remain Planned.
+- V3.0.2 is a deferred / optional commercial-infrastructure track for Admin UI, Payment interfaces, Recharge, and Auth / RBAC; none are implemented in V3.0.1.
 - V3.1 Project Intelligence / RAG and V3.2 Controlled Multi-Agent Collaboration are the thesis-priority tracks.
 - V3.3 Data-driven Multi-Model Router and V3.4 VS Code Integration remain Planned.
