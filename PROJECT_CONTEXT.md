@@ -8,7 +8,7 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `V3.0.1 RC1.2 Repository Hygiene Audit Completed (PASS WITH CLEANUP RECOMMENDED)`
+- Status: `V3.0.1 RC1.3 Product Documentation Completed`
 - V3.0.1 Core Feature Freeze: `ACTIVE`
 - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
 - V3.0.1 RC1.1 Release Blockers: `0`
@@ -16,7 +16,11 @@
   (`PASS WITH CLEANUP RECOMMENDED`)
 - V3.0.1 RC1.2 Release Blockers: `0`
 - Current V3.0.1 RC baseline: `414 passed`
-- Next: V3.0.1 RC1.3 — Product Documentation
+- V3.0.1 RC1.3 — Product Documentation: completed
+- Product Documentation: `UPDATED`
+- README: `V3.0.1 RC1`
+- Release Notes: `docs/release/Release_Notes_V3_0_1.md`
+- Next: V3.0.1 RC1.4 — Full-System Release QA
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -289,7 +293,10 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 RC1.3 — Product Documentation. RC1.2 is completed.
+- V3.0.1 RC1.3 Product Documentation: completed. README records V3.0.1 RC1
+  product capabilities and boundaries, and the RC1 release notes are recorded at
+  `docs/release/Release_Notes_V3_0_1.md`.
+- Next: V3.0.1 RC1.4 — Full-System Release QA. RC1.4 has not started.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -330,6 +337,8 @@
   - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
   - V3.0.1 RC1.2 — Repository Hygiene Audit: completed
     (`PASS WITH CLEANUP RECOMMENDED`)
+  - V3.0.1 RC1.3 — Product Documentation: completed
+  - V3.0.1 RC1.4 — Full-System Release QA: next; not started
   - V3.0.1 — Managed AI Access & Credits: release candidate; not released
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
