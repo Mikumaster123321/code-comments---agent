@@ -7,7 +7,15 @@
 ## Current State
 
 - Current Version: `3.0.1`
-- Current branch: `v3.0.1-dev`
+- Current branch: `v3.1.0-dev`
+- V3.1.0: `DEVELOPMENT STARTED`
+- V3.1.0 theme: Project Intelligence / RAG
+- V3.1.0 Phase 0.0 — Development Baseline Gate: `COMPLETED`
+- V3.1.0 Phase 0 — Architecture & Research Review: `NOT STARTED`
+- V3.1.0 branch base / synchronized `main`: `381708bb5cd57f9c15a8755416434ede5a337824`
+- V3.1.0 baseline: `414 passed`; offline LLM-contract smoke: `6 passed`
+- Released version metadata remains `3.0.1` until later RC Release Engineering.
+- Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
 - Status: `V3.0.1 Final / Stable Release`
 - V3.0.1 Final Release Gate: `PASS`
@@ -37,7 +45,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started)
+- Next: V3.1.0 Phase 0 Architecture & Research Review
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -50,6 +58,10 @@
 - V3.0.0: released / frozen
 - V3.0.0 tag: annotated tag `v3.0.0` resolves to final release commit
   `2b2b0cb103264f7ac278f35c19a1dc0b02196dc8`
+- V3.0.0 tracked Thesis-Oriented Development Report: missing; Documentation Backlog
+- V3.0.1 tracked Thesis-Oriented Development Report: missing; a pre-existing untracked
+  local candidate is preserved outside the Phase 0.0 commit and requires a separate
+  Documentation Task before it becomes repository evidence
 - Development baseline tests: `129 passed` with the documented current-host
   `python -m pytest -p no:debugging` workaround; ordinary pytest reproduces the known
   Anaconda Python 3.13.5 debugging-plugin / `rlcompleter` segmentation fault
@@ -319,7 +331,7 @@
 - V3.0.1 RC1.5 Claude Final Release Review: completed
   (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
 - V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
-- Next: V3.1 Project Intelligence / RAG (`PLANNED`; not started).
+- Next: V3.1.0 Phase 0 Architecture & Research Review (`NOT STARTED`).
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -513,7 +525,8 @@ use this server-side boundary:
 ### Later Planned Versions
 
 - V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
-- V3.1 — Project Intelligence / RAG: **PLANNED**
+- V3.1.0 — Project Intelligence / RAG: **DEVELOPMENT STARTED**; Phase 0.0 Development
+  Baseline Gate completed; Phase 0 Architecture & Research Review not started
 - V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
 - V3.3 — Data-driven Multi-Model Router: **PLANNED**
 - V3.4 — VS Code Integration: **PLANNED**
@@ -696,6 +709,67 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   is a Low coverage observation, not a product defect.
 
 ## Frozen Decisions
+
+### V3.1.0 Development and Research Baseline
+
+- V3.1.0 develops on `v3.1.0-dev` from synchronized stable `main`. V3.0.1 remains
+  released and frozen; `v3.0.0`, `v3.0.1`, and previous development branches are not
+  moved or automatically deleted.
+- V3.1.0 targets Project Intelligence / RAG: project retrieval, context construction,
+  and project understanding that can provide reliable project context to the future
+  V3.2 Multi-Agent stage.
+- V3.1.0 must support engineering implementation and thesis research: research
+  questions, benchmark/dataset design, ground truth, baselines, quantitative metrics,
+  ablation studies, and reproducible experiments. Architecture must answer both how
+  retrieval works and how its effectiveness will be demonstrated.
+- Phase 0 Architecture & Research Review must assess file-, symbol-, chunk-, and
+  hybrid-level retrieval units; lexical/BM25-like, embedding, graph-aware, hybrid, and
+  reranking strategies; and in-memory, standard-library/local, FAISS-like,
+  Chroma-like, or other storage options. These are candidates, not frozen selections.
+- Candidate metrics include Recall@K, Precision@K, MRR, Hit Rate@K, nDCG@K, context
+  relevance, maintenance-task success, LLM answer correctness, and token/context cost.
+  Metric applicability remains a Phase 0 decision.
+- Phase 0 must decide the embedding provider boundary, local versus remote execution,
+  BYOK/Managed relationship, offline testing, cache behavior, privacy, and
+  determinism. No embedding implementation or dependency is part of Phase 0.0.
+- V3.1 should reuse stable `SymbolId`, `ProjectScanner`, `ProjectGraph`,
+  `ProjectSnapshot`, content hashes, and `SnapshotDiff`. Graph-assisted retrieval may
+  use the frozen `CONTAINS` and `IMPORTS` relations, but any graph relation expansion
+  requires a separate architecture review.
+- `ProjectSnapshot`, content hashes, and `SnapshotDiff` are candidates for index
+  identity, incremental indexing, change detection, and cache invalidation.
+- `AnalysisEngine` remains a deterministic analysis service. It does not become a RAG
+  engine, Agent runtime, or planner. The RAG layer remains separate, and its package
+  name is not selected during Phase 0.0.
+- V3.2 Multi-Agent Collaboration and V3.3 Multi-Model Router are not started. V3.1 may
+  design a future consumption interface but does not implement Agent runtime, planner,
+  collaboration, memory, or routing.
+- V3.0.2 commercial enhancements remain deferred and optional. Admin UI, Payment,
+  Recharge, and Auth/RBAC do not enter V3.1.
+- Phase 0.0 adds no RAG package, embedding, vector database, retrieval dependency,
+  Agent, Router, tree-sitter, ANTLR, JavaParser, source change, test change, or
+  `requirements.txt` change.
+- The research questions registered for Phase 0 are: retrieval-unit selection;
+  comparative effectiveness of lexical, embedding, and graph-aware retrieval;
+  hybrid versus single-strategy retrieval; Project Graph/Snapshot contribution;
+  SnapshotDiff-based incremental indexing; and RAG-context impact on maintenance-task
+  correctness and relevance. Phase 0.0 does not answer them.
+
+### Release Documentation Policy
+
+- Every formal release, including major, minor, and patch versions, must retain an
+  accurate but concise README Version History entry. Feature releases record Version,
+  Status, Major Updates, Phase Summary when needed, and Tests. Patch releases record
+  Version, Status, Changes/Fixes, and Tests. README history excludes internal finding
+  identifiers, probe counts, and directed-retest workflow detail.
+- After every formal release, create a version-level Thesis-Oriented Development Report
+  under `docs/thesis/`, named `V<major>_<minor>_<patch>_Thesis_Development_Report.md`
+  (for example, `V3_1_0_Thesis_Development_Report.md`). It must
+  reorganize evidence from real code, Development Reports, QA Reports, and release
+  evidence into thesis-usable material rather than concatenate existing reports.
+- The tracked V3.0.0 report is a Documentation Backlog item. The tracked V3.0.1 report
+  is also pending; a pre-existing untracked local candidate must be handled only by a
+  separate Documentation Task.
 
 ### Phase 3.3 Graph Identity Contract
 
