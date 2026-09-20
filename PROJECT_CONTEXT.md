@@ -8,7 +8,12 @@
 
 - Current Development Version: `V3.0.1`
 - Current branch: `v3.0.1-dev`
-- Status: `Phase 4 Documentation Gate Closed; Ready for V3.0.1 RC / Release Engineering`
+- Status: `V3.0.1 RC1 Started; RC1.1 Release Engineering Gate Completed (PASS)`
+- V3.0.1 Core Feature Freeze: `ACTIVE`
+- V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
+- V3.0.1 RC1.1 Release Blockers: `0`
+- Current V3.0.1 RC baseline: `414 passed`
+- Next: V3.0.1 RC1.2 — Repository Hygiene Audit
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -272,7 +277,7 @@
   Provider, UI, SQLite, network, pricing, or managed-access dependency.
 - Phase 1 completion baseline: Credits `50 passed`; full suite `179 passed` with the documented
   current-host `python -m pytest -p no:debugging` workaround.
-- Next: V3.0.1 RC / Release Engineering. RC work has not started.
+- Next: V3.0.1 RC1.2 — Repository Hygiene Audit. RC1.1 is completed.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -310,7 +315,8 @@
   - V3.0.1 Phase 4 — Admin Operations Surface: completed; Final QA `PASS FOR PHASE 4`
   - V3.0.1 Phase 4.1 — Admin Identity & Persistence Hardening: completed
   - V3.0.1 Phase 4 Documentation Gate: closed (`PASS`)
-  - V3.0.1 — Managed AI Access & Credits: in development
+  - V3.0.1 RC1.1 — Release Engineering Gate: completed (`PASS`)
+  - V3.0.1 — Managed AI Access & Credits: release candidate; not released
   - V3.1 — Project Intelligence / RAG: planned
   - V3.2 — Multi-Agent: planned
   - V3.3 — Data-driven Model Router: planned
@@ -370,7 +376,7 @@
 - Phase 4.1 Documentation Gate: `CLOSED`
 - BYOK foundation: `Completed`; workspace persistence and `code_maintenance/` remain
   Credential/Provider-free at their respective persistence and domain boundaries
-- Release metadata source: `code_maintenance.__version__ = "3.0.0"`
+- Release metadata source: `code_maintenance.__version__ = "3.0.1-rc1"`
 - Python support: minimum and recommended `3.10`; CI validates Python 3.10
 - RC1.1 clean install: `PASS` in a repository-external Python 3.13.7 virtual
   environment; install, import, startup, dependency, and 129-test gates passed
@@ -409,7 +415,7 @@
   pytest debugging-plugin issue; `python -m pytest -p no:debugging` passes all 129 tests
 - Standard-environment evidence: RC1.4 records `python -m pytest` with `129 passed`
   under standard CPython / clean venv; the host-specific issue is not a release blocker
-- Current development version: V3.0.1 — Managed AI Access & Credits (`IN DEVELOPMENT`)
+- Current development version: V3.0.1 — Managed AI Access & Credits (`RELEASE CANDIDATE`; not released)
 
 ## Planned Version Roadmap
 
@@ -420,8 +426,9 @@ the completed V3 core and BYOK foundation.
 
 ### V3.0.1 — Managed AI Access & Credits
 
-Status: **IN DEVELOPMENT**. Phase 1 — Credits Domain, Phase 2 — Managed Access
-Foundation + SQLite + flat pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
+Status: **RELEASE CANDIDATE**. Core Feature Freeze is active and RC1.1 passed.
+Phase 1 — Credits Domain, Phase 2 — Managed Access Foundation + SQLite + flat
+pricing, Phase 3 — Usage Metering + PricingPolicy, Phase
 3.1 hardening, Phase 4 — Admin Operations Surface, and Phase 4.1 Admin Identity &
 Persistence Hardening are completed. The Phase 2
 Documentation Gate is closed with Final QA `PASS`; Phase 3 Initial QA returned
@@ -620,8 +627,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   coordination. A stranded `RESERVED` request and `FINALIZATION_FAILED` request require
   reconciliation; Phase 2 intentionally provides no automatic retry or admin recovery
   workflow. The original Provider response is not persisted, so successful replay
-  returns metadata only. Real Usage Metering, token pricing, Payment, Admin UI, and a
-  production HTTP backend remain unimplemented.
+  returns metadata only. Payment, Admin UI, and a production HTTP backend remain
+  unimplemented.
 - Phase 2 QA Low L2 remains deferred: a BYOK context with `account_id=""` continues to
   fail closed with the existing credit-domain exception type rather than a normalized
   Managed Access exception.
@@ -754,8 +761,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   domain grant; Phase 2 Managed Access Foundation, SQLite, and flat pricing; Phase 3
   Usage Metering and token pricing; Phase 4 Admin Operations Surface; optional Phase 5
   Payment Interface Reservation; then RC. Phases 1 through 4.1 and the Phase 4
-  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC /
-  Release Engineering is next and has not started.
+  Documentation Gate are completed. Optional Phase 5 is skipped for V3.0.1; RC1 has
+  started, RC1.1 is completed, and RC1.2 Repository Hygiene Audit is next.
 - The timeout case where a Provider succeeded but the caller observed a timeout remains
   an explicit known limitation; V3.0.1 does not build distributed transaction machinery.
 - Phase 3 extends Flat Pricing into Usage Metering and `PricingPolicy` while preserving
