@@ -472,3 +472,145 @@ def test_phase_one_package_contains_only_frozen_minimum_files():
         "corpus.py",
         "domain.py",
     }
+
+
+@pytest.mark.parametrize(
+    "marker",
+    ["\u2028", "\u2029", "\f", "\x0b", "\x85"],
+    ids=["line-separator", "paragraph-separator", "form-feed", "vertical-tab", "nel"],
+)
+def test_m1_python_physical_line_ranges_are_literal_and_hash_aligned(marker, tmp_path):
+    source = (
+        'def first():\n'
+        f'    marker = "before{marker}after"\n'
+        '    return marker\n'
+        '\n'
+        'def second():\n'
+        '    return 2\n'
+    )
+    (tmp_path / "markers.py").write_text(source, encoding="utf-8")
+
+    documents = build_corpus(tmp_path)
+    first, second = [document for document in documents if document.qualified_name in {"first", "second"}]
+    expected_first = "\n".join(source.split("\n")[0:3])
+    expected_second = "\n".join(source.split("\n")[4:6])
+
+    # These independent literal slices expose the old splitlines/AST mismatch;
+    # the old implementation instead accepted its own incorrectly sliced hash.
+    assert first.source_text == expected_first
+    assert second.source_text == expected_second
+    assert first.content_hash == sha256(expected_first.encode("utf-8")).hexdigest()
+    assert second.content_hash == sha256(expected_second.encode("utf-8")).hexdigest()
+    snapshot = build_snapshot(tmp_path)
+    snapshot_hashes = {state.id: state.content_hash for state in snapshot.symbols}
+    assert snapshot_hashes[first.symbol_id] == first.content_hash
+    assert snapshot_hashes[second.symbol_id] == second.content_hash
+
+
+def test_m2_zero_symbol_parse_failure_now_matches_snapshot_contract(tmp_path):
+    (tmp_path / "good.py").write_text("def good():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "broken.py").write_text("def broken(\n", encoding="utf-8")
+    snapshot = build_snapshot(tmp_path)
+
+    assert [state.id.qualified_name for state in snapshot.symbols] == ["good"]
+    documents = CorpusBuilder().build(tmp_path, snapshot)
+
+    assert [document.qualified_name for document in documents] == ["good"]
+
+
+def test_m2_zero_symbol_unparseable_file_must_still_be_fresh(tmp_path):
+    (tmp_path / "good.py").write_text("def good():\n    return 1\n", encoding="utf-8")
+    broken = tmp_path / "broken.py"
+    broken.write_text("def broken(\n", encoding="utf-8")
+    snapshot = build_snapshot(tmp_path)
+    broken.write_text("def broken(\n# changed\n", encoding="utf-8")
+
+    with pytest.raises(CorpusSnapshotMismatchError, match="file content hash differs"):
+        CorpusBuilder().build(tmp_path, snapshot)
+
+
+def test_m2_expected_symbol_parse_failure_still_fails_closed(tmp_path):
+    (tmp_path / "good.py").write_text("def good():\n    return 1\n", encoding="utf-8")
+    snapshot = build_snapshot(tmp_path)
+
+    class FailingAdapter:
+        def parse_symbols(self, _source_file):
+            raise SyntaxError("fixture parse failure")
+
+    with pytest.raises(CorpusBuildError, match="parse failure"):
+        CorpusBuilder(adapters={"python": FailingAdapter()}).build(tmp_path, snapshot)
+
+
+def test_m2_good_files_and_multiple_unparseable_files_are_deterministic(tmp_path):
+    (tmp_path / "good.py").write_text("def good():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "broken_a.py").write_text("def broken_a(\n", encoding="utf-8")
+    (tmp_path / "broken_b.py").write_text("class broken_b(\n", encoding="utf-8")
+    snapshot = build_snapshot(tmp_path)
+
+    first = CorpusBuilder().build(tmp_path, snapshot)
+    second = CorpusBuilder().build(tmp_path, snapshot)
+
+    assert [document.qualified_name for document in first] == ["good"]
+    assert first == second
+
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n", b"\r"], ids=["lf", "crlf", "cr"])
+def test_l1_java_source_reading_policy_is_consistent(newline, tmp_path):
+    (tmp_path / "Example.java").write_bytes(
+        b"class Example {" + newline + b"    void run() {}" + newline + b"}" + newline
+    )
+    snapshot = build_snapshot(tmp_path)
+
+    documents = CorpusBuilder().build(tmp_path, snapshot)
+
+    run = next(document for document in documents if document.qualified_name == "Example.run")
+    assert run.source_text == "    void run() {}"
+
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n", b"\r"], ids=["lf", "crlf", "cr"])
+def test_l1_python_source_reading_policy_is_consistent(newline, tmp_path):
+    (tmp_path / "example.py").write_bytes(
+        b"def run():" + newline + b"    return 1" + newline
+    )
+    snapshot = build_snapshot(tmp_path)
+
+    run = next(document for document in CorpusBuilder().build(tmp_path, snapshot) if document.qualified_name == "run")
+    assert run.source_text == "def run():\n    return 1"
+
+
+def test_multiline_decorated_python_definition_keeps_ast_range(tmp_path):
+    source = (
+        "def decorator(function):\n"
+        "    return function\n\n"
+        "@decorator\n"
+        "def decorated(\n"
+        "    value,\n"
+        "):\n"
+        "    return value\n\n"
+        "class Container:\n"
+        "    def method(self):\n"
+        "        return 1\n"
+    )
+    (tmp_path / "example.py").write_text(source, encoding="utf-8")
+
+    documents = build_corpus(tmp_path)
+    decorated = next(document for document in documents if document.qualified_name == "decorated")
+
+    assert decorated.source_text == "\n".join(source.split("\n")[4:8])
+    assert decorated.signature == "decorated(value)"
+    assert "@decorator" not in decorated.source_text
+
+
+def test_toctou_mutation_after_source_read_fails_final_freshness_check(tmp_path):
+    source_path = tmp_path / "main.py"
+    source_path.write_text("def run():\n    return 1\n", encoding="utf-8")
+    snapshot = build_snapshot(tmp_path)
+    delegate = PythonAdapter()
+
+    class MutatingAdapter:
+        def parse_symbols(self, source_file):
+            source_path.write_text("def run():\n    return 2\n", encoding="utf-8")
+            return delegate.parse_symbols(source_file)
+
+    with pytest.raises(CorpusSnapshotMismatchError, match="file content hash differs"):
+        CorpusBuilder(adapters={"python": MutatingAdapter()}).build(tmp_path, snapshot)

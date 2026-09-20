@@ -7,7 +7,12 @@ from typing import Mapping
 from code_maintenance.adapters import JavaAdapter, LanguageAdapter, PythonAdapter
 from code_maintenance.domain import ProjectFile, SourceFile, Symbol, SymbolId
 from code_maintenance.scanner import ProjectScanner
-from code_maintenance.snapshot import FileState, ProjectSnapshot, SymbolState
+from code_maintenance.snapshot import (
+    FileState,
+    ProjectSnapshot,
+    SymbolState,
+    decode_source_bytes,
+)
 
 from .domain import (
     CorpusBuildError,
@@ -184,7 +189,7 @@ class CorpusBuilder:
             raise CorpusSnapshotMismatchError(
                 expected.relative_path, "file changed while corpus was being built"
             )
-        return content.decode("utf-8", errors="replace")
+        return decode_source_bytes(content)
 
     def _build_documents(
         self,
@@ -218,6 +223,8 @@ class CorpusBuilder:
             try:
                 parsed_symbols = adapter.parse_symbols(source_file)
             except (SyntaxError, ValueError) as error:
+                if not expected_symbols:
+                    continue
                 raise CorpusBuildError(
                     "corpus source parse failure: "
                     f"file='{relative_path}', error='{type(error).__name__}'"
@@ -263,7 +270,7 @@ class CorpusBuilder:
 
     @staticmethod
     def _document(symbol: Symbol, source: str) -> RetrievalDocument:
-        lines = source.splitlines()
+        lines = source.split("\n")
         if (
             type(symbol.start_line) is not int
             or type(symbol.end_line) is not int

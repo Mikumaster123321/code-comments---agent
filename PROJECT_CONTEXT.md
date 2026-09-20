@@ -17,7 +17,8 @@
 - V3.1.0 Phase 0 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 0 Blocking Issues: `0`
 - V3.1.0 Core Research Questions: RQ1–RQ4
-- V3.1.0 Phase 1 — Corpus & Symbol Content Model: `COMPLETED`
+- V3.1.0 Phase 1 — Corpus & Symbol Content Model: `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 1.1 — Corpus Integrity Hardening: `COMPLETED`
 - V3.1.0 Phase 1 Corpus & Symbol Content Model: `IMPLEMENTED`
 - V3.1.0 Phase 1 primary retrieval unit: `Symbol`
 - V3.1.0 Phase 1 snapshot: `UNCHANGED`
@@ -25,8 +26,8 @@
 - V3.1.0 Phase 1 source text: `CorpusBuilder`
 - V3.1.0 Phase 1 freshness: `content hash validation`
 - V3.1.0 Phase 1 build: `offline/read-only/atomic`
-- V3.1.0 Phase 1 tests: `24 passed`; full regression: `438 passed`
-- V3.1.0 Phase 1 next: `DeepSeek Phase 1 Independent QA`
+- V3.1.0 Phase 1 tests: `41 passed`; full regression: `455 passed`
+- V3.1.0 Phase 1 next: `DeepSeek Directed Retest PENDING`
 - V3.1.0 BM25: `NOT STARTED`
 - V3.1.0 Embedding: `NOT STARTED`
 - V3.1.0 Graph Retrieval: `NOT STARTED`
