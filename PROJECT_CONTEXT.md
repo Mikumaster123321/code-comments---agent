@@ -17,8 +17,13 @@
 - V3.1.0 Phase 0 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 0 Blocking Issues: `0`
 - V3.1.0 Core Research Questions: RQ1–RQ4
-- V3.1.0 Phase 1 — Corpus & Symbol Content Model: `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 1 — Corpus & Symbol Content Model: `COMPLETED`
 - V3.1.0 Phase 1.1 — Corpus Integrity Hardening: `COMPLETED`
+- V3.1.0 Phase 1 Documentation Gate: `CLOSED`
+- V3.1.0 Phase 1 Final QA: `PASS WITH LOW NOTES`
+- V3.1.0 Phase 1 Final Critical / Medium: `0 / 0`
+- V3.1.0 Phase 1 M1 / M2 / L1: `RESOLVED / RESOLVED / RESOLVED`
+- V3.1.0 Phase 1 architecture: `FROZEN`
 - V3.1.0 Phase 1 Corpus & Symbol Content Model: `IMPLEMENTED`
 - V3.1.0 Phase 1 primary retrieval unit: `Symbol`
 - V3.1.0 Phase 1 snapshot: `UNCHANGED`
@@ -27,7 +32,10 @@
 - V3.1.0 Phase 1 freshness: `content hash validation`
 - V3.1.0 Phase 1 build: `offline/read-only/atomic`
 - V3.1.0 Phase 1 tests: `41 passed`; full regression: `455 passed`
-- V3.1.0 Phase 1 next: `DeepSeek Directed Retest PENDING`
+- V3.1.0 Phase 1 deferred Low: Java exotic separators; broad `ValueError` parse
+  category; pre-hardening snapshot compatibility; hostile `str` subclass
+- V3.1.0 Phase 1 next: `V3.1.0 Phase 2 — Lexical Baseline / BM25`
+- V3.1.0 Phase 2 — Lexical Baseline / BM25: `NOT STARTED`
 - V3.1.0 BM25: `NOT STARTED`
 - V3.1.0 Embedding: `NOT STARTED`
 - V3.1.0 Graph Retrieval: `NOT STARTED`
@@ -66,7 +74,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 1 — Corpus & Symbol Content Model
+- Next: V3.1.0 Phase 2 — Lexical Baseline / BM25 (`NOT STARTED`)
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -352,7 +360,7 @@
 - V3.0.1 RC1.5 Claude Final Release Review: completed
   (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
 - V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
-- Next: V3.1.0 Phase 1 — Corpus & Symbol Content Model (`NOT STARTED`).
+- Next: V3.1.0 Phase 2 — Lexical Baseline / BM25 (`NOT STARTED`).
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -547,7 +555,8 @@ use this server-side boundary:
 
 - V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
 - V3.1.0 — Project Intelligence / RAG: **DEVELOPMENT STARTED**; Phase 0 Architecture
-  and Research Methodology frozen; Documentation Gate closed; Phase 1 not started
+  and Research Methodology frozen; Phase 1 Documentation Gate closed; Phase 1
+  completed and frozen; Phase 2 Lexical Baseline / BM25 allowed but not started
 - V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
 - V3.3 — Data-driven Multi-Model Router: **PLANNED**
 - V3.4 — VS Code Integration: **PLANNED**
@@ -882,7 +891,8 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   evaluation of stable symbol identity, project structure, hybrid retrieval, and
   context construction. It does not claim a new BM25, embedding, or graph algorithm.
 - V3.1.0 Phase 0 Architecture and Research Methodology are frozen with no blocker. The
-  Documentation Gate is closed. Phase 1 is allowed as a separate task and remains not
+  Phase 0 and Phase 1 Documentation Gates are closed. Phase 1 is completed and frozen;
+  Phase 2 — Lexical Baseline / BM25 is allowed as a separate task and remains not
   started.
 
 ### Phase 3.3 Graph Identity Contract
