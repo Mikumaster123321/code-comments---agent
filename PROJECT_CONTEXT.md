@@ -34,15 +34,19 @@
 - V3.1.0 Phase 1 tests: `41 passed`; full regression: `455 passed`
 - V3.1.0 Phase 1 deferred Low: Java exotic separators; broad `ValueError` parse
   category; pre-hardening snapshot compatibility; hostile `str` subclass
-- V3.1.0 Phase 1 next: `V3.1.0 Phase 2 — Lexical Baseline / BM25`
-- V3.1.0 Phase 2 — Lexical Baseline / BM25: `NOT STARTED`
-- V3.1.0 BM25: `NOT STARTED`
+- V3.1.0 Phase 1 next: `COMPLETED; transitioned to Phase 2`
+- V3.1.0 Phase 2 — Lexical Baseline / BM25: `COMPLETED`
+- V3.1.0 Phase 2 implementation: deterministic stdlib-only BM25 over immutable
+  Phase 1 `RetrievalDocument` values; embedding, graph, hybrid, and service layers
+  remain deferred
+- V3.1.0 BM25: `IMPLEMENTED / DETERMINISTIC / OFFLINE`
 - V3.1.0 Embedding: `NOT STARTED`
 - V3.1.0 Graph Retrieval: `NOT STARTED`
 - V3.1.0 Hybrid: `NOT STARTED`
 - V3.2: `NOT STARTED`
 - V3.1.0 branch base / synchronized `main`: `381708bb5cd57f9c15a8755416434ede5a337824`
-- V3.1.0 baseline: `414 passed`; offline LLM-contract smoke: `6 passed`
+- V3.1.0 baseline before Phase 2: `455 passed`; Phase 2 full regression: `463 passed`;
+  offline LLM-contract smoke: `6 passed`
 - Released version metadata remains `3.0.1` until later RC Release Engineering.
 - Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
@@ -74,7 +78,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 2 — Lexical Baseline / BM25 (`NOT STARTED`)
+- Next: V3.1.0 Phase 3 — Embedding (`NOT STARTED`)
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
