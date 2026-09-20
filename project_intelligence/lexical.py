@@ -76,6 +76,10 @@ class BM25Config:
             object.__setattr__(self, name, numeric)
         if not isinstance(self.tokenizer_version, str) or not self.tokenizer_version:
             raise InvalidBM25ConfigError("tokenizer_version must be a non-empty string")
+        if self.tokenizer_version != TOKENIZER_VERSION:
+            raise InvalidBM25ConfigError(
+                f"unsupported tokenizer_version: {self.tokenizer_version!r}"
+            )
 
 
 @dataclass(frozen=True)
@@ -148,14 +152,16 @@ def tokenize(text: str) -> tuple[str, ...]:
     return tuple(tokens)
 
 
-def _symbol_id_key(symbol_id: SymbolId) -> tuple[str, str, str, str, str, int]:
+def _symbol_id_key(
+    symbol_id: SymbolId,
+) -> tuple[str, str, str, str, tuple[bool, str], tuple[bool, int]]:
     return (
         symbol_id.language,
         symbol_id.relative_path,
         symbol_id.qualified_name,
         symbol_id.kind.value,
-        symbol_id.semantic_disambiguator or "",
-        symbol_id.fallback_line if symbol_id.fallback_line is not None else -1,
+        (symbol_id.semantic_disambiguator is None, symbol_id.semantic_disambiguator or ""),
+        (symbol_id.fallback_line is None, symbol_id.fallback_line or 0),
     )
 
 
@@ -169,7 +175,7 @@ class BM25Index:
     ) -> None:
         if config is not None and not isinstance(config, BM25Config):
             raise InvalidBM25ConfigError("config must be a BM25Config")
-        self.config = config if config is not None else BM25Config()
+        self._config = config if config is not None else BM25Config()
         if not isinstance(documents, (tuple, list)):
             try:
                 documents = tuple(documents)
@@ -207,6 +213,11 @@ class BM25Index:
         self._average_document_length = (
             sum(lengths) / len(lengths) if lengths else 0.0
         )
+
+    @property
+    def config(self) -> BM25Config:
+        """Return the read-only authoritative ranking configuration."""
+        return self._config
 
     @property
     def documents(self) -> tuple[RetrievalDocument, ...]:
@@ -258,11 +269,11 @@ class BM25Index:
                     continue
                 df = self._document_frequencies[term]
                 idf = math.log1p((n_documents - df + 0.5) / (df + 0.5))
-                normalization = 1.0 - self.config.b
+                normalization = 1.0 - self._config.b
                 if self._average_document_length:
-                    normalization += self.config.b * length / self._average_document_length
-                denominator = tf + self.config.k1 * normalization
-                score += idf * (tf * (self.config.k1 + 1.0)) / denominator
+                    normalization += self._config.b * length / self._average_document_length
+                denominator = tf + self._config.k1 * normalization
+                score += idf * (tf * (self._config.k1 + 1.0)) / denominator
             if score > 0.0 and math.isfinite(score):
                 scored.append((score, document))
 

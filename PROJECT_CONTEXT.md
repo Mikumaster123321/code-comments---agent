@@ -35,10 +35,14 @@
 - V3.1.0 Phase 1 deferred Low: Java exotic separators; broad `ValueError` parse
   category; pre-hardening snapshot compatibility; hostile `str` subclass
 - V3.1.0 Phase 1 next: `COMPLETED; transitioned to Phase 2`
-- V3.1.0 Phase 2 — Lexical Baseline / BM25: `COMPLETED`
+- V3.1.0 Phase 2 — Lexical Baseline / BM25: `IMPLEMENTED / HARDENING COMPLETE`
 - V3.1.0 Phase 2 implementation: deterministic stdlib-only BM25 over immutable
   Phase 1 `RetrievalDocument` values; embedding, graph, hybrid, and service layers
   remain deferred
+- V3.1.0 Phase 2 Independent QA: `PASS WITH ISSUES`; Critical `0`; Medium `1 initially`
+- V3.1.0 Phase 2 M1 public config mutability: `RESOLVED BY PHASE 2.1`
+- V3.1.0 Phase 2 Directed Retest: `PENDING`
+- V3.1.0 Phase 2 Documentation Gate: `OPEN`
 - V3.1.0 BM25: `IMPLEMENTED / DETERMINISTIC / OFFLINE`
 - V3.1.0 Embedding: `NOT STARTED`
 - V3.1.0 Graph Retrieval: `NOT STARTED`
@@ -47,6 +51,13 @@
 - V3.1.0 branch base / synchronized `main`: `381708bb5cd57f9c15a8755416434ede5a337824`
 - V3.1.0 baseline before Phase 2: `455 passed`; Phase 2 full regression: `463 passed`;
   offline LLM-contract smoke: `6 passed`
+- V3.1.0 Phase 2.1 hardening validation: lexical `14 passed`; Phase 1 corpus `41
+  passed`; offline LLM-contract smoke `6 passed`; full regression `469 passed`; no
+  real API, Credential, or network request was used
+- V3.1.0 Phase 2.1 current-project corpus smoke: `913 documents indexed` (working
+  tree smoke only; not a retrieval-quality claim)
+- V3.1.0 RQ2 fairness entry contract: lexical and future embedding retrieval use the
+  same text input, exactly one `qualified_name` plus one `source_text`
 - Released version metadata remains `3.0.1` until later RC Release Engineering.
 - Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
@@ -78,7 +89,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 3 — Embedding (`NOT STARTED`)
+- Next: V3.1.0 Phase 3 — Embedding (`NOT STARTED; blocked until Phase 2 directed retest and Documentation Gate closure`)
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed

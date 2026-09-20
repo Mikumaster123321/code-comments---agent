@@ -2,7 +2,13 @@
 
 ## Status
 
-- Phase: **COMPLETED**
+- Implementation: **COMPLETED**
+- Independent QA: **PASS WITH ISSUES**
+- Phase 2.1 hardening: **COMPLETED**
+- M1: **RESOLVED BY PHASE 2.1**
+- Directed retest: **PENDING**
+- Final QA: **PENDING DIRECTED RETEST**
+- Documentation Gate: **OPEN**
 - Scope: deterministic, offline lexical retrieval over the Phase 1 symbol corpus
 - Dependencies: Python standard library only; `requirements.txt` unchanged
 - Retrieval unit: Phase 1 `RetrievalDocument` / `code_maintenance.SymbolId`
@@ -17,7 +23,9 @@ snapshot, call a Provider or LLM, write a cache, or access the network. Duplicat
 `SymbolId` values fail closed. No second document identity is introduced.
 
 The public Phase 2 contracts are the immutable `BM25Config`, `LexicalHit`, and
-`BM25Index` values, plus the frozen tokenizer version `code-lexical-v1`.
+`BM25Index` values, plus the frozen tokenizer version `code-lexical-v1`. `BM25Index`
+exposes its authoritative configuration through a read-only `config` property;
+rebinding or mutating the public configuration is rejected.
 
 ## 2. Tokenizer Contract
 
@@ -58,6 +66,10 @@ seed. Unknown-only and empty queries return an empty tuple. `top_k` must be an
 actual positive `int`; `bool`, floats, strings, zero, and negative values are
 rejected.
 
+The tie key retains Optional value types for both semantic disambiguators and
+fallback lines. Thus `None` cannot collide with an empty string or with a numeric
+sentinel such as `-1`.
+
 ## 4. Immutability and Explainability
 
 The index snapshots canonical document order and keeps private read-only token
@@ -78,3 +90,38 @@ immutability, read-only metadata, and the no-filesystem boundary.
 The Phase 1 package-boundary regression was updated to recognize the now-authorized
 Phase 2 `lexical.py` module. Existing corpus, scanner, provider, Credits, and UI
 contracts were not changed.
+
+## 6. Phase 2.1 Hardening and Deferred Baseline Limits
+
+The hardening regression covers public configuration immutability, frozen config
+fields, tokenizer-version validation, Optional-preserving tie ordering, 100 fixed
+seed input permutations, boundary `b=0`/`b=1` and large valid `k1`, zero-token
+documents, partial-unknown and long queries, and the existing deterministic and
+non-mutation checks.
+
+The following remain deliberate `code-lexical-v1` limitations, not Phase 2.1
+blockers: no tokenizer registry or retrieval-config identity, no Unicode NFC/NFD
+normalization, coarse contiguous CJK/Japanese tokenization, operator tokens remain
+searchable, and no stop-word or parser-aware comment/string processing. A query
+with no indexed tokens returns no hits; operator-only queries may match source
+operators by design.
+
+For future RQ2 experiments, semantic retrieval must use the same baseline input
+text—exactly one `qualified_name` plus one `source_text`—to preserve lexical versus
+embedding fairness.
+
+The implementation phase must not pre-classify its self-check as independent QA.
+The remaining sequence is directed retest, final report evidence, and then the
+Documentation Gate decision.
+
+## 7. Phase 2.1 Validation Snapshot
+
+- Phase 2 lexical tests: **14 passed**
+- Phase 1 corpus regression: **41 passed**
+- Offline LLM-contract smoke: **6 passed**
+- Full regression: **469 passed**
+- Current-project real corpus smoke: **913 documents indexed**
+- Real API, Credential, network LLM, and network embedding requests: **none**
+
+The 913-document smoke count includes the current working tree after adding the
+hardening tests and reports; it is a smoke check only, not a retrieval-quality claim.

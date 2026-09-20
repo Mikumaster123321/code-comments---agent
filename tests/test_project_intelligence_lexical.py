@@ -1,4 +1,5 @@
 import math
+import random
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
@@ -17,8 +18,23 @@ from project_intelligence import (
 )
 
 
-def document(name, source, *, path="main.py", kind=SymbolKind.FUNCTION):
-    symbol_id = SymbolId("python", path, name, kind)
+def document(
+    name,
+    source,
+    *,
+    path="main.py",
+    kind=SymbolKind.FUNCTION,
+    semantic_disambiguator=None,
+    fallback_line=None,
+):
+    symbol_id = SymbolId(
+        "python",
+        path,
+        name,
+        kind,
+        semantic_disambiguator=semantic_disambiguator,
+        fallback_line=fallback_line,
+    )
     return RetrievalDocument(
         symbol_id=symbol_id,
         language="python",
@@ -65,6 +81,51 @@ def test_config_validation_and_immutable_results():
         hit.rank = 2
 
 
+def test_m1_public_config_is_read_only_and_ranking_is_unchanged():
+    index = BM25Index((document("run", "run"),))
+    original = index.search("run")
+
+    with pytest.raises(AttributeError):
+        index.config = BM25Config(k1=99.0)
+    with pytest.raises(AttributeError):
+        index.config = "not-a-config"
+    with pytest.raises(FrozenInstanceError):
+        index.config.k1 = 99.0
+    with pytest.raises(FrozenInstanceError):
+        index.config.b = 0.0
+    with pytest.raises(FrozenInstanceError):
+        index.config.tokenizer_version = "other"
+
+    assert index.config == BM25Config()
+    assert all(index.search("run") == original for _ in range(100))
+
+
+def test_tokenizer_version_is_frozen_to_code_lexical_v1():
+    with pytest.raises(InvalidBM25ConfigError, match="unsupported tokenizer_version"):
+        BM25Config(tokenizer_version="future-tokenizer")
+
+
+def test_symbol_id_tie_key_preserves_optional_value_types():
+    first = document("first", "shared", semantic_disambiguator=None, fallback_line=None)
+    second = document("second", "shared", semantic_disambiguator="", fallback_line=-1)
+    forward = BM25Index((first, second)).search("shared")
+    reverse = BM25Index((second, first)).search("shared")
+    assert [(hit.symbol_id, hit.rank, hit.score) for hit in forward] == [
+        (hit.symbol_id, hit.rank, hit.score) for hit in reverse
+    ]
+
+
+def test_random_input_permutations_preserve_identity_rank_and_score():
+    docs = tuple(document(f"item{i}", "shared term") for i in range(8))
+    expected = [(hit.symbol_id, hit.rank, hit.score) for hit in BM25Index(docs).search("shared")]
+    rng = random.Random(20260920)
+    for _ in range(100):
+        shuffled = list(docs)
+        rng.shuffle(shuffled)
+        actual = [(hit.symbol_id, hit.rank, hit.score) for hit in BM25Index(tuple(shuffled)).search("shared")]
+        assert actual == expected
+
+
 def test_empty_unknown_and_top_k_queries():
     index = BM25Index((document("run", "run"),))
     assert BM25Index().search("run") == ()
@@ -97,7 +158,25 @@ def test_hand_calculation_matches_independent_bm25_oracle():
     expected = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avgdl))
     hit = index.search("rare")[0]
     assert hit.document.qualified_name == "a"
-    assert hit.score == expected
+    assert hit.score == pytest.approx(expected)
+
+
+def test_boundary_configs_zero_and_one_length_normalization_are_finite():
+    docs = (document("short", "term"), document("long", "term " * 20))
+    for b in (0.0, 1.0):
+        hits = BM25Index(docs, BM25Config(k1=1e12, b=b)).search("term")
+        assert hits
+        assert all(math.isfinite(hit.score) and hit.score >= 0 for hit in hits)
+
+
+def test_zero_token_document_partial_unknown_and_long_query_are_safe():
+    empty = document("", "")
+    index = BM25Index((empty, document("run", "run")))
+    assert index.document_lengths[0] == 0
+    assert index.search("missing run")
+    assert index.search("missing-only") == ()
+    long_query = " ".join(["missing"] * 1000 + ["run"])
+    assert index.search(long_query)[0].document.qualified_name == "run"
 
 
 def test_idf_length_and_tf_saturation():
