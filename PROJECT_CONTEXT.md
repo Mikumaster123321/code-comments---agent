@@ -68,9 +68,14 @@
 - V3.1.0 current baseline: `469 passed`; Phase 0 and Phase 1 are completed/frozen,
   Phase 2 is completed with Final QA `PASS WITH LOW NOTES` and Documentation Gate
   `CLOSED`
-- V3.1.0 Phase 3: `ALLOWED BUT NOT STARTED`; Phase 3.0 Documentation Freeze is not
-  yet completed
-- V3.1.0 Phase 3.1: `NOT STARTED`
+- V3.1.0 Phase 3: `ALLOWED BUT NOT STARTED`; Phase 3.0 Documentation Freeze is
+  `CLOSED`
+- V3.1.0 Phase 3.0 Selection Review: `COMPLETED`
+- V3.1.0 Phase 3.0 Selection: `FROZEN`
+- V3.1.0 Phase 3.0 Primary / Backup: `FROZEN`
+- V3.1.0 Phase 3.0 RQ2/RQ4 fairness: `FROZEN`
+- V3.1.0 Phase 3.0 failure ownership: `FROZEN`
+- V3.1.0 Phase 3.1: `ALLOWED BUT NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
@@ -115,8 +120,7 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 3.0 Documentation Freeze, based on the completed Claude
-  Semantic Embedding Selection Review
+- Next: V3.1.0 Phase 3.1 — Embedding Core Architecture
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
