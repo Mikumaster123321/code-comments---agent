@@ -36,6 +36,20 @@ from .embedding import (
     SemanticIndex,
     SemanticRetrievalError,
 )
+from .local_embedding import (
+    EmbeddingDependencyError,
+    EmbeddingInferenceError,
+    EmbeddingModelLoadError,
+    EmbeddingTokenizationError,
+    LocalE5EmbeddingProvider,
+    LocalEmbeddingError,
+    MAX_INPUT_POLICY,
+    MAX_INPUT_TOKENS,
+    PRIMARY_MODEL_DIMENSION,
+    PRIMARY_MODEL_REPOSITORY,
+    PRIMARY_MODEL_REVISION,
+    TokenizationDiagnostic,
+)
 
 __all__ = [
     "CorpusBuildError",
@@ -70,4 +84,16 @@ __all__ = [
     "SemanticHit",
     "SemanticIndex",
     "SemanticRetrievalError",
+    "EmbeddingDependencyError",
+    "EmbeddingInferenceError",
+    "EmbeddingModelLoadError",
+    "EmbeddingTokenizationError",
+    "LocalE5EmbeddingProvider",
+    "LocalEmbeddingError",
+    "MAX_INPUT_POLICY",
+    "MAX_INPUT_TOKENS",
+    "PRIMARY_MODEL_DIMENSION",
+    "PRIMARY_MODEL_REPOSITORY",
+    "PRIMARY_MODEL_REVISION",
+    "TokenizationDiagnostic",
 ]

@@ -1,0 +1,4 @@
+# Optional Phase 3.2 runtime; requirements.txt intentionally remains unchanged.
+torch==2.8.0
+transformers==4.56.2
+safetensors==0.6.2

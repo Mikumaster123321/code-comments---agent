@@ -473,6 +473,7 @@ def test_phase_two_package_contains_only_implemented_minimum_files():
         "domain.py",
         "embedding.py",
         "lexical.py",
+        "local_embedding.py",
     }
 
 
