@@ -75,7 +75,7 @@
 - V3.1.0 Phase 3.0 Primary / Backup: `FROZEN`
 - V3.1.0 Phase 3.0 RQ2/RQ4 fairness: `FROZEN`
 - V3.1.0 Phase 3.0 failure ownership: `FROZEN`
-- V3.1.0 Phase 3.1: `IMPLEMENTED / QA PENDING`
+- V3.1.0 Phase 3.1: `COMPLETED`
 - V3.1.0 Phase 3.1 implementation: stdlib-only immutable embedding contracts,
   credential-free deterministic fingerprints, validated/l2-normalized vectors,
   deterministic fake query/document provider, and exact in-memory cosine
@@ -83,12 +83,21 @@
 - V3.1.0 Phase 3.1 tests: `12 passed`; full regression after implementation:
   `481 passed`; offline LLM-contract smoke: `6 passed`; no real model, model
   download, ML dependency, network inference, or API request was used
+- V3.1.0 Phase 3.1 Independent QA: `PASS WITH LOW NOTES`; Critical `0`; Medium
+  `0`; Phase blocker `0`; Phase 3.1.1 `NOT REQUIRED`
+- V3.1.0 Phase 3.1 Intermediate Documentation Gate: `CLOSED`
+- V3.1.0 formal Phase 3.1 corpus smoke: `976 documents` across `51 contributing
+  files`; Phase 2 reference `913`; corrected growth `+63`, removed `0`
+- V3.1.0 corpus-count correction: prior `971` implementation smoke was replaced
+  by the independent-QA `976` evidence; this is a smoke-count correction, not a
+  CorpusBuilder regression
 - V3.1.0 Phase 3.1 real model: `NOT IMPLEMENTED`; fake provider is tests-only and
   provides no semantic-quality evidence; oversized-tokenization adapter remains
   deferred to Phase 3.2
-- V3.1.0 Phase 3 Independent QA: `REQUIRED`
+- V3.1.0 Phase 3 Independent QA: `PASS WITH LOW NOTES`
 - V3.1.0 Phase 3 Documentation Gate: `OPEN`
-- V3.1.0 Phase 3.2: `NOT STARTED`
+- V3.1.0 Phase 3.2: `ALLOWED BUT NOT STARTED`
+- V3.1.0 next: Phase 3.2 — Real Local Model Adapter Validation
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
