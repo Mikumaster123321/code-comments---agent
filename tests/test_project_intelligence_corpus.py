@@ -464,18 +464,21 @@ def test_dependency_direction_and_forbidden_import_guard():
     assert "project_intelligence" not in maintenance_imports
 
 
-def test_phase_two_package_contains_only_implemented_minimum_files():
+def test_phase_five_package_contains_only_implemented_minimum_files():
     package = Path(__file__).resolve().parents[1] / "project_intelligence"
 
     assert {path.name for path in package.iterdir() if path.is_file()} == {
         "__init__.py",
         "corpus.py",
+        "context.py",
         "domain.py",
         "embedding.py",
         "graph_expansion.py",
+        "hybrid.py",
         "index.py",
         "lexical.py",
         "local_embedding.py",
+        "service.py",
     }
 
 

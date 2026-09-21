@@ -76,6 +76,23 @@ from .index import (
     RetrievalConfigMismatchError,
     build_incremental_plan,
 )
+from .hybrid import (
+    FusionStrategy,
+    HybridConfig,
+    HybridHit,
+    HybridRetrievalError,
+    HybridRetrievalResult,
+    HybridRetriever,
+    InvalidHybridConfigError,
+)
+from .context import (
+    ContextBuildError,
+    ContextBuilder,
+    ContextPackage,
+    ContextSnippet,
+    RetrievalQuery,
+)
+from .service import RetrievalService
 
 __all__ = [
     "CorpusBuildError",
@@ -144,4 +161,17 @@ __all__ = [
     "RetrievalIndexIdentity",
     "RetrievalConfigMismatchError",
     "build_incremental_plan",
+    "FusionStrategy",
+    "HybridConfig",
+    "HybridHit",
+    "HybridRetrievalError",
+    "HybridRetrievalResult",
+    "HybridRetriever",
+    "InvalidHybridConfigError",
+    "ContextBuildError",
+    "ContextBuilder",
+    "ContextPackage",
+    "ContextSnippet",
+    "RetrievalQuery",
+    "RetrievalService",
 ]

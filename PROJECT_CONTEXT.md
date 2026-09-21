@@ -181,7 +181,45 @@
   fail closed; frozen `ProjectGraph` / `Snapshot` contracts remain unchanged
 - V3.1.0 Phase 4 reports: `docs/development/Development_Report_V3_1_0_Phase_4.md`
   and `docs/qa/QA_Report_V3_1_0_Phase_4.md`
-- V3.1.0 Phase 5: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 5 — Hybrid Retrieval + ContextBuilder: `IMPLEMENTED / QA PENDING`
+- V3.1.0 Phase 5 Independent QA: `REQUIRED`
+- V3.1.0 Phase 5 Documentation Gate: `OPEN`
+- V3.1.0 Phase 5 implementation: deterministic candidate union by authoritative
+  `SymbolId`; explainable Weighted Score Fusion over normalized BM25, normalized
+  cosine, and fixed relation/direction/hop Graph signals; optional deterministic
+  weighted RRF comparison; lexical-only, semantic-only, Hybrid-without-Graph,
+  Hybrid-with-Graph, and Graph-focused configurations remain independently ablatable
+- V3.1.0 Phase 5 normalization: BM25 scores use safe branch-maximum normalization;
+  cosine scores use fixed `[-1, 1] -> [0, 1]` normalization with finite clamping;
+  missing branch components are `0`; fusion weights are explicit, finite,
+  non-negative, and need not sum to one because final scores are ranking-relative
+- V3.1.0 Phase 5 Graph integration: Phase 4 expansion candidates and immutable
+  `(relation, direction, hop)` provenance are preserved; Graph signal is isolated in
+  the Hybrid layer and never mutates original BM25 or Semantic scores
+- V3.1.0 Phase 5 degraded mode: standalone Semantic failure remains explicit;
+  Hybrid may return a complete lexical-only result only when the lexical branch is
+  active, with `degraded=True`, a stable `degradation_reason`, and failure provenance
+- V3.1.0 Phase 5 ContextBuilder: deterministic SymbolId deduplication, Hybrid-rank/
+  seed-adjacent Graph ordering, `RetrievalDocument.source_text`-only source assembly,
+  explicit character budget, deterministic oversized-snippet truncation, and
+  observable `truncated` metadata
+- V3.1.0 Phase 5 V3.2 boundary: immutable `RetrievalQuery` and `ContextPackage`, plus
+  `RetrievalService.retrieve(query) -> ContextPackage`, are the recommended future
+  Agent consumption boundary; V3.2 Agent runtime remains `NOT STARTED`
+- V3.1.0 Phase 5 RRF: `IMPLEMENTED AS OPTIONAL COMPARISON`; Weighted Fusion remains
+  the default primary strategy
+- V3.1.0 Phase 5 implementation validation: `48 passed`; Phase 4 `37 passed`;
+  Phase 3.2 `10 passed`; Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1
+  `41 passed`; offline LLM smoke `6 passed`; full regression `576 passed`
+- V3.1.0 Phase 5 real-corpus engineering smoke: `1232 documents`, `10 hits`, median
+  Hybrid query `~9.724 ms`, median ContextBuilder `~0.055 ms`, `8000` context
+  characters / `9` snippets with explicit truncation; Fake Embedding only; this is
+  engineering smoke evidence and not a formal RQ4 result
+- V3.1.0 Phase 5 research boundary: no claim that Hybrid beats BM25 or Embedding,
+  that Graph improves Recall, that RQ4 is answered, or that RAG improves maintenance;
+  formal RQ1–RQ4 conclusions remain Phase 6 benchmark/ablation work
+- V3.1.0 Phase 6: `NOT STARTED`
+- V3.2 Multi-Agent: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
