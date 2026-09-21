@@ -65,7 +65,7 @@
 - V3.1.0 Phase 3 entry contract: fake/hash embeddings are tests-only; formal semantic
   comparison requires a separately reviewed real model with fixed version, dimension,
   normalization, license, reproducibility, and runtime/hardware evidence
-- V3.1.0 current baseline: `469 passed`; Phase 0 and Phase 1 are completed/frozen,
+- V3.1.0 current baseline before Phase 3.1: `469 passed`; Phase 0 and Phase 1 are completed/frozen,
   Phase 2 is completed with Final QA `PASS WITH LOW NOTES` and Documentation Gate
   `CLOSED`
 - V3.1.0 Phase 3: `ALLOWED BUT NOT STARTED`; Phase 3.0 Documentation Freeze is
@@ -75,7 +75,20 @@
 - V3.1.0 Phase 3.0 Primary / Backup: `FROZEN`
 - V3.1.0 Phase 3.0 RQ2/RQ4 fairness: `FROZEN`
 - V3.1.0 Phase 3.0 failure ownership: `FROZEN`
-- V3.1.0 Phase 3.1: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 3.1: `IMPLEMENTED / QA PENDING`
+- V3.1.0 Phase 3.1 implementation: stdlib-only immutable embedding contracts,
+  credential-free deterministic fingerprints, validated/l2-normalized vectors,
+  deterministic fake query/document provider, and exact in-memory cosine
+  `SemanticIndex` over Phase 1 `RetrievalDocument` values
+- V3.1.0 Phase 3.1 tests: `12 passed`; full regression after implementation:
+  `481 passed`; offline LLM-contract smoke: `6 passed`; no real model, model
+  download, ML dependency, network inference, or API request was used
+- V3.1.0 Phase 3.1 real model: `NOT IMPLEMENTED`; fake provider is tests-only and
+  provides no semantic-quality evidence; oversized-tokenization adapter remains
+  deferred to Phase 3.2
+- V3.1.0 Phase 3 Independent QA: `REQUIRED`
+- V3.1.0 Phase 3 Documentation Gate: `OPEN`
+- V3.1.0 Phase 3.2: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`

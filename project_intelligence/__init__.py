@@ -19,6 +19,23 @@ from .lexical import (
     TOKENIZER_VERSION,
     tokenize,
 )
+from .embedding import (
+    DEFAULT_DOCUMENT_INSTRUCTION,
+    DEFAULT_QUERY_INSTRUCTION,
+    DeterministicFakeEmbeddingProvider,
+    DuplicateSemanticDocumentError,
+    EmbeddingError,
+    EmbeddingFingerprint,
+    EmbeddingFingerprintError,
+    EmbeddingProvider,
+    EmbeddingVector,
+    EmbeddingVectorError,
+    ExactSemanticIndex,
+    InvalidSemanticQueryError,
+    SemanticHit,
+    SemanticIndex,
+    SemanticRetrievalError,
+)
 
 __all__ = [
     "CorpusBuildError",
@@ -38,4 +55,19 @@ __all__ = [
     "LexicalRetrievalError",
     "TOKENIZER_VERSION",
     "tokenize",
+    "DEFAULT_DOCUMENT_INSTRUCTION",
+    "DEFAULT_QUERY_INSTRUCTION",
+    "DeterministicFakeEmbeddingProvider",
+    "DuplicateSemanticDocumentError",
+    "EmbeddingError",
+    "EmbeddingFingerprint",
+    "EmbeddingFingerprintError",
+    "EmbeddingProvider",
+    "EmbeddingVector",
+    "EmbeddingVectorError",
+    "ExactSemanticIndex",
+    "InvalidSemanticQueryError",
+    "SemanticHit",
+    "SemanticIndex",
+    "SemanticRetrievalError",
 ]

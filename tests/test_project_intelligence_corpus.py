@@ -471,6 +471,7 @@ def test_phase_two_package_contains_only_implemented_minimum_files():
         "__init__.py",
         "corpus.py",
         "domain.py",
+        "embedding.py",
         "lexical.py",
     }
 
