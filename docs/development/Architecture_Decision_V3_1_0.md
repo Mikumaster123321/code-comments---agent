@@ -144,8 +144,11 @@ Python standard library only, with no new retrieval dependency. It must be deter
 offline, unit-testable, and explainable.
 
 The project must not skip the lexical baseline and proceed directly to embeddings.
-Phase 2 QA covers tokenization, document frequency, IDF, length normalization, ranking,
-deterministic tie ordering, empty queries, unknown terms, and incremental consistency.
+Phase 2 covers BM25 correctness, tokenization, document frequency, IDF, length
+normalization, ranking, deterministic tie ordering, empty queries, unknown terms,
+input-order independence, and corpus compatibility. Incremental indexing, incremental
+index consistency, and `SnapshotDiff` add/delete/replace/reuse operations belong to
+Phase 4, not Phase 2.
 
 ## 8. Embedding Architecture and Evidence Boundary
 
@@ -243,8 +246,25 @@ LLM rerankers and cross-encoder rerankers are deferred because they add cost,
 dependencies, nondeterminism, and experimental confounding. Graph or heuristic boosts
 are part of hybrid fusion, not a separate model reranker.
 
-Embedding failure falls back to lexical retrieval. Hybrid failure isolation must not
-turn an optional semantic component failure into loss of the deterministic baseline.
+### 12.1 Clarification / Refined Phase Ownership
+
+The earlier Phase 0 wording that “embedding failure -> lexical fallback” described
+the final Hybrid/system-resilience behavior. It did not require the Phase 3 Semantic
+Retriever to absorb a provider failure. This is a contract clarification, not a Phase
+0 architecture reversal:
+
+- Phase 3 standalone Semantic Retrieval: an `EmbeddingProvider` failure must fail
+  explicitly as a stable semantic retrieval error; it must not silently return BM25
+  results or claim semantic success.
+- Phase 5 Hybrid Retrieval: the embedding branch may degrade to lexical-only fallback,
+  provided the result explicitly marks degraded mode and strategy provenance. It must
+  not be presented as a complete Hybrid success.
+
+Failure ownership is layered: `EmbeddingProvider` reports provider/model failure;
+the Semantic Retriever converts it to the stable semantic retrieval error; the Phase
+5 Hybrid Retriever decides whether lexical fallback is permitted; and the future
+`RetrievalService` exposes the final strategy/provenance. Hybrid fallback is not
+implemented in Phase 3.
 
 ## 13. Package and Dependency Architecture
 
@@ -298,7 +318,8 @@ The minimum failure behavior is frozen as:
 - missing source -> fail closed;
 - snapshot mismatch -> reject or rebuild;
 - corrupt index -> rebuild;
-- embedding failure -> lexical fallback.
+- standalone Phase 3 embedding-provider failure -> explicit semantic retrieval error;
+  Phase 5 Hybrid Retrieval may use an explicitly marked degraded lexical-only fallback.
 
 V3.1.0 does not create a complex retry framework.
 
@@ -461,5 +482,9 @@ review; Phase 0 must not modify, move, delete, or commit it.
 ## 27. Consequences and Next Step
 
 The Software Architecture and Research Methodology are **FROZEN** with no blocking
-issue. This documentation gate authorizes a separate Phase 1 — Corpus & Symbol Content
-Model task. Phase 1 remains **NOT STARTED** by this decision.
+issue. At the time of this original Phase 0 decision, the documentation gate
+authorized a separate Phase 1 — Corpus & Symbol Content Model task. That historical
+authorization is retained; Phase 1 and the subsequent Phase 2 Lexical Baseline are
+now completed with their documentation gates closed. Phase 3 is allowed but not
+started, and the next task is the Phase 3.0 Documentation Freeze based on the
+completed Claude Semantic Embedding Selection Review.

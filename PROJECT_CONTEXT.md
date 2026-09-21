@@ -65,6 +65,25 @@
 - V3.1.0 Phase 3 entry contract: fake/hash embeddings are tests-only; formal semantic
   comparison requires a separately reviewed real model with fixed version, dimension,
   normalization, license, reproducibility, and runtime/hardware evidence
+- V3.1.0 current baseline: `469 passed`; Phase 0 and Phase 1 are completed/frozen,
+  Phase 2 is completed with Final QA `PASS WITH LOW NOTES` and Documentation Gate
+  `CLOSED`
+- V3.1.0 Phase 3: `ALLOWED BUT NOT STARTED`; Phase 3.0 Documentation Freeze is not
+  yet completed
+- V3.1.0 Phase 3.1: `NOT STARTED`
+- Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
+  verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
+  research-methodology blocker `0`
+- Phase 3.0 selection summary: primary `intfloat/multilingual-e5-base` (revision
+  `d128750597153bb5987e10b1c3493a34e5a4502a`, dimension `768`, L2 normalization,
+  cosine similarity, query instruction `query: `, document instruction `passage: `;
+  English main benchmark with a Chinese coverage set); backup
+  `BAAI/bge-base-en-v1.5`; core requirements remain unchanged and real-model
+  dependencies are optional
+- Historical Audit Remediation P1: `RESOLVED`; this is a documentation/contract
+  clarification only. Deferred audit items are P2: V3.0.0 formal release-gate
+  evidence, V3.0.0 Thesis Development Report, and tracked V3.0.1 Thesis
+  Development Report; P3: CorpusBuilder optional canonical tie-key hardening
 - Released version metadata remains `3.0.1` until later RC Release Engineering.
 - Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
@@ -96,7 +115,8 @@
 - Phase 5: `SKIPPED FOR V3.0.1`
 - V3.0.2 commercial track: `DEFERRED`
 - No release fix or directed retest is required.
-- Next: V3.1.0 Phase 3 — Embedding Port & Semantic Retrieval Foundation (`ALLOWED BUT NOT STARTED`)
+- Next: V3.1.0 Phase 3.0 Documentation Freeze, based on the completed Claude
+  Semantic Embedding Selection Review
 - Phase 0 — Architecture & Scope Gate: completed
 - Phase 0.0 — Development Baseline: completed
 - Claude Phase 0 Architecture Review: completed
@@ -382,7 +402,8 @@
 - V3.0.1 RC1.5 Claude Final Release Review: completed
   (`APPROVE WITH NON-BLOCKING NOTES`) with Release Blockers `0`.
 - V3.0.1 Final Release Gate: `PASS`; version `3.0.1` is released.
-- Next: V3.1.0 Phase 2 — Lexical Baseline / BM25 (`NOT STARTED`).
+- Next: V3.1.0 Phase 3.0 Documentation Freeze, based on the completed Claude
+  Semantic Embedding Selection Review.
 - V3.0 roadmap:
   - Phase 0 — Engineering Baseline: completed
   - Phase 1 — Domain Core & Stable Symbol Identity: completed
@@ -578,7 +599,9 @@ use this server-side boundary:
 - V3.0.2 — Commercial infrastructure enhancement track: **DEFERRED / OPTIONAL**
 - V3.1.0 — Project Intelligence / RAG: **DEVELOPMENT STARTED**; Phase 0 Architecture
   and Research Methodology frozen; Phase 1 Documentation Gate closed; Phase 1
-  completed and frozen; Phase 2 Lexical Baseline / BM25 allowed but not started
+  completed and frozen; Phase 2 Lexical Baseline / BM25 completed with Final QA
+  `PASS WITH LOW NOTES` and Documentation Gate `CLOSED`; Phase 3 is allowed but
+  not started
 - V3.2 — Controlled Multi-Agent Collaboration: **PLANNED**
 - V3.3 — Data-driven Multi-Model Router: **PLANNED**
 - V3.4 — VS Code Integration: **PLANNED**
@@ -856,8 +879,9 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   retrieval-config hash, and optional embedding fingerprint. Any identity change
   invalidates silent reuse.
 - `SnapshotDiff` maps added/add, removed/delete, changed/replace, and unchanged/reuse.
-  Incremental results must equal a full rebuild. Incremental indexing is a secondary
-  engineering performance experiment, not a core RQ.
+  Incremental results must equal a full rebuild. Incremental indexing is a Phase 4
+  capability and secondary engineering performance experiment, not a Phase 2
+  responsibility or core RQ.
 - Graph-aware retrieval reads only frozen `CONTAINS` and `IMPORTS` relations. Expansion
   has hop, relation, per-seed, and global node budgets; unbounded traversal is
   prohibited. `max_hops = 1` is an implementation candidate, not a frozen numeric
@@ -897,9 +921,16 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   committed.
 - Engineering performance records full build time, incremental update time, query
   latency, index size, and context size with environment and dataset scope.
-- Failure behavior is stale content -> reject/rebuild, embedding failure -> lexical
-  fallback, corrupt index -> rebuild, missing source -> fail closed, and snapshot
-  mismatch -> reject/rebuild. V3.1 does not create a complex retry framework.
+- Failure behavior is stale content -> reject/rebuild, missing source -> fail closed,
+  corrupt index -> rebuild, and snapshot mismatch -> reject/rebuild. In standalone
+  Phase 3 Semantic Retrieval, an embedding-provider failure becomes an explicit
+  semantic retrieval error; Phase 5 Hybrid Retrieval may use a lexical-only fallback
+  only when it marks degraded mode and strategy provenance. V3.1 does not create a
+  complex retry framework.
+- Failure ownership is layered: `EmbeddingProvider` reports provider/model failure;
+  the Semantic Retriever converts it to a stable semantic retrieval error; the Phase
+  5 Hybrid Retriever decides whether lexical fallback is permitted; and the future
+  `RetrievalService` exposes final strategy/provenance.
 - Frozen phase plan: Phase 0 Architecture & Research Design; Phase 1 Corpus & Symbol
   Content Model; Phase 2 Lexical BM25; Phase 3 Embedding Port & Semantic Retrieval;
   Phase 4 Graph-aware Retrieval + Index Identity + Incremental Indexing; Phase 5
@@ -913,9 +944,11 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
   evaluation of stable symbol identity, project structure, hybrid retrieval, and
   context construction. It does not claim a new BM25, embedding, or graph algorithm.
 - V3.1.0 Phase 0 Architecture and Research Methodology are frozen with no blocker. The
-  Phase 0 and Phase 1 Documentation Gates are closed. Phase 1 is completed and frozen;
-  Phase 2 — Lexical Baseline / BM25 is allowed as a separate task and remains not
-  started.
+  Phase 0, Phase 1, and Phase 2 Documentation Gates are closed. Phase 1 and Phase 2
+  are completed and frozen; Phase 3 is allowed but not started. Phase 2 owns BM25
+  correctness, determinism, input-order independence, and corpus compatibility only;
+  incremental indexing, incremental index consistency, and `SnapshotDiff` operations
+  belong to Phase 4.
 
 ### Phase 3.3 Graph Identity Contract
 
