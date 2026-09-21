@@ -1,4 +1,6 @@
 import sys
+import types
+from types import SimpleNamespace
 
 import pytest
 
@@ -68,3 +70,106 @@ def test_empty_and_whitespace_inputs_are_rejected_before_model_use():
         provider.embed_query("")
     with pytest.raises(EmbeddingTokenizationError, match="must not contain"):
         provider.embed_documents(("  ",))
+
+
+class _DiagnosticEncoding:
+    def __init__(self, size):
+        self.ids = list(range(size))
+
+
+class _StatefulDiagnosticBackend:
+    def __init__(self):
+        self.truncation = None
+
+    def no_truncation(self):
+        self.truncation = None
+
+    def enable_truncation(self, **config):
+        self.truncation = dict(config)
+
+    def encode(self, text, *, add_special_tokens):
+        size = 2004 if add_special_tokens else 2002
+        if self.truncation is not None:
+            size = min(size, self.truncation["max_length"])
+        return _DiagnosticEncoding(size)
+
+
+def test_diagnose_is_independent_of_inference_mutated_backend_state():
+    provider = LocalE5EmbeddingProvider()
+    backend = _StatefulDiagnosticBackend()
+    provider._tokenizer = SimpleNamespace(backend_tokenizer=backend)
+    provider._model = object()
+
+    long_text = "long text"
+    before = provider.diagnose(long_text)
+    assert before.total_token_count == 2004
+    assert before.truncated is True
+
+    # Simulate the shared backend state left by the real tokenizer's inference
+    # call. diagnose() must temporarily disable it and restore it afterwards.
+    backend.enable_truncation(max_length=512, stride=0, strategy="longest_first", direction="right")
+    after = provider.diagnose(long_text)
+
+    assert after == before
+    assert backend.truncation["max_length"] == 512
+
+
+def test_embed_documents_empty_tuple_resets_diagnostics_deterministically():
+    provider = LocalE5EmbeddingProvider()
+
+    assert provider.embed_documents(()) == ()
+    assert provider.last_diagnostics == ()
+
+
+class _FakeLoadTokenizer:
+    model_max_length = 512
+
+
+class _FakeLoadModel:
+    def __init__(self, *, revision, dimension):
+        self.config = SimpleNamespace(_commit_hash=revision, hidden_size=dimension)
+
+    def to(self, _device):
+        return self
+
+    def eval(self):
+        return self
+
+
+def _install_fake_runtime(monkeypatch, *, resolved_revision, dimension):
+    fake_torch = types.ModuleType("torch")
+    fake_torch.device = lambda name: SimpleNamespace(type=name)
+    fake_torch.backends = SimpleNamespace(
+        mps=SimpleNamespace(is_available=lambda: False)
+    )
+    fake_transformers = types.ModuleType("transformers")
+    fake_transformers.AutoTokenizer = SimpleNamespace(
+        from_pretrained=lambda *args, **kwargs: _FakeLoadTokenizer()
+    )
+    fake_transformers.AutoModel = SimpleNamespace(
+        from_pretrained=lambda *args, **kwargs: _FakeLoadModel(
+            revision=resolved_revision, dimension=dimension
+        )
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
+
+
+def test_wrong_resolved_revision_fails_closed(monkeypatch):
+    provider = LocalE5EmbeddingProvider()
+    _install_fake_runtime(monkeypatch, resolved_revision="wrong", dimension=768)
+
+    from project_intelligence import EmbeddingModelLoadError
+
+    with pytest.raises(EmbeddingModelLoadError, match="unable to load pinned"):
+        provider.load()
+
+
+def test_wrong_model_dimension_fails_closed(monkeypatch):
+    provider = LocalE5EmbeddingProvider()
+    _install_fake_runtime(monkeypatch, resolved_revision=PRIMARY_MODEL_REVISION, dimension=7)
+
+    from project_intelligence import EmbeddingModelLoadError
+
+    with pytest.raises(EmbeddingModelLoadError, match="unable to load pinned"):
+        provider.load()

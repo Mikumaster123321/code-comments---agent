@@ -2,8 +2,10 @@
 
 ## Status
 
-- Implementation: **IMPLEMENTED / VALIDATION COMPLETE**
-- Independent QA: **PENDING**
+- Initial Independent QA: **FAIL / BLOCKED** (Critical 1, Medium 2, Low 7)
+- Phase 3.2.1: **IMPLEMENTED / HARDENING COMPLETE**
+- C-1 truncation diagnostics: **FIX IMPLEMENTED / PENDING DIRECTED RETEST**
+- Directed Retest: **REQUIRED / PENDING**
 - Phase 3 overall Gate: **OPEN**
 - Core `requirements.txt`: **UNCHANGED**
 - Primary: `intfloat/multilingual-e5-base`
@@ -90,20 +92,31 @@ Python 3.12.14, CPU, and batch size 8:
 - RSS before/after load: **21.5 / 763.0 MB**;
 - 100 repeated query embeddings: maximum absolute delta **0**;
 - single-versus-batch embedding: maximum absolute delta **0**;
-- current post-implementation corpus: **1002 documents**;
-- corpus embedding/index build: **94.453 s**;
-- peak measured RSS during corpus indexing: **1496.1 MB**;
-- Git `HEAD` baseline corpus: **976 documents**, **95.139 s** embedding time,
-  **1509.3 MB** peak RSS in the same CPU environment;
-- warm single-query latency: **0.636 s**;
+- audited commit `1c950ec` corpus: **1003 documents**;
+- audited HEAD token distribution: min **19**, median **147**, p90 **422**, p95
+  **635**, p99 **2236**, max **8886**; over-512/truncated **78**;
+  ratio **7.7767%**; maximum dropped tokens **8374** (matches the Independent QA
+  evidence);
+- post-hardening working-tree corpus: **1020 documents**;
+- post-hardening delta: **+17**, all from
+  `tests/test_project_intelligence_local_embedding.py` additions;
+- corrected post-hardening token distribution: min **19**, median **145**, p90
+  **415**, p95 **627**, p99 **2321**, max **8886**;
+- post-hardening documents over 512: **79**; truncated documents: **79**;
+  truncated ratio **7.7451%**; maximum dropped tokens **8374**;
+- the audited pre-Phase-3.2 baseline remains **976 documents**;
+- prior `1002 documents / 0 truncated / 0.00%` evidence is **INVALID** and is
+  retained only as superseded historical evidence;
+- corrected full validation run: **90.420 s** corpus embedding/index build and
+  **1520.7 MB** peak RSS;
+- corrected cold load: **2.241 s**; warm single-query latency: **0.585 s**;
 - query results were finite, deterministic, and carried the unchanged adapter
   fingerprint through `SemanticIndex`.
 
-The formal Phase 3.1 entry evidence remains 976 documents; its direct
-embedding-cost run is recorded above. The validation
-smoke count is 1002 because the Phase 3.2 adapter, validation tests, and
-validation entry themselves add symbols to the current working-tree corpus; it
-does not indicate a CorpusBuilder mutation. No vector files, persistent cache,
+The formal Phase 3.1 entry evidence remains 976 documents. The audited Phase
+3.2 commit contained 1003 documents; the post-hardening tree contains 1020,
+with the +17 change attributable solely to the expanded local-adapter regression
+test file. These counts do not indicate a CorpusBuilder mutation. No vector files, persistent cache,
 SQLite vectors, or corpus dump were written to the repository.
 
 Boundary evidence uses the actual tokenizer and special tokens: 510 raw tokens
@@ -112,7 +125,35 @@ produce 512 total tokens and are not truncated; 511–514 raw tokens exceed the
 covered English, Chinese, Japanese, Unicode identifiers, Python non-ASCII
 comments/strings, and Java non-ASCII source without inference failure.
 
-## 5. Research and Scope Boundary
+## 5. Phase 3.2.1 Hardening History
+
+The initial Phase 3.2 implementation passed its local smoke checks but reported
+incorrectly low truncation counts because `diagnose()` read shared fast-tokenizer
+backend state after inference had enabled truncation. DeepSeek Independent QA
+classified this as one Critical and two Medium findings and rejected the phase.
+
+This hardening makes diagnostics temporarily disable backend truncation, measure
+the untruncated sequence, and restore the prior tokenizer state in `finally`.
+Inference still uses `truncation=True, max_length=512`. It also makes direct
+validation-script execution bootstrap the repository root without requiring
+`PYTHONPATH`, and adds focused offline regression tests for state independence,
+empty batches, wrong revision, and wrong dimension. The corrected statistics
+above were recomputed through the production diagnostic path rather than copied
+from QA.
+
+Post-hardening offline evidence: local adapter tests **10 passed**, Phase 3.1
+embedding regression **12 passed**, Phase 2 lexical regression **14 passed**,
+Phase 1 corpus regression **41 passed**, LLM smoke **6 passed**, and full
+regression **491 passed**. The ordinary host `python -m pytest` debugging-plugin
+segmentation fault remains an environment-specific issue; the documented
+workaround `python -m pytest -p no:debugging` is green.
+
+The documented direct command now starts from repository root without a manual
+`PYTHONPATH`; the script performs a minimal repository-root bootstrap before
+project imports. The offline reload used the pinned external snapshot and
+`pip check` passed in the optional environment.
+
+## 6. Research and Scope Boundary
 
 The sanity queries and corpus smoke establish local adapter feasibility only.
 They are not RQ2/RQ4 recall, MRR, or benchmark results. Formal semantic-quality

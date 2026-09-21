@@ -23,6 +23,11 @@ import time
 from pathlib import Path
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+
 def _rss_mb() -> float:
     value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     # macOS reports bytes; Linux reports KiB.
@@ -56,7 +61,7 @@ def main() -> int:
         SemanticIndex,
     )
 
-    root = Path(__file__).resolve().parents[1]
+    root = REPOSITORY_ROOT
     provider = LocalE5EmbeddingProvider(
         cache_dir=args.cache_dir,
         model_path=args.model_path,
@@ -119,6 +124,22 @@ def main() -> int:
     assert all(math.isfinite(value) for value in query_vector)
     assert abs(math.sqrt(math.fsum(value * value for value in query_vector.values)) - 1.0) < 1e-5
     print(f"warm_query_seconds={warm_seconds:.3f} vector_dimension={len(query_vector)}")
+
+    long_probe = "a " * 2000
+    diagnostic_before = provider.diagnose(long_probe, kind="document")
+    provider.embed_query("diagnostic state probe")
+    diagnostic_after_query = provider.diagnose(long_probe, kind="document")
+    provider.embed_documents(("diagnostic document", "another document"))
+    diagnostic_after_documents = provider.diagnose(long_probe, kind="document")
+    assert diagnostic_before == diagnostic_after_query == diagnostic_after_documents
+    long_vectors = provider.embed_documents((long_probe,))
+    assert provider.last_diagnostics[0] == diagnostic_before
+    print(
+        "diagnostic_history_stable=True "
+        f"long_total={diagnostic_before.total_token_count} "
+        f"long_truncated={diagnostic_before.truncated} "
+        f"long_vector_dimension={len(long_vectors[0])}"
+    )
 
     repeated = [provider.embed_query(texts[0]).values for _ in range(100)]
     max_delta = max(

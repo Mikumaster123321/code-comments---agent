@@ -199,8 +199,16 @@ class LocalE5EmbeddingProvider:
             backend = getattr(self._tokenizer, "backend_tokenizer", None)
             if backend is None:
                 raise RuntimeError("fast tokenizer backend is unavailable")
-            raw = backend.encode(prepared, add_special_tokens=False).ids
-            full = backend.encode(prepared, add_special_tokens=True).ids
+            previous_truncation = backend.truncation
+            backend.no_truncation()
+            try:
+                raw = backend.encode(prepared, add_special_tokens=False).ids
+                full = backend.encode(prepared, add_special_tokens=True).ids
+            finally:
+                if previous_truncation is None:
+                    backend.no_truncation()
+                else:
+                    backend.enable_truncation(**previous_truncation)
         except Exception as error:
             raise EmbeddingTokenizationError(
                 f"tokenizer failed to inspect input: {type(error).__name__}"

@@ -95,8 +95,11 @@
   fake provider remains tests-only and provides no semantic-quality evidence
 - V3.1.0 Phase 3 Independent QA: `PASS WITH LOW NOTES`
 - V3.1.0 Phase 3 Documentation Gate: `OPEN`
-- V3.1.0 Phase 3.2: `IMPLEMENTED / VALIDATION COMPLETE`
-- V3.1.0 Phase 3.2 Independent QA: `PENDING`
+- V3.1.0 Phase 3.2: `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 3.2 Initial Independent QA: `FAIL / BLOCKED` (Critical `1`,
+  Medium `2`, Low `7`)
+- V3.1.0 Phase 3.2.1: `IMPLEMENTED / HARDENING COMPLETE`; C-1 truncation
+  diagnostics fix implemented; Directed Retest `REQUIRED / PENDING`
 - V3.1.0 Phase 3 overall Gate: `OPEN`
 - V3.1.0 Phase 3.2 runtime: `transformers==4.56.2` + `torch==2.8.0`,
   isolated Python 3.12.14 optional environment; `requirements.txt` unchanged
@@ -104,9 +107,12 @@
   `d128750597153bb5987e10b1c3493a34e5a4502a`, dimension `768` verified,
   tokenizer/model revision consistency verified, CPU float32 baseline validated
 - V3.1.0 Phase 3.2 validation: explicit offline entry point; 100-repeat
-  determinism and single/batch consistency passed; current working-tree corpus
-  smoke `1002` documents; no vectors or model cache committed
-- V3.1.0 next: Phase 3.2 Independent QA and Documentation Gate review
+  determinism and single/batch consistency passed; audited HEAD corpus `1003`
+  and post-hardening working-tree corpus `1020`; corrected truncation evidence
+  `79 / 7.7451%` on the post-hardening tree (p99 `2321`); no vectors or model
+  cache committed
+- V3.1.0 next: DeepSeek Phase 3.2.1 Directed Retest; Documentation Gate remains
+  open and Phase 4 remains not started
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
