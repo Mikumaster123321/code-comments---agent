@@ -125,14 +125,18 @@
   Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM smoke `6 passed`; full
   regression `491 passed`; no real API, credential, or network request used
 - V3.1.0 Phase 4 — Graph Expansion + Index Identity / Incremental Indexing:
-  `IMPLEMENTED / HARDENING COMPLETE`
-- V3.1.0 Phase 4 Independent QA: `PASS WITH NON-BLOCKING FINDINGS`
+  `COMPLETED`
+- V3.1.0 Phase 4 Initial Independent QA: `PASS WITH NON-BLOCKING FINDINGS`
+- V3.1.0 Phase 4.1 Hardening: `COMPLETED`
+- V3.1.0 Phase 4 Directed Retest: `PASS WITH LOW NOTES`
 - V3.1.0 Phase 4 F1 — graph traversal direction contract:
-  `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+  `CLOSED / RESOLVED`
 - V3.1.0 Phase 4 F2 — incremental unchanged lookup complexity:
-  `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
-- V3.1.0 Phase 4 Directed Retest: `REQUIRED / PENDING` (DeepSeek)
-- V3.1.0 Phase 4 Documentation Gate: `OPEN`
+  `CLOSED / RESOLVED`
+- V3.1.0 Phase 4 Final QA: `PASS FOR PHASE 4 WITH LOW NOTES`
+- V3.1.0 Phase 4 Final Critical / Medium / Phase blocker: `0 / 0 / 0`
+- V3.1.0 Phase 4.1.1: `NOT REQUIRED`
+- V3.1.0 Phase 4 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 4 index identity: immutable, deterministic, credential-free
   `RetrievalIndexIdentity` over project ID, authoritative Snapshot content hash,
   retrieval-config hash, and optional Embedding fingerprint
@@ -163,10 +167,21 @@
   Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM
   smoke `6 passed`; full regression `528 passed`; no real model, model download,
   credential, API, or network request was used
-- V3.1.0 Phase 4 deferred Low: `expected_graph` tuple-order comparison is handled
-  inside `graph_expansion.py` by canonical comparison; the frozen `ProjectGraph` /
-  `Snapshot` contract is untouched
-- V3.1.0 Phase 5: `NOT STARTED`
+- V3.1.0 Phase 4 Directed Retest performance evidence: 5,000 Symbols incremental
+  `~0.1059s` versus full rebuild `~0.1152s` (ratio `~0.919`); 10,000 Symbols
+  incremental `~0.2158s` versus full rebuild `~0.2332s` (ratio `~0.926`); doubling
+  produced `~2.038x` incremental scaling and did not show stable `O(N^2)` behavior;
+  this is engineering evidence, not a formal thesis performance result
+- V3.1.0 Phase 4 deferred Low: direct manual `GraphExpansionProvenance`
+  construction has no `__post_init__` validation for invalid direction values;
+  authoritative `expand_graph()` emits only `FORWARD` / `REVERSE`, so production
+  expansion is unaffected; future defensive hardening only
+- V3.1.0 Phase 4 expected-graph behavior: semantically equal graphs with different
+  tuple order are accepted through canonical comparison; genuinely different graphs
+  fail closed; frozen `ProjectGraph` / `Snapshot` contracts remain unchanged
+- V3.1.0 Phase 4 reports: `docs/development/Development_Report_V3_1_0_Phase_4.md`
+  and `docs/qa/QA_Report_V3_1_0_Phase_4.md`
+- V3.1.0 Phase 5: `ALLOWED BUT NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
