@@ -4,9 +4,11 @@
 
 - Initial Independent QA: **FAIL / BLOCKED** (Critical 1, Medium 2, Low 7)
 - Phase 3.2.1: **IMPLEMENTED / HARDENING COMPLETE**
-- C-1 truncation diagnostics: **FIX IMPLEMENTED / PENDING DIRECTED RETEST**
-- Directed Retest: **REQUIRED / PENDING**
-- Phase 3 overall Gate: **OPEN**
+- C-1 truncation diagnostics: **CLOSED / RESOLVED**
+- M-1: **CLOSED / RESOLVED**
+- Directed Retest: **PASS WITH LOW NOTES**
+- Phase 3.2.2: **NOT REQUIRED**
+- Phase 3 overall Documentation Gate: **CLOSED**
 - Core `requirements.txt`: **UNCHANGED**
 - Primary: `intfloat/multilingual-e5-base`
 - Primary revision: `d128750597153bb5987e10b1c3493a34e5a4502a`
@@ -100,7 +102,7 @@ Python 3.12.14, CPU, and batch size 8:
 - post-hardening working-tree corpus: **1020 documents**;
 - post-hardening delta: **+17**, all from
   `tests/test_project_intelligence_local_embedding.py` additions;
-- corrected post-hardening token distribution: min **19**, median **145**, p90
+- corrected post-hardening token distribution: min **19**, median **144**, p90
   **415**, p95 **627**, p99 **2321**, max **8886**;
 - post-hardening documents over 512: **79**; truncated documents: **79**;
   truncated ratio **7.7451%**; maximum dropped tokens **8374**;

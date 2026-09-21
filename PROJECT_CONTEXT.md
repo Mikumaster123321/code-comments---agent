@@ -68,8 +68,7 @@
 - V3.1.0 current baseline before Phase 3.1: `469 passed`; Phase 0 and Phase 1 are completed/frozen,
   Phase 2 is completed with Final QA `PASS WITH LOW NOTES` and Documentation Gate
   `CLOSED`
-- V3.1.0 Phase 3: `ALLOWED BUT NOT STARTED`; Phase 3.0 Documentation Freeze is
-  `CLOSED`
+- V3.1.0 Phase 3: `COMPLETED`; Phase 3.0 Documentation Freeze is `CLOSED`
 - V3.1.0 Phase 3.0 Selection Review: `COMPLETED`
 - V3.1.0 Phase 3.0 Selection: `FROZEN`
 - V3.1.0 Phase 3.0 Primary / Backup: `FROZEN`
@@ -94,13 +93,17 @@
 - V3.1.0 Phase 3.1 real model: superseded by Phase 3.2 local adapter validation;
   fake provider remains tests-only and provides no semantic-quality evidence
 - V3.1.0 Phase 3 Independent QA: `PASS WITH LOW NOTES`
-- V3.1.0 Phase 3 Documentation Gate: `OPEN`
+- V3.1.0 Phase 3 Final QA: `PASS FOR PHASE 3 WITH LOW NOTES`
+- V3.1.0 Phase 3 Final Critical / Medium / Phase blocker: `0 / 0 / 0`
+- V3.1.0 Phase 3 Documentation Gate: `CLOSED`
+- V3.1.0 Semantic Embedding Foundation: `FROZEN FOR V3.1`
 - V3.1.0 Phase 3.2: `IMPLEMENTED / HARDENING COMPLETE`
 - V3.1.0 Phase 3.2 Initial Independent QA: `FAIL / BLOCKED` (Critical `1`,
   Medium `2`, Low `7`)
-- V3.1.0 Phase 3.2.1: `IMPLEMENTED / HARDENING COMPLETE`; C-1 truncation
-  diagnostics fix implemented; Directed Retest `REQUIRED / PENDING`
-- V3.1.0 Phase 3 overall Gate: `OPEN`
+- V3.1.0 Phase 3.2.1: `IMPLEMENTED / HARDENING COMPLETE`; C-1 `CLOSED / RESOLVED`;
+  M-1 `CLOSED / RESOLVED`; Directed Retest `PASS WITH LOW NOTES`
+- V3.1.0 Phase 3.2.2: `NOT REQUIRED`
+- V3.1.0 Phase 3 overall Gate: `CLOSED`
 - V3.1.0 Phase 3.2 runtime: `transformers==4.56.2` + `torch==2.8.0`,
   isolated Python 3.12.14 optional environment; `requirements.txt` unchanged
 - V3.1.0 Phase 3.2 real model: `intfloat/multilingual-e5-base`, frozen revision
@@ -109,10 +112,20 @@
 - V3.1.0 Phase 3.2 validation: explicit offline entry point; 100-repeat
   determinism and single/batch consistency passed; audited HEAD corpus `1003`
   and post-hardening working-tree corpus `1020`; corrected truncation evidence
-  `79 / 7.7451%` on the post-hardening tree (p99 `2321`); no vectors or model
-  cache committed
-- V3.1.0 next: DeepSeek Phase 3.2.1 Directed Retest; Documentation Gate remains
-  open and Phase 4 remains not started
+  `79 / 7.7451%` on the post-hardening tree (median `144`, p99 `2321`); no
+  vectors or model cache committed
+- V3.1.0 Phase 3.2 audited token evidence: `1003 documents`, `78 truncated`,
+  `7.7767%`; post-hardening: `1020 documents`, `79 truncated`, `7.7451%`,
+  min `19`, median `144`, p90 `415`, p95 `627`, p99 `2321`, max `8886`, max
+  dropped `8374`
+- V3.1.0 Phase 3.2 prior `1002 documents / 0 truncated / 0.00%` evidence:
+  `INVALID INITIAL EVIDENCE` due to tokenizer backend truncation-state
+  diagnostic contamination; superseded by the audited and post-hardening evidence
+- V3.1.0 Phase 3 final validation: adapter `10 passed`; Phase 3.1 `12 passed`;
+  Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM smoke `6 passed`; full
+  regression `491 passed`; no real API, credential, or network request used
+- V3.1.0 next: Phase 4 — Graph Expansion + Index Identity / Incremental Indexing;
+  Phase 4 is `ALLOWED BUT NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`
