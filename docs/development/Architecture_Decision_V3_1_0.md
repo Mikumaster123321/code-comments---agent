@@ -67,7 +67,11 @@ The following four questions are frozen:
 - **RQ2 — Retrieval Strategy:** How do lexical retrieval and semantic embedding
   retrieval perform on maintenance queries, and where are they complementary?
 - **RQ3 — Graph Signal:** Can the existing `CONTAINS` and `IMPORTS` signals in
-  `ProjectGraph` improve relevant-code-entity recall?
+  `ProjectGraph` improve relevant-code-entity recall? RQ3 is evaluated over the pair
+  `(relation, direction)`, not over `relation` alone: a dependency and a
+  dependent/importer are two different graph signals and must never be conflated into a
+  single undifferentiated `IMPORTS` signal during ablation. Phase 4 only freezes the
+  contract that makes this separation observable; it produces no RQ3 result.
 - **RQ4 — Hybrid Retrieval:** Does a Lexical + Embedding + Graph hybrid strategy
   outperform individual strategies, and which signal accounts for the gain?
 
@@ -235,6 +239,49 @@ Every expansion must enforce:
 `max_hops = 1` is the initial candidate, not a Phase 0 hard-coded production default;
 implementation tests may adjust the exact value. Infinite expansion across the project
 graph is prohibited.
+
+### 11.1 Frozen Traversal Direction Contract
+
+The `CONTAINS` and `IMPORTS` relations in `ProjectGraph` remain **directed**. The graph
+has not become an undirected graph, and V3.1.0 adds no new `GraphRelationKind`. The
+graph explicitly tracks an edge source and an edge target for every relation.
+What Phase 4 freezes is that the graph-expansion layer may traverse such an edge in
+either direction, and that the chosen direction is recorded explicitly rather than
+inferred from node kinds.
+
+Traversal direction is a retrieval-provenance attribute. It is **not** a `ProjectGraph`
+relation type change, and it must never be reconstructed by guessing whether a node is a
+File, a Symbol, or an external module.
+
+| Relation | FORWARD (source → target) | REVERSE (target → source) |
+| --- | --- | --- |
+| `CONTAINS` | container → contained (File → Symbol) | contained → container (Symbol → containing File) |
+| `IMPORTS` | importer → dependency (File → imported module) | dependency → importer/dependent (module → importing File) |
+
+Frozen semantics:
+
+- `edge.source → edge.target` is `FORWARD`;
+- `edge.target → edge.source` is `REVERSE`;
+- `GraphTraversalDirection` is immutable and admits exactly `FORWARD` and `REVERSE`;
+- every expanded candidate carries
+  `seed_identity, relation, direction, hop, node_identity`;
+- bidirectional traversal is retained deliberately. A Symbol seed must be able to reach
+  its containing File through reverse `CONTAINS`, and maintenance context needs both the
+  dependency side (forward `IMPORTS`) and the dependent/importer side (reverse
+  `IMPORTS`). These two sides must stay distinguishable in provenance.
+
+Deduplication stays deterministic and minimal: when one candidate is reachable through
+several seeds or paths, exactly one deterministic provenance is retained. V3.1.0 does not
+introduce multi-provenance history or a graph path object.
+
+### 11.2 Structural Context Nodes and Expansion Budget
+
+`PROJECT` and `FILE` structural context nodes may legitimately have `document=None`
+because they have no retrieval document of their own. Such nodes remain valid graph
+context: they may be reached by expansion (for example a File seed reaching the owning
+`PROJECT` node through reverse `CONTAINS` at `max_hops = 1`) and they still consume
+expansion budget. `document=None` is therefore not an inconsistency and is not filtered
+out silently; callers must treat absence of a document as "structural context only".
 
 ## 12. Hybrid Retrieval and Reranking
 
@@ -410,6 +457,13 @@ Engineering performance records at least full index build time, incremental upda
 time, query latency, index size, and context size. Claims state hardware, Python
 version, dataset size, index size, and run scope. Millisecond results from small
 fixtures must not be presented as production scalability evidence.
+
+Incremental update cost must be linear in the number of index documents. The
+`IncrementalIndexPlan` keeps its public immutable tuple contract, but the update path
+performs unchanged-membership tests through a set built once per update, so a plan with
+`N` unchanged entries costs average `O(1)` per document instead of `O(N)` per document.
+Scaling evidence is recorded as a ratio across doubled corpus sizes rather than as an
+absolute millisecond threshold.
 
 ## 22. Frozen Phase Plan
 

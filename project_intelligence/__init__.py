@@ -58,6 +58,7 @@ from .graph_expansion import (
     GraphExpansionResult,
     GraphExpander,
     GraphSnapshotMismatchError,
+    GraphTraversalDirection,
     expand_graph,
 )
 from .index import (
@@ -128,6 +129,7 @@ __all__ = [
     "GraphExpander",
     "ExpandedContextCandidate",
     "GraphSnapshotMismatchError",
+    "GraphTraversalDirection",
     "expand_graph",
     "EmbeddingFingerprintMismatchError",
     "IncrementalIndexPlan",

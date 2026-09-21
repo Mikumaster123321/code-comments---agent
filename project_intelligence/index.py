@@ -519,11 +519,12 @@ class RetrievalIndex:
             effective_provider = None
 
         entries = []
+        unchanged_ids = set(plan.unchanged)
         for document in sorted(docs, key=lambda item: _symbol_id_key(item.symbol_id)):
             old_entry = self._entries_by_id.get(document.symbol_id)
             if document.symbol_id in new_vectors:
                 vector = new_vectors[document.symbol_id]
-            elif old_entry is not None and document.symbol_id in plan.unchanged:
+            elif old_entry is not None and document.symbol_id in unchanged_ids:
                 vector = old_entry.vector
             elif not self._config.embedding_enabled:
                 vector = None

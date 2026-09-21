@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Iterable
 
 from code_maintenance.domain import SymbolId
@@ -12,9 +13,23 @@ from code_maintenance.graph import (
     GraphNodeKind,
     GraphRelationKind,
     ProjectGraph,
+    canonicalize_graph,
 )
 
 from .domain import RetrievalDocument
+
+
+class GraphTraversalDirection(str, Enum):
+    """Explicit traversal direction of one graph expansion step.
+
+    ``FORWARD`` follows an edge from its source to its target; ``REVERSE``
+    follows the same (unchanged) graph edge from its target back to its source.
+    Direction is a property of retrieval provenance only: it never changes the
+    frozen ``ProjectGraph`` relation kinds.
+    """
+
+    FORWARD = "forward"
+    REVERSE = "reverse"
 
 
 class GraphExpansionError(Exception):
@@ -105,6 +120,7 @@ class GraphExpansionConfig:
 class GraphExpansionProvenance:
     seed_identity: object
     relation: GraphRelationKind
+    direction: GraphTraversalDirection
     hop: int
     node_identity: object
 
@@ -177,14 +193,20 @@ def expand_graph(
 
     Edges are traversable in either direction: this permits a symbol seed to reach
     its containing file and a file seed to reach imported files/symbols.  Only the
-    two frozen relation kinds are admitted.  External or otherwise non-retrievable
-    nodes are visited for traversal but are not fabricated as documents.
+    two frozen relation kinds are admitted.  Each expansion step records the
+    traversal direction explicitly: following ``edge.source -> edge.target`` is
+    ``GraphTraversalDirection.FORWARD`` and following ``edge.target ->
+    edge.source`` is ``GraphTraversalDirection.REVERSE``.  Direction is retrieval
+    provenance and never rewrites the underlying directed project graph.
+    External or otherwise non-retrievable nodes are visited for traversal but are
+    not fabricated as documents.
     """
 
     if not isinstance(graph, ProjectGraph):
         raise GraphExpansionError("graph must be a ProjectGraph")
     if expected_graph is not None and graph != expected_graph:
-        raise GraphSnapshotMismatchError("graph does not belong to the target snapshot")
+        if canonicalize_graph(graph) != canonicalize_graph(expected_graph):
+            raise GraphSnapshotMismatchError("graph does not belong to the target snapshot")
     cfg = config if config is not None else GraphExpansionConfig()
     if not isinstance(cfg, GraphExpansionConfig):
         raise GraphExpansionError("config must be a GraphExpansionConfig")
@@ -194,19 +216,21 @@ def expand_graph(
     for node in sorted(graph.nodes, key=_node_key):
         node_by_ref.setdefault(_node_ref_key(node), node)
         nodes_by_identity.setdefault(_identity_key(node.identity), []).append(node)
-    adjacency: dict[tuple, list[tuple[GraphRelationKind, GraphNode]]] = {}
+    adjacency: dict[tuple, list[tuple[GraphRelationKind, GraphTraversalDirection, GraphNode]]] = {}
     allowed = set(cfg.relations)
     for edge in sorted(graph.edges, key=_edge_key):
         if edge.relation not in allowed:
             continue
         adjacency.setdefault(_node_ref_key(edge.source), []).append(
-            (edge.relation, edge.target)
+            (edge.relation, GraphTraversalDirection.FORWARD, edge.target)
         )
         adjacency.setdefault(_node_ref_key(edge.target), []).append(
-            (edge.relation, edge.source)
+            (edge.relation, GraphTraversalDirection.REVERSE, edge.source)
         )
     for key in adjacency:
-        adjacency[key].sort(key=lambda pair: (pair[0].value, _node_key(pair[1])))
+        adjacency[key].sort(
+            key=lambda pair: (pair[0].value, pair[1].value, _node_key(pair[2]))
+        )
 
     by_symbol: dict[SymbolId, RetrievalDocument] = {}
     for document in documents:
@@ -252,7 +276,7 @@ def expand_graph(
             cursor += 1
             if hop >= cfg.max_hops:
                 continue
-            for relation, neighbor in adjacency.get(_node_ref_key(current), ()):
+            for relation, direction, neighbor in adjacency.get(_node_ref_key(current), ()):
                 neighbor_key = _node_ref_key(neighbor)
                 if neighbor_key in visited:
                     continue
@@ -268,6 +292,7 @@ def expand_graph(
                     provenance=GraphExpansionProvenance(
                         seed_identity=seed_identity,
                         relation=relation,
+                        direction=direction,
                         hop=next_hop,
                         node_identity=neighbor.identity,
                     ),
@@ -278,6 +303,7 @@ def expand_graph(
                 item.provenance.hop,
                 _node_key(item.node),
                 item.provenance.relation.value,
+                item.provenance.direction.value,
             )
         )
         for candidate in per_seed[: cfg.max_expanded_per_seed]:
@@ -295,6 +321,7 @@ def expand_graph(
                 _node_key(item.node),
                 _identity_key(item.provenance.seed_identity),
                 item.provenance.relation.value,
+                item.provenance.direction.value,
             ),
         )[: cfg.max_total_context_nodes]
     )

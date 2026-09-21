@@ -125,27 +125,47 @@
   Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM smoke `6 passed`; full
   regression `491 passed`; no real API, credential, or network request used
 - V3.1.0 Phase 4 — Graph Expansion + Index Identity / Incremental Indexing:
-  `IMPLEMENTED / QA PENDING`
-- V3.1.0 Phase 4 Independent QA: `REQUIRED`
+  `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 4 Independent QA: `PASS WITH NON-BLOCKING FINDINGS`
+- V3.1.0 Phase 4 F1 — graph traversal direction contract:
+  `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 4 F2 — incremental unchanged lookup complexity:
+  `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 4 Directed Retest: `REQUIRED / PENDING` (DeepSeek)
 - V3.1.0 Phase 4 Documentation Gate: `OPEN`
 - V3.1.0 Phase 4 index identity: immutable, deterministic, credential-free
   `RetrievalIndexIdentity` over project ID, authoritative Snapshot content hash,
   retrieval-config hash, and optional Embedding fingerprint
 - V3.1.0 Phase 4 incremental indexing: deterministic `SnapshotDiff` add/delete/
   replace/reuse semantics; unchanged semantic vectors are reused without Provider
-  calls; fingerprint/config changes fail closed and require rebuild
+  calls; fingerprint/config changes fail closed and require rebuild; the public
+  immutable `IncrementalIndexPlan` tuple contract is unchanged and unchanged
+  membership is tested through a per-update set (average `O(1)` per document instead
+  of `O(N)`)
 - V3.1.0 Phase 4 full-rebuild equivalence: document/content identity, BM25 ranking,
   exact semantic ranking, metadata, and index identity covered by offline tests
 - V3.1.0 Phase 4 Graph Expansion: deterministic bidirectional neighborhood traversal
   over frozen `CONTAINS` / `IMPORTS` only, with hop, per-seed, global, cycle, duplicate,
   provenance, unsupported-node, and target-graph guards
+- V3.1.0 Phase 4 traversal direction: `CONTAINS` / `IMPORTS` stay directed in
+  `ProjectGraph`; the expansion layer records explicit `GraphTraversalDirection`
+  (`FORWARD` = `edge.source → edge.target`, `REVERSE` = `edge.target → edge.source`)
+  in `GraphExpansionProvenance`; direction is retrieval provenance only and no new
+  `GraphRelationKind` is introduced
+- V3.1.0 Phase 4 structural context nodes: `PROJECT` / `FILE` structural nodes may have
+  `document=None` and still consume expansion budget; this is documented behavior, not
+  a correctness defect
 - V3.1.0 Phase 4 exclusions: no Hybrid Retrieval, score fusion/RRF, ContextBuilder,
   final RetrievalService facade, persistent cache, Vector DB, ANN, Agent, or Router;
-  no RQ3 conclusion is claimed
-- V3.1.0 Phase 4 implementation tests: `21 passed`; Phase 3.2 `10 passed`;
+  no RQ3 conclusion is claimed; RQ3 must later ablate `(relation, direction)` pairs
+  rather than a merged `IMPORTS` signal
+- V3.1.0 Phase 4 implementation tests: `37 passed`; Phase 3.2 `10 passed`;
   Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM
-  smoke `6 passed`; full regression `512 passed`; no real model, model download,
+  smoke `6 passed`; full regression `528 passed`; no real model, model download,
   credential, API, or network request was used
+- V3.1.0 Phase 4 deferred Low: `expected_graph` tuple-order comparison is handled
+  inside `graph_expansion.py` by canonical comparison; the frozen `ProjectGraph` /
+  `Snapshot` contract is untouched
 - V3.1.0 Phase 5: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
