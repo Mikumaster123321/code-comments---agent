@@ -124,8 +124,29 @@
 - V3.1.0 Phase 3 final validation: adapter `10 passed`; Phase 3.1 `12 passed`;
   Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM smoke `6 passed`; full
   regression `491 passed`; no real API, credential, or network request used
-- V3.1.0 next: Phase 4 — Graph Expansion + Index Identity / Incremental Indexing;
-  Phase 4 is `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 4 — Graph Expansion + Index Identity / Incremental Indexing:
+  `IMPLEMENTED / QA PENDING`
+- V3.1.0 Phase 4 Independent QA: `REQUIRED`
+- V3.1.0 Phase 4 Documentation Gate: `OPEN`
+- V3.1.0 Phase 4 index identity: immutable, deterministic, credential-free
+  `RetrievalIndexIdentity` over project ID, authoritative Snapshot content hash,
+  retrieval-config hash, and optional Embedding fingerprint
+- V3.1.0 Phase 4 incremental indexing: deterministic `SnapshotDiff` add/delete/
+  replace/reuse semantics; unchanged semantic vectors are reused without Provider
+  calls; fingerprint/config changes fail closed and require rebuild
+- V3.1.0 Phase 4 full-rebuild equivalence: document/content identity, BM25 ranking,
+  exact semantic ranking, metadata, and index identity covered by offline tests
+- V3.1.0 Phase 4 Graph Expansion: deterministic bidirectional neighborhood traversal
+  over frozen `CONTAINS` / `IMPORTS` only, with hop, per-seed, global, cycle, duplicate,
+  provenance, unsupported-node, and target-graph guards
+- V3.1.0 Phase 4 exclusions: no Hybrid Retrieval, score fusion/RRF, ContextBuilder,
+  final RetrievalService facade, persistent cache, Vector DB, ANN, Agent, or Router;
+  no RQ3 conclusion is claimed
+- V3.1.0 Phase 4 implementation tests: `21 passed`; Phase 3.2 `10 passed`;
+  Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1 `41 passed`; offline LLM
+  smoke `6 passed`; full regression `512 passed`; no real model, model download,
+  credential, API, or network request was used
+- V3.1.0 Phase 5: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
   research-methodology blocker `0`

@@ -472,6 +472,8 @@ def test_phase_two_package_contains_only_implemented_minimum_files():
         "corpus.py",
         "domain.py",
         "embedding.py",
+        "graph_expansion.py",
+        "index.py",
         "lexical.py",
         "local_embedding.py",
     }
