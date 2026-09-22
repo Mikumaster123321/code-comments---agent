@@ -309,8 +309,17 @@
 - V3.1.0 Phase 6.1 formal benchmark: `NOT RUN`; no RQ1–RQ4 result or conclusion exists
 - V3.1.0 Phase 6.1 reports: `docs/development/Development_Report_V3_1_0_Phase_6_1.md`
   and `docs/qa/QA_Report_V3_1_0_Phase_6_1.md`
-- V3.1.0 Phase 6.2: `ALLOWED BUT NOT STARTED`
-- V3.1.0 Phase 6.0.1 formal dataset/query/ground truth: `NOT CREATED`
+- V3.1.0 Phase 6.2.0 — Dataset Specification Documentation Freeze:
+  `COMPLETED / SPECIFICATION FROZEN`
+- V3.1.0 Dataset Specification: `AVAILABLE IN REPOSITORY` at
+  `docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md`
+- V3.1.0 Phase 6.2 research specification source: Grok 4.7 review + corrected
+  specification + GPT-5.6 Sol cross-audit; these are design/review provenance, not
+  empirical evidence
+- V3.1.0 Phase 6.2A: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 6.2 dataset/query/ground truth: `NOT CREATED / NOT CREATED / NOT CREATED`
+- V3.1.0 Phase 6.2 annotation: `NOT STARTED`
+- V3.1.0 Phase 6.2 Gate: `OPEN`
 - V3.1.0 Phase 6.3: `NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
