@@ -239,7 +239,17 @@
   formal RQ1–RQ4 conclusions remain Phase 6 benchmark/ablation work
 - V3.1.0 Phase 5 reports: `docs/development/Development_Report_V3_1_0_Phase_5.md`
   and `docs/qa/QA_Report_V3_1_0_Phase_5.md`
-- V3.1.0 Phase 6: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 6: `STARTED`
+- V3.1.0 Phase 6.0 — Experiment Protocol Documentation Freeze:
+  `COMPLETED / PROTOCOL FROZEN`
+- V3.1.0 Experiment Protocol: `FROZEN` at
+  `docs/experiments/Experiment_Protocol_V3_1_0.md`
+- V3.1.0 formal RQ1–RQ4: `NOT STARTED`
+- V3.1.0 Phase 6.1 — Benchmark Infrastructure: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 6 self-repository dataset commit:
+  `12391233daa2149ead4f451e920b2e0d8a1a6beb`
+- V3.1.0 Phase 6 formal test rule: once formal test results exist, they must not be
+  used to tune parameters within the frozen protocol version
 - V3.2 Multi-Agent: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
