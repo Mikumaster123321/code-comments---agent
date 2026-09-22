@@ -273,7 +273,22 @@
 - V3.1.0 Phase 6.1 Final Critical / Medium / Phase blocker: `0 / 0 / 0`
 - V3.1.0 Phase 6.1 residual defensive Low: `1`; future UUID-like version/run
   identifiers may receive stricter canonical validation; non-blocking
-- V3.1.0 Phase 6.1.2: `NOT REQUIRED`
+- V3.1.0 Phase 6.1.2 — Annotation Lifecycle Schema Hardening:
+  `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 6.1.2 root cause: `GroundTruthRecord` required `reviewed_at` to be a
+  non-empty timestamp and therefore could not represent the frozen pre-review
+  `drafted` annotation state
+- V3.1.0 Phase 6.1.2 resolution: `drafted` records support `reviewed_at=null` and
+  reject review/adjudication evidence; `reviewed`, `adjudicated`, and `frozen`
+  records require a valid review timestamp at least 48 hours after `created_at`, in
+  accordance with the Addendum A lifecycle
+- V3.1.0 Phase 6.1.2 validation: annotation lifecycle / Phase 6.1 benchmark
+  infrastructure `47 passed`; Phase 5 `48 passed`; Phase 4 `37 passed`; Phase 3.2
+  `10 passed`; Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1 `41 passed`;
+  offline LLM-contract smoke `6 passed`; full regression `623 passed`; no dataset,
+  query, ground-truth artifact, Retriever/E5 call, network request, or formal RQ run
+  was performed
+- V3.1.0 Phase 6.2A schema blocker: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
 - V3.1.0 Phase 6.1 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 6.1 implementation: isolated experiment-only infrastructure in
   `experiments/` for immutable deterministic benchmark configuration identity,
@@ -316,7 +331,7 @@
 - V3.1.0 Phase 6.2 research specification source: Grok 4.7 review + corrected
   specification + GPT-5.6 Sol cross-audit; these are design/review provenance, not
   empirical evidence
-- V3.1.0 Phase 6.2A: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 6.2A: `BLOCKED UNTIL DIRECTED RETEST / NOT STARTED`
 - V3.1.0 Phase 6.2 dataset/query/ground truth: `NOT CREATED / NOT CREATED / NOT CREATED`
 - V3.1.0 Phase 6.2 annotation: `NOT STARTED`
 - V3.1.0 Phase 6.2 Gate: `OPEN`

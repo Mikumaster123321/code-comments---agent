@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -28,6 +28,8 @@ _TASK_TYPES = {
 }
 _SOURCE_KINDS = {"self_repository", "fixture"}
 _ANNOTATION_STATUSES = {"drafted", "reviewed", "adjudicated", "frozen"}
+_REVIEW_COMPLETE_ANNOTATION_STATUSES = {"reviewed", "adjudicated", "frozen"}
+_MINIMUM_REVIEW_DELAY = timedelta(hours=48)
 _RUN_STATUSES = {"success", "failed", "invalid"}
 
 
@@ -44,7 +46,7 @@ def _sha256(name: str, value: object) -> str:
     return text
 
 
-def _timestamp(name: str, value: object) -> str:
+def _timestamp(name: str, value: object) -> datetime:
     text = _non_empty(name, value)
     try:
         parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
@@ -52,7 +54,7 @@ def _timestamp(name: str, value: object) -> str:
         raise SchemaValidationError(f"{name} must be an ISO-8601 timestamp") from error
     if parsed.tzinfo is None:
         raise SchemaValidationError(f"{name} must include a UTC offset")
-    return text
+    return parsed
 
 
 def _exact(record: Mapping[str, Any], fields: set[str], schema: str) -> None:
@@ -366,7 +368,7 @@ class GroundTruthRecord:
     reviewer_id: str
     adjudicator_id: str | None
     created_at: str
-    reviewed_at: str
+    reviewed_at: str | None
 
     def __post_init__(self) -> None:
         for name in (
@@ -385,8 +387,22 @@ class GroundTruthRecord:
             _non_empty("adjudicator_id", self.adjudicator_id)
         if self.annotation_status == "adjudicated" and self.adjudicator_id is None:
             raise SchemaValidationError("adjudicated truth requires adjudicator_id")
-        _timestamp("created_at", self.created_at)
-        _timestamp("reviewed_at", self.reviewed_at)
+        created_at = _timestamp("created_at", self.created_at)
+        if self.annotation_status == "drafted":
+            if self.reviewed_at is not None:
+                raise SchemaValidationError("drafted truth must not have reviewed_at")
+            if self.adjudicator_id is not None:
+                raise SchemaValidationError("drafted truth must not have adjudicator_id")
+        elif self.annotation_status in _REVIEW_COMPLETE_ANNOTATION_STATUSES:
+            if self.reviewed_at is None:
+                raise SchemaValidationError(
+                    f"{self.annotation_status} truth requires reviewed_at"
+                )
+            reviewed_at = _timestamp("reviewed_at", self.reviewed_at)
+            if reviewed_at - created_at < _MINIMUM_REVIEW_DELAY:
+                raise SchemaValidationError(
+                    "reviewed_at must be at least 48 hours after created_at"
+                )
         if type(self.evidence) is not tuple or not all(
             isinstance(item, EvidenceRecord) for item in self.evidence
         ):

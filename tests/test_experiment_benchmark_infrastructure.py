@@ -134,7 +134,7 @@ def truth(query_id="q-1", truth_id="gt-1", target=None, relevance=2):
         primary_annotator_id="annotator-a",
         reviewer_id="reviewer-b",
         adjudicator_id=None,
-        created_at="2026-09-22T08:00:00+00:00",
+        created_at="2026-09-20T08:00:00+00:00",
         reviewed_at="2026-09-22T09:00:00+00:00",
     )
 
@@ -368,6 +368,95 @@ def test_ground_truth_rejects_missing_relevance_invalid_spans_and_duplicates():
         replace(truth(), evidence=(evidence, evidence))
     with pytest.raises(SchemaValidationError, match="duplicate"):
         replace(truth(), evidence=(evidence, replace(evidence, relevance=1)))
+
+
+def test_phase62a_blocker_reproduction_draft_accepts_null_review_and_serializes_it(tmp_path):
+    draft = replace(truth(), annotation_status="drafted", reviewed_at=None)
+
+    assert draft.reviewed_at is None
+    assert draft.to_record()["reviewed_at"] is None
+    assert '"reviewed_at":null' in canonical_json(draft)
+    assert canonical_hash(draft) == canonical_hash(
+        replace(truth(), annotation_status="drafted", reviewed_at=None)
+    )
+    truth_path = tmp_path / "draft-truth.jsonl"
+    truth_path.write_text(canonical_json(draft) + "\n", encoding="utf-8")
+    assert load_ground_truth(truth_path) == (draft,)
+
+
+def test_ground_truth_draft_rejects_review_or_adjudication_evidence():
+    with pytest.raises(SchemaValidationError, match="must not have reviewed_at"):
+        replace(truth(), annotation_status="drafted")
+    with pytest.raises(SchemaValidationError, match="must not have adjudicator_id"):
+        replace(
+            truth(),
+            annotation_status="drafted",
+            reviewed_at=None,
+            adjudicator_id="annotator-a",
+        )
+
+
+@pytest.mark.parametrize(
+    "reviewed_at", [None, "", "null", "None", "not-a-timestamp", 0, False]
+)
+def test_ground_truth_frozen_rejects_missing_or_invalid_review_timestamp(reviewed_at):
+    message = "requires reviewed_at" if reviewed_at is None else "reviewed_at must"
+    with pytest.raises(SchemaValidationError, match=message):
+        replace(truth(), reviewed_at=reviewed_at)
+
+
+@pytest.mark.parametrize(
+    "reviewed_at",
+    [
+        "2026-09-20T07:59:59+00:00",
+        "2026-09-20T08:00:00+00:00",
+        "2026-09-22T07:59:59+00:00",
+    ],
+)
+def test_ground_truth_review_complete_states_reject_review_before_48_hours(reviewed_at):
+    for annotation_status in ("reviewed", "adjudicated", "frozen"):
+        adjudicator_id = "annotator-a" if annotation_status == "adjudicated" else None
+        with pytest.raises(SchemaValidationError, match="at least 48 hours"):
+            replace(
+                truth(),
+                annotation_status=annotation_status,
+                adjudicator_id=adjudicator_id,
+                reviewed_at=reviewed_at,
+            )
+
+
+@pytest.mark.parametrize("annotation_status", ["reviewed", "frozen"])
+def test_ground_truth_review_complete_states_accept_48_hour_delay(annotation_status):
+    record = replace(
+        truth(),
+        annotation_status=annotation_status,
+        reviewed_at="2026-09-22T08:00:00+00:00",
+    )
+    assert record.annotation_status == annotation_status
+
+    if annotation_status == "reviewed":
+        assert record.to_record()["reviewed_at"] == "2026-09-22T08:00:00+00:00"
+
+
+def test_ground_truth_adjudicated_accepts_48_hour_delay_with_adjudicator():
+    record = replace(
+        truth(),
+        annotation_status="adjudicated",
+        adjudicator_id="annotator-a",
+        reviewed_at="2026-09-22T08:00:00+00:00",
+    )
+    assert record.adjudicator_id == "annotator-a"
+
+
+def test_ground_truth_hash_changes_when_draft_becomes_frozen():
+    draft = replace(truth(), annotation_status="drafted", reviewed_at=None)
+    frozen = replace(
+        draft,
+        annotation_status="frozen",
+        reviewed_at="2026-09-22T08:00:00+00:00",
+    )
+
+    assert canonical_hash(draft) != canonical_hash(frozen)
 
 
 def test_file_baseline_identity_text_lf_normalization_empty_file_and_order():
