@@ -181,9 +181,14 @@
   fail closed; frozen `ProjectGraph` / `Snapshot` contracts remain unchanged
 - V3.1.0 Phase 4 reports: `docs/development/Development_Report_V3_1_0_Phase_4.md`
   and `docs/qa/QA_Report_V3_1_0_Phase_4.md`
-- V3.1.0 Phase 5 — Hybrid Retrieval + ContextBuilder: `IMPLEMENTED / QA PENDING`
-- V3.1.0 Phase 5 Independent QA: `REQUIRED`
-- V3.1.0 Phase 5 Documentation Gate: `OPEN`
+- V3.1.0 Phase 5 — Hybrid Retrieval + ContextBuilder: `COMPLETED`
+- V3.1.0 Phase 5 Independent QA: `PASS WITH LOW NOTES`
+- V3.1.0 Phase 5 Final QA: `PASS FOR PHASE 5 WITH LOW NOTES`
+- V3.1.0 Phase 5 Final Critical / Medium / Low: `0 / 0 / 6`
+- V3.1.0 Phase 5 Phase blockers: `0`
+- V3.1.0 Phase 5.1: `NOT REQUIRED`
+- V3.1.0 Phase 5 Directed Retest: `NOT REQUIRED`
+- V3.1.0 Phase 5 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 5 implementation: deterministic candidate union by authoritative
   `SymbolId`; explainable Weighted Score Fusion over normalized BM25, normalized
   cosine, and fixed relation/direction/hop Graph signals; optional deterministic
@@ -211,14 +216,30 @@
 - V3.1.0 Phase 5 implementation validation: `48 passed`; Phase 4 `37 passed`;
   Phase 3.2 `10 passed`; Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1
   `41 passed`; offline LLM smoke `6 passed`; full regression `576 passed`
-- V3.1.0 Phase 5 real-corpus engineering smoke: `1232 documents`, `10 hits`, median
-  Hybrid query `~9.724 ms`, median ContextBuilder `~0.055 ms`, `8000` context
-  characters / `9` snippets with explicit truncation; Fake Embedding only; this is
-  engineering smoke evidence and not a formal RQ4 result
+- V3.1.0 Phase 5 Independent QA probes: `243 / 243 passed` (fusion `77/77`,
+  normalization extremes `19/19`, context `48/48`, service `52/52`, scope `21/21`,
+  determinism `9/9`, performance `17/17`); these are probes, not pytest tests
+- V3.1.0 Phase 5 final real-corpus QA evidence: `1233 RetrievalDocuments`, `131 files`,
+  `1233 symbols`; the earlier `1232 documents` value remains implementation-time
+  evidence, and the natural growth is not a CorpusBuilder regression
+- V3.1.0 Phase 5 final performance evidence: median `HybridRetriever.retrieve`
+  `~13.981 ms`; median end-to-end `RetrievalService.retrieve` `~13.959 ms`; synthetic
+  fusion for `N=100/1000/5000` `~0.391/3.920/20.435 ms`; deep `top_k=N` fusion
+  `~0.723/7.318/36.799 ms` and ContextBuilder `~0.240/2.402/12.252 ms`; no obvious
+  `O(N^2)` observed; engineering smoke evidence only, not a formal RQ4 result
+- V3.1.0 Phase 5 Context semantics: `ContextPackage.hits` are final ranked Hybrid
+  hits, while `ContextSnippet` values are the actually rendered budgeted context;
+  Graph-only snippets use `hybrid_rank=None`, and hits/provenance may be unrendered
+- V3.1.0 Phase 5 deferred Low: clamp-comment wording; exception-chain traceback
+  privacy; hits versus rendered snippets; possibly unrendered Graph provenance;
+  implementation/QA corpus and latency drift; public fake-provider export; all six are
+  non-blocking
 - V3.1.0 Phase 5 research boundary: no claim that Hybrid beats BM25 or Embedding,
   that Graph improves Recall, that RQ4 is answered, or that RAG improves maintenance;
   formal RQ1–RQ4 conclusions remain Phase 6 benchmark/ablation work
-- V3.1.0 Phase 6: `NOT STARTED`
+- V3.1.0 Phase 5 reports: `docs/development/Development_Report_V3_1_0_Phase_5.md`
+  and `docs/qa/QA_Report_V3_1_0_Phase_5.md`
+- V3.1.0 Phase 6: `ALLOWED BUT NOT STARTED`
 - V3.2 Multi-Agent: `NOT STARTED`
 - Claude Phase 3.0 Semantic Embedding Selection Review: `COMPLETED / READ-ONLY`;
   verdict `APPROVE WITH NON-BLOCKING OPEN QUESTIONS`; architecture blocker `0`;
