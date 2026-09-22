@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -46,6 +47,26 @@ class SemanticMode(str, Enum):
     NONE = "none"
     FAKE_TEST = "fake_test"
     REAL_E5 = "real_e5"
+
+
+class Population(str, Enum):
+    ENGLISH_DEV = "english_dev"
+    ENGLISH_TEST = "english_test"
+    CHINESE_COVERAGE = "chinese_coverage"
+
+
+_UNSTABLE_IDENTITY = re.compile(
+    r"(?:<[^>]+ object at 0x[0-9a-fA-F]+>|\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-"
+    r"[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\b)"
+)
+
+
+def _stable_identity(name: str, value: object) -> str:
+    if not isinstance(value, str) or not value:
+        raise ConfigValidationError(f"{name} must be a non-empty string")
+    if is_absolute_host_path(value) or _UNSTABLE_IDENTITY.search(value):
+        raise ConfigValidationError(f"{name} contains unstable or host-specific identity")
+    return value
 
 
 @dataclass(frozen=True)
@@ -252,6 +273,8 @@ class BenchmarkConfig:
     ground_truth_hash: str
     strategy: Strategy
     retrieval_unit: RetrievalUnit
+    matrix_run_id: str = "SYNTHETIC-SMOKE"
+    population: Population = Population.ENGLISH_DEV
     run_kind: RunKind = RunKind.SYNTHETIC
     semantic_mode: SemanticMode = SemanticMode.NONE
     top_k: int = 10
@@ -272,16 +295,14 @@ class BenchmarkConfig:
             "ground_truth_version",
             "ground_truth_hash",
         ):
-            value = getattr(self, name)
-            if not isinstance(value, str) or not value:
-                raise ConfigValidationError(f"{name} must be a non-empty string")
-            if is_absolute_host_path(value):
-                raise ConfigValidationError(f"{name} must not contain an absolute path")
+            _stable_identity(name, getattr(self, name))
+        _stable_identity("matrix_run_id", self.matrix_run_id)
         for name, enum_type in (
             ("strategy", Strategy),
             ("retrieval_unit", RetrievalUnit),
             ("run_kind", RunKind),
             ("semantic_mode", SemanticMode),
+            ("population", Population),
         ):
             value = getattr(self, name)
             if not isinstance(value, enum_type):
@@ -321,6 +342,9 @@ class BenchmarkConfig:
             raise ConfigValidationError("Graph enabled state and frozen Graph weight must agree")
         if self.run_kind is RunKind.FORMAL:
             self.validate_formal_semantics()
+            self._validate_formal_matrix_binding()
+        elif not self.matrix_run_id.startswith("SYNTHETIC-"):
+            raise ConfigValidationError("synthetic matrix_run_id must use SYNTHETIC- namespace")
 
     @property
     def semantic_required(self) -> bool:
@@ -357,6 +381,38 @@ class BenchmarkConfig:
         if actual != expected or fingerprint.runtime_kind != "transformers-torch":
             raise ConfigValidationError("formal semantic fingerprint is not the frozen real E5")
 
+    def _validate_formal_matrix_binding(self) -> None:
+        all_signals = (
+            ("contains", "forward"), ("contains", "reverse"),
+            ("imports", "forward"), ("imports", "reverse"),
+        )
+        bindings = {
+            "RQ1-FILE": (Strategy.LEXICAL, RetrievalUnit.FILE, False, SemanticMode.NONE, None),
+            "RQ1-SYMBOL": (Strategy.LEXICAL, RetrievalUnit.SYMBOL, False, SemanticMode.NONE, None),
+            "RQ1-CHUNK": (Strategy.LEXICAL, RetrievalUnit.CHUNK, False, SemanticMode.NONE, None),
+            "RQ2-BM25": (Strategy.LEXICAL, RetrievalUnit.SYMBOL, False, SemanticMode.NONE, None),
+            "RQ2-E5": (Strategy.EMBEDDING, RetrievalUnit.SYMBOL, False, SemanticMode.REAL_E5, None),
+            "RQ3-GRAPH-OFF": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, False, SemanticMode.REAL_E5, None),
+            "RQ3-GRAPH-ON": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, all_signals),
+            "RQ3-CONTAINS-FORWARD": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, (("contains", "forward"),)),
+            "RQ3-CONTAINS-REVERSE": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, (("contains", "reverse"),)),
+            "RQ3-IMPORTS-FORWARD": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, (("imports", "forward"),)),
+            "RQ3-IMPORTS-REVERSE": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, (("imports", "reverse"),)),
+            "RQ4-LEXICAL": (Strategy.LEXICAL, RetrievalUnit.SYMBOL, False, SemanticMode.NONE, None),
+            "RQ4-EMBEDDING": (Strategy.EMBEDDING, RetrievalUnit.SYMBOL, False, SemanticMode.REAL_E5, None),
+            "RQ4-HYBRID-NO-GRAPH": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, False, SemanticMode.REAL_E5, None),
+            "RQ4-HYBRID-GRAPH": (Strategy.WEIGHTED, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, all_signals),
+            "RRF-HYBRID-NO-GRAPH": (Strategy.RRF, RetrievalUnit.SYMBOL, False, SemanticMode.REAL_E5, None),
+            "RRF-HYBRID-GRAPH": (Strategy.RRF, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, all_signals),
+        }
+        expected = bindings.get(self.matrix_run_id)
+        actual = (
+            self.strategy, self.retrieval_unit, self.graph.enabled, self.semantic_mode,
+            self.graph.signals if self.graph.enabled else None,
+        )
+        if expected is None or actual != expected:
+            raise ConfigValidationError("matrix_run_id is not bound to this formal configuration")
+
     def to_record(self) -> dict:
         return {
             "protocol_version": self.protocol_version,
@@ -371,6 +427,8 @@ class BenchmarkConfig:
             },
             "strategy": self.strategy.value,
             "retrieval_unit": self.retrieval_unit.value,
+            "matrix_run_id": self.matrix_run_id,
+            "population": self.population.value,
             "run_kind": self.run_kind.value,
             "semantic_mode": self.semantic_mode.value,
             "top_k": self.top_k,

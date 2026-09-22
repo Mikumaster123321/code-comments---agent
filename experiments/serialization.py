@@ -22,7 +22,10 @@ _CREDENTIAL_KEY = re.compile(
     re.IGNORECASE,
 )
 _CREDENTIAL_VALUE = re.compile(
-    r"(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,})"
+    r"(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,}|"
+    r"AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|"
+    r"SECRET_MARKER|SOURCE_MARKER)",
+    re.IGNORECASE,
 )
 
 

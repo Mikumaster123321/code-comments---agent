@@ -245,8 +245,14 @@
 - V3.1.0 Experiment Protocol: `FROZEN` at
   `docs/experiments/Experiment_Protocol_V3_1_0.md`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
-- V3.1.0 Phase 6.1 — Benchmark Infrastructure: `IMPLEMENTED / QA PENDING`
-- V3.1.0 Phase 6.1 Independent QA: `REQUIRED`
+- V3.1.0 Phase 6.1 — Benchmark Infrastructure: `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 6.1 Initial Independent QA: `FAIL / BLOCKED`
+- V3.1.0 Phase 6.1 Initial QA findings: Critical `4`; Medium `7`; Low `3`
+- V3.1.0 Phase 6.1.1 — Benchmark Evidence Integrity Hardening: `IMPLEMENTED`
+- V3.1.0 Phase 6.1.1 C1–C4: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 6.1.1 Medium findings M1–M7: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 6.1 Directed Retest: `REQUIRED / PENDING`
+- V3.1.0 Phase 6.1 Gate: `OPEN`
 - V3.1.0 Phase 6.1 implementation: isolated experiment-only infrastructure in
   `experiments/` for immutable deterministic benchmark configuration identity,
   strict dataset/query/ground-truth and result contracts, canonical credential-free
@@ -266,13 +272,14 @@
   formal semantic configuration requires the frozen real-E5 fingerprint; provider
   failure never substitutes fake embeddings; degraded semantic output invalidates a
   formal run; formal execution remains disabled by default in the runner skeleton
-- V3.1.0 Phase 6.1 validation: infrastructure `21 passed`; Phase 5 `48 passed`;
+- V3.1.0 Phase 6.1.1 validation: infrastructure/hardening `31 passed`; Phase 5 `48 passed`;
   Phase 4 `37 passed`; Phase 3.2 `10 passed`; Phase 3.1 `12 passed`; Phase 2
   `14 passed`; Phase 1 `41 passed`; offline LLM-contract smoke `6 passed`; full
-  regression `597 passed`; no real model, formal query, formal ground truth, formal
+  regression `607 passed`; no real model, formal query, formal ground truth, formal
   benchmark, network LLM request, or credential was used
 - V3.1.0 Phase 6.1 formal dataset/query/ground truth: `ABSENT / PHASE 6.2 NOT STARTED`
 - V3.1.0 Phase 6.1 formal benchmark: `NOT RUN`; no RQ1–RQ4 result or conclusion exists
+- V3.1.0 Phase 6.2: `BLOCKED / NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`
 - V3.1.0 Phase 6 formal test rule: once formal test results exist, they must not be

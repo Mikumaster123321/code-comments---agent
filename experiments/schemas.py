@@ -123,18 +123,22 @@ class DatasetFile:
     relative_path: str
     content_hash: str
     path_role: str
+    language: str = "python"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "relative_path", normalize_relative_path(self.relative_path))
         _sha256("content_hash", self.content_hash)
         if self.path_role not in {"production", "test", "fixture"}:
             raise SchemaValidationError("path_role must be production, test, or fixture")
+        if self.language not in _LANGUAGES:
+            raise SchemaValidationError("file language is invalid")
 
     def to_record(self) -> dict:
         return {
             "relative_path": self.relative_path,
             "content_hash": self.content_hash,
             "path_role": self.path_role,
+            "language": self.language,
         }
 
 
@@ -161,7 +165,7 @@ class DatasetProject:
             _sha256("fixture_hash", self.fixture_hash)
         elif self.fixture_hash is not None:
             raise SchemaValidationError("self_repository must not have fixture_hash")
-        if self.language not in _LANGUAGES:
+        if self.language not in _LANGUAGES | {"mixed"}:
             raise SchemaValidationError("project language is invalid")
         if type(self.files) is not tuple or not all(isinstance(item, DatasetFile) for item in self.files):
             raise SchemaValidationError("files must be an immutable DatasetFile tuple")
@@ -169,7 +173,10 @@ class DatasetProject:
         if len({item.relative_path for item in canonical}) != len(canonical):
             raise SchemaValidationError("dataset project contains duplicate file paths")
         object.__setattr__(self, "files", canonical)
-        if self.file_count != len(self.files):
+        file_languages = {item.language for item in self.files}
+        if self.language != (next(iter(file_languages)) if len(file_languages) == 1 else "mixed"):
+            raise SchemaValidationError("project language must reflect file-level languages")
+        if type(self.file_count) is not int or self.file_count != len(self.files):
             raise SchemaValidationError("file_count does not match files")
         if type(self.symbol_count) is not int or self.symbol_count < 0:
             raise SchemaValidationError("symbol_count must be a non-negative integer")
@@ -225,6 +232,19 @@ class DatasetManifest:
 
     def to_record(self) -> dict:
         return {**self.identity_record(), "dataset_hash": self.dataset_hash}
+
+    @property
+    def path_manifest_hash(self) -> str:
+        return canonical_hash([
+            {
+                "project_id": project.project_id,
+                "relative_path": item.relative_path,
+                "content_hash": item.content_hash,
+                "language": item.language,
+            }
+            for project in self.projects
+            for item in project.files
+        ])
 
 
 @dataclass(frozen=True)
@@ -408,7 +428,7 @@ class GroundTruthRecord:
 
 
 def _dataset_file(record: Mapping[str, Any]) -> DatasetFile:
-    _exact(record, {"relative_path", "content_hash", "path_role"}, "DatasetFile")
+    _exact(record, {"relative_path", "content_hash", "path_role", "language"}, "DatasetFile")
     return DatasetFile(**record)
 
 
@@ -525,6 +545,8 @@ class RuntimeMetadata:
     device: str
     dtype: str
     thread_settings: tuple[tuple[str, str], ...]
+    network_disabled: bool = False
+    model_local_files_only: bool = False
 
     def __post_init__(self) -> None:
         for name in (
@@ -543,6 +565,8 @@ class RuntimeMetadata:
             ):
                 raise SchemaValidationError(f"{name} must contain string pairs")
             object.__setattr__(self, name, tuple(sorted(values)))
+        if type(self.network_disabled) is not bool or type(self.model_local_files_only) is not bool:
+            raise SchemaValidationError("runtime offline flags must be bool")
 
     def to_record(self) -> dict:
         return {
@@ -559,6 +583,77 @@ class RuntimeMetadata:
             "device": self.device,
             "dtype": self.dtype,
             "thread_settings": dict(self.thread_settings),
+            "network_disabled": self.network_disabled,
+            "model_local_files_only": self.model_local_files_only,
+        }
+
+
+@dataclass(frozen=True)
+class FormalGateEvidence:
+    phase_6_2_dataset_truth_frozen: bool
+    phase_6_3_dry_run_passed: bool
+    runner_code_commit: str
+
+    def __post_init__(self) -> None:
+        if type(self.phase_6_2_dataset_truth_frozen) is not bool or type(self.phase_6_3_dry_run_passed) is not bool:
+            raise SchemaValidationError("formal gate values must be bool")
+        _non_empty("formal gate runner_code_commit", self.runner_code_commit)
+
+    def to_record(self) -> dict:
+        return {
+            "phase_6_2_dataset_truth_frozen": self.phase_6_2_dataset_truth_frozen,
+            "phase_6_3_dry_run_passed": self.phase_6_3_dry_run_passed,
+            "runner_code_commit": self.runner_code_commit,
+        }
+
+
+@dataclass(frozen=True)
+class PerformanceMetadata:
+    dataset_file_count: int
+    document_count: int
+    vector_count: int
+    vector_dimension: int | None
+    cache_condition: str
+    warmup_query_count: int
+    measured_query_count: int
+    context_measurement_count: int
+    model_load_ns: int | None = None
+    index_build_ns: int | None = None
+    performance_artifact_sha256: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in (
+            "dataset_file_count", "document_count", "vector_count", "warmup_query_count",
+            "measured_query_count", "context_measurement_count",
+        ):
+            if type(getattr(self, name)) is not int or getattr(self, name) < 0:
+                raise SchemaValidationError(f"{name} must be a non-negative integer")
+        if self.vector_dimension is not None and (
+            type(self.vector_dimension) is not int or self.vector_dimension <= 0
+        ):
+            raise SchemaValidationError("vector_dimension must be positive or null")
+        if self.cache_condition not in {"cold", "warm", "not_applicable"}:
+            raise SchemaValidationError("cache_condition is invalid")
+        for name in ("model_load_ns", "index_build_ns"):
+            value = getattr(self, name)
+            if value is not None and (type(value) is not int or value < 0):
+                raise SchemaValidationError(f"{name} must be non-negative or null")
+        if self.performance_artifact_sha256 is not None:
+            _sha256("performance_artifact_sha256", self.performance_artifact_sha256)
+
+    def to_record(self) -> dict:
+        return {
+            "dataset_file_count": self.dataset_file_count,
+            "document_count": self.document_count,
+            "vector_count": self.vector_count,
+            "vector_dimension": self.vector_dimension,
+            "cache_condition": self.cache_condition,
+            "warmup_query_count": self.warmup_query_count,
+            "measured_query_count": self.measured_query_count,
+            "context_measurement_count": self.context_measurement_count,
+            "model_load_ns": self.model_load_ns,
+            "index_build_ns": self.index_build_ns,
+            "performance_artifact_sha256": self.performance_artifact_sha256,
         }
 
 
@@ -591,6 +686,8 @@ class RunMetadata:
     output_checksums: tuple[tuple[str, str], ...]
     operator_id: str
     independent_audit_status: str
+    formal_gate: FormalGateEvidence | None = None
+    performance: PerformanceMetadata | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -633,7 +730,13 @@ class RunMetadata:
         for path, digest in self.output_checksums:
             normalize_relative_path(path)
             _sha256("output checksum", digest)
+        if len({path for path, _ in self.output_checksums}) != len(self.output_checksums):
+            raise SchemaValidationError("output checksum paths must be unique")
         object.__setattr__(self, "output_checksums", tuple(sorted(self.output_checksums)))
+        if self.formal_gate is not None and not isinstance(self.formal_gate, FormalGateEvidence):
+            raise SchemaValidationError("formal_gate must be FormalGateEvidence or null")
+        if self.performance is not None and not isinstance(self.performance, PerformanceMetadata):
+            raise SchemaValidationError("performance must be PerformanceMetadata or null")
 
     def deterministic_record(self) -> dict:
         return {
@@ -650,6 +753,8 @@ class RunMetadata:
             "index_identity": self.index_identity,
             "random_seed": self.random_seed,
             "python_hash_seed": self.python_hash_seed,
+            "formal_gate": None if self.formal_gate is None else self.formal_gate.to_record(),
+            "performance": None if self.performance is None else self.performance.to_record(),
         }
 
     def to_record(self) -> dict:

@@ -10,11 +10,11 @@ from project_intelligence import EmbeddingFingerprint
 
 from .baselines import (
     CandidateIdentity,
-    SymbolSourceRange,
+    DatasetEvidenceRegistry,
     TruthMapper,
     serialize_candidate_identity,
 )
-from .config import BenchmarkConfig, RunKind, SemanticMode
+from .config import BenchmarkConfig, Population, RunKind, SemanticMode
 from .metrics import MetricSummary, MetricValues, compute_metrics, summarize_metrics
 from .schemas import (
     DatasetManifest,
@@ -88,6 +88,7 @@ def _score(name: str, value: float | None, *, normalized: bool = False) -> None:
 class StrategyHit:
     identity: CandidateIdentity
     relative_path: str
+    rank: int
     symbol_id: SymbolId | None = None
     start_offset: int | None = None
     end_offset: int | None = None
@@ -101,6 +102,8 @@ class StrategyHit:
 
     def __post_init__(self) -> None:
         serialize_candidate_identity(self.identity)
+        if type(self.rank) is not int or self.rank < 1:
+            raise SchemaValidationError("strategy hit rank must be a positive integer")
         object.__setattr__(self, "relative_path", normalize_relative_path(self.relative_path))
         if self.symbol_id is not None and not isinstance(self.symbol_id, SymbolId):
             raise SchemaValidationError("hit symbol_id must be SymbolId or null")
@@ -141,8 +144,10 @@ class StrategyResult:
             raise SchemaValidationError("degraded must be bool")
         if self.degraded != (self.degradation_reason is not None):
             raise SchemaValidationError("degraded state and reason must agree")
-        if self.degradation_reason is not None and not self.degradation_reason:
-            raise SchemaValidationError("degradation_reason must be non-empty")
+        if self.degradation_reason is not None and self.degradation_reason not in {
+            "semantic_branch_failure", "semantic_timeout", "semantic_unavailable"
+        }:
+            raise SchemaValidationError("degradation_reason must be a frozen safe code")
         allowed_diagnostic_fields = {
             "identity",
             "kind",
@@ -154,8 +159,13 @@ class StrategyResult:
         for diagnostic in self.token_diagnostics:
             if not isinstance(diagnostic, Mapping) or set(diagnostic) != allowed_diagnostic_fields:
                 raise SchemaValidationError("token diagnostics must use the frozen safe fields")
-            if not isinstance(diagnostic["identity"], str) or not diagnostic["identity"]:
-                raise SchemaValidationError("token diagnostic identity must be non-empty")
+            identity = diagnostic["identity"]
+            if (
+                not isinstance(identity, str)
+                or not identity
+                or not identity.startswith(("file:", "chunk:", "symbol:", "query:"))
+            ):
+                raise SchemaValidationError("token diagnostic identity must be a safe canonical ID")
             if diagnostic["kind"] not in {"query", "document"}:
                 raise SchemaValidationError("token diagnostic kind is invalid")
             for name in (
@@ -184,10 +194,6 @@ class BenchmarkStrategy(Protocol):
 
     @property
     def embedding_fingerprint(self) -> EmbeddingFingerprint | None: ...
-
-    def candidate_identities(self, query: QueryRecord) -> Sequence[CandidateIdentity]: ...
-
-    def symbol_ranges(self, query: QueryRecord) -> Sequence[SymbolSourceRange]: ...
 
     def retrieve(self, query: QueryRecord, config: BenchmarkConfig) -> StrategyResult: ...
 
@@ -306,6 +312,10 @@ class RawQueryResult:
             raise SchemaValidationError("successful result cannot contain failure metadata")
         if self.status != "success" and (not self.failure_type or not self.failure_stage):
             raise SchemaValidationError("failed/invalid result requires failure metadata")
+        if self.status != "success" and (
+            self.ranked_hits or self.metrics != MetricValues.zero()
+        ):
+            raise SchemaValidationError("failed/invalid result must have zero metrics and no normal hits")
         if self.config_identity != self.retrieval_config_hash:
             raise SchemaValidationError("config identity aliases must agree")
         if type(self.top_k) is not int or self.top_k <= 0:
@@ -407,6 +417,7 @@ class AggregateResult:
     matrix_run_id: str
     strategy: str
     retrieval_unit: str
+    run_status: str
     dataset_version: str
     dataset_hash: str
     query_set_version: str
@@ -443,6 +454,14 @@ class AggregateResult:
                 raise SchemaValidationError(f"aggregate {name} must be SHA-256")
         if not isinstance(self.overall, MetricSummary):
             raise SchemaValidationError("aggregate overall must be MetricSummary")
+        if self.run_status not in {"success", "failed", "invalid"}:
+            raise SchemaValidationError("aggregate run_status is invalid")
+        expected_status = (
+            "invalid" if self.overall.invalid_count else
+            "failed" if self.overall.failure_count else "success"
+        )
+        if self.run_status != expected_status:
+            raise SchemaValidationError("aggregate run_status does not match raw counts")
         if type(self.strata) is not tuple or not all(
             isinstance(item, AggregateStratum) for item in self.strata
         ):
@@ -466,6 +485,7 @@ class AggregateResult:
             "matrix_run_id": self.matrix_run_id,
             "strategy": self.strategy,
             "retrieval_unit": self.retrieval_unit,
+            "run_status": self.run_status,
             "dataset": {"version": self.dataset_version, "hash": self.dataset_hash},
             "query_set": {"version": self.query_set_version, "hash": self.query_set_hash},
             "ground_truth": {"version": self.ground_truth_version, "hash": self.ground_truth_hash},
@@ -539,45 +559,57 @@ class BenchmarkRunner:
         config: BenchmarkConfig,
         strategy: BenchmarkStrategy,
         metadata: RunMetadata,
-        matrix_run_id: str,
+        evidence_registry: DatasetEvidenceRegistry,
+        matrix_run_id: str | None = None,
     ) -> BenchmarkRunResult:
         query_values = tuple(sorted(tuple(queries), key=lambda item: item.query_id))
         truth_values = tuple(truth)
-        self._validate_inputs(
-            dataset, query_values, truth_values, config, strategy, metadata
-        )
         if config.run_kind is RunKind.FORMAL and not self._allow_formal:
             raise FormalRunGuardError(
                 "formal execution is disabled in the Phase 6.1 runner skeleton"
             )
+        self._validate_inputs(
+            dataset, query_values, truth_values, config, strategy, metadata, evidence_registry
+        )
+        if matrix_run_id is not None and matrix_run_id != config.matrix_run_id:
+            raise BenchmarkRunnerError("matrix_run_id must come from the immutable config")
         truth_by_id = {item.ground_truth_id: item for item in truth_values}
+        selected_queries = tuple(item for item in query_values if item.split == config.population.value)
+        if not selected_queries:
+            raise BenchmarkRunnerError("configured population has no queries")
         raw: list[RawQueryResult] = []
-        for query in query_values:
+        for query in selected_queries:
             annotation = truth_by_id[query.ground_truth_id]
-            candidates = tuple(strategy.candidate_identities(query))
-            mapper = TruthMapper(annotation, strategy.symbol_ranges(query))
+            candidates = evidence_registry.candidates_for(query.project_id, config.retrieval_unit)
+            mapper = TruthMapper(annotation, evidence_registry.symbol_ranges_for(query.project_id))
             relevance = mapper.relevance_map(candidates)
             start = self._clock_ns()
+            latency: int | None = None
             try:
                 output = strategy.retrieve(query, config)
                 latency = self._elapsed(start)
-                if config.run_kind is RunKind.FORMAL and config.semantic_required and output.degraded:
-                    raise FormalRunGuardError(
-                        "degraded semantic output invalidates a formal run"
+                for hit in output.hits:
+                    evidence_registry.validate_retrieved(
+                        query.project_id, config.retrieval_unit, hit.identity,
+                        hit.relative_path, hit.symbol_id, hit.start_offset, hit.end_offset,
                     )
-                ranked = self._ranked_records(output.hits, relevance, config.top_k)
-                metrics = compute_metrics(
-                    (item.candidate_identity for item in ranked),
-                    relevance,
-                    config=config.metric,
-                )
-                status = "success"
-                failure_type = None
-                failure_stage = None
-            except FormalRunGuardError:
-                raise
+                if config.run_kind is RunKind.FORMAL and config.semantic_required and output.degraded:
+                    ranked = ()
+                    metrics = MetricValues.zero()
+                    status = "invalid"
+                    failure_type = "FormalDegradedResult"
+                    failure_stage = "retrieval"
+                else:
+                    ranked = self._ranked_records(output.hits, relevance, config.top_k)
+                    metrics = compute_metrics(
+                        (item.candidate_identity for item in ranked), relevance, config=config.metric
+                    )
+                    status = "success"
+                    failure_type = None
+                    failure_stage = None
             except Exception as error:
-                latency = self._elapsed(start)
+                if latency is None:
+                    latency = self._elapsed(start)
                 output = StrategyResult(())
                 ranked = ()
                 metrics = compute_metrics((), relevance, failed=True, config=config.metric)
@@ -589,7 +621,7 @@ class BenchmarkRunner:
                     run_id=metadata.run_id,
                     experiment_id=metadata.run_id,
                     protocol_version=config.protocol_version,
-                    matrix_run_id=matrix_run_id,
+                    matrix_run_id=config.matrix_run_id,
                     query_id=query.query_id,
                     split=query.split,
                     language=query.language,
@@ -626,9 +658,11 @@ class BenchmarkRunner:
         aggregate = AggregateResult(
             run_id=metadata.run_id,
             protocol_version=config.protocol_version,
-            matrix_run_id=matrix_run_id,
+            matrix_run_id=config.matrix_run_id,
             strategy=config.strategy.value,
             retrieval_unit=config.retrieval_unit.value,
+            run_status=("invalid" if any(item.status == "invalid" for item in raw_values) else
+                        "failed" if any(item.status == "failed" for item in raw_values) else "success"),
             dataset_version=config.dataset_version,
             dataset_hash=config.dataset_hash,
             query_set_version=config.query_set_version,
@@ -639,7 +673,13 @@ class BenchmarkRunner:
             code_commit=metadata.runner_code_commit,
             embedding_fingerprint=_fingerprint_record(strategy.embedding_fingerprint),
             index_identity=strategy.index_identity,
-            population_filters={"population": "all_fixed_queries"},
+            population_filters={
+                "population": config.population.value,
+                "split": config.population.value,
+                "language": "all",
+                "role": "primary" if config.population is Population.ENGLISH_TEST else
+                        "development" if config.population is Population.ENGLISH_DEV else "coverage",
+            },
             overall=summarize_metrics(raw_values),
             strata=tuple(strata),
             context_diagnostic_summary_reference=None,
@@ -662,7 +702,10 @@ class BenchmarkRunner:
     ) -> tuple[RankedHitRecord, ...]:
         records: list[RankedHitRecord] = []
         seen: set[str] = set()
-        for hit in hits:
+        ordered = sorted(hits, key=lambda item: item.rank)
+        if [item.rank for item in ordered] != list(range(1, len(ordered) + 1)):
+            raise BenchmarkRunnerError("strategy hit ranks must be unique and contiguous")
+        for hit in ordered:
             identity = serialize_candidate_identity(hit.identity)
             if identity in seen:
                 continue
@@ -671,7 +714,7 @@ class BenchmarkRunner:
             seen.add(identity)
             records.append(
                 RankedHitRecord(
-                    rank=len(records) + 1,
+                    rank=hit.rank,
                     candidate_identity=identity,
                     relative_path=hit.relative_path,
                     symbol_id=hit.symbol_id,
@@ -699,11 +742,16 @@ class BenchmarkRunner:
         config: BenchmarkConfig,
         strategy: BenchmarkStrategy,
         metadata: RunMetadata,
+        evidence_registry: DatasetEvidenceRegistry,
     ) -> None:
         if not isinstance(dataset, DatasetManifest) or not isinstance(config, BenchmarkConfig):
             raise BenchmarkRunnerError("dataset/config types are invalid")
         if not isinstance(metadata, RunMetadata):
             raise BenchmarkRunnerError("metadata must be RunMetadata")
+        if not isinstance(evidence_registry, DatasetEvidenceRegistry):
+            raise BenchmarkRunnerError("evidence_registry must be validated dataset evidence")
+        if evidence_registry.manifest != dataset:
+            raise BenchmarkRunnerError("evidence registry does not match dataset manifest")
         if not isinstance(strategy, BenchmarkStrategy):
             raise BenchmarkRunnerError("strategy does not implement BenchmarkStrategy")
         query_values = tuple(queries)
@@ -729,6 +777,7 @@ class BenchmarkRunner:
                 query.project_id,
             ):
                 raise BenchmarkRunnerError("truth does not belong to query dataset/project")
+            evidence_registry.validate_truth(annotation)
         query_hash = canonical_hash([item.to_record() for item in sorted(query_values, key=lambda item: item.query_id)])
         truth_hash = canonical_hash([item.to_record() for item in sorted(truth_values, key=lambda item: item.query_id)])
         versions = {item.query_set_version for item in query_values}
@@ -746,14 +795,39 @@ class BenchmarkRunner:
             raise FormalRunGuardError("configured semantic mode does not match strategy")
         if config.embedding_fingerprint != strategy.embedding_fingerprint:
             raise FormalRunGuardError("configured embedding fingerprint does not match strategy")
+        if metadata.embedding_fingerprint != _fingerprint_record(strategy.embedding_fingerprint):
+            raise FormalRunGuardError("run metadata embedding fingerprint does not match strategy")
         if metadata.config_hashes != (config.identity_hash,):
             raise BenchmarkRunnerError("run metadata does not identify the exact config")
         if (
             metadata.dataset_id != dataset.dataset_id
             or metadata.dataset_version != dataset.version
             or metadata.dataset_hash != dataset.dataset_hash
+            or metadata.path_manifest_hash != dataset.path_manifest_hash
+            or metadata.protocol_version != config.protocol_version
             or metadata.query_set_hash != query_hash
             or metadata.ground_truth_hash != truth_hash
             or metadata.index_identity != strategy.index_identity
         ):
             raise BenchmarkRunnerError("run metadata does not match benchmark inputs")
+        if config.run_kind is RunKind.FORMAL:
+            gate = metadata.formal_gate
+            dependencies = dict(metadata.runtime.dependencies)
+            if (
+                gate is None
+                or not gate.phase_6_2_dataset_truth_frozen
+                or not gate.phase_6_3_dry_run_passed
+                or gate.runner_code_commit != metadata.runner_code_commit
+                or metadata.self_repository_commit != "12391233daa2149ead4f451e920b2e0d8a1a6beb"
+                or metadata.dirty_state
+                or metadata.runtime.python_version != "3.12.14"
+                or metadata.runtime.python_implementation != "CPython"
+                or dependencies.get("torch") != "2.8.0"
+                or dependencies.get("transformers") != "4.56.2"
+                or metadata.runtime.device != "cpu"
+                or metadata.runtime.dtype != "float32"
+                or not metadata.runtime.network_disabled
+                or not metadata.runtime.model_local_files_only
+                or (config.semantic_required and metadata.model_cache_verified is not True)
+            ):
+                raise FormalRunGuardError("formal gate/runtime evidence is incomplete or mismatched")

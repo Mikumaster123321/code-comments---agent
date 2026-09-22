@@ -1,6 +1,10 @@
 import json
 import math
 import random
+import os
+import subprocess
+import sys
+from hashlib import sha256
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
@@ -11,26 +15,32 @@ from project_intelligence import DeterministicFakeEmbeddingProvider, EmbeddingFi
 
 from experiments import (
     ArtifactCollisionError,
+    AuthoritativeCandidate,
     BenchmarkConfig,
     BenchmarkRunner,
     ChunkIdentity,
     ConfigValidationError,
     DatasetFile,
+    DatasetEvidenceRegistry,
     DatasetManifest,
     DatasetProject,
     EvidenceRecord,
     ExperimentalBM25Index,
     FileIdentity,
     FileSource,
+    FormalGateEvidence,
     FormalRunGuardError,
     GroundTruthRecord,
     GraphExperimentConfig,
     HybridExperimentConfig,
     QueryRecord,
+    Population,
+    PerformanceMetadata,
     RetrievalUnit,
     RunKind,
     RunMetadata,
     RuntimeMetadata,
+    RuntimeDatasetFile,
     SchemaValidationError,
     SemanticMode,
     SerializationError,
@@ -59,6 +69,7 @@ def symbol(name="target", path="src/a.py"):
 
 
 def dataset():
+    source = "def target():\n    pass\n\ndef support():\n    pass\n"
     project = DatasetProject(
         project_id="fixture-python",
         version="v1",
@@ -66,12 +77,28 @@ def dataset():
         source_revision="fixture-v1",
         fixture_hash="b" * 64,
         language="python",
-        files=(DatasetFile("src/a.py", "a" * 64, "fixture"),),
+        files=(DatasetFile("src/a.py", sha256(source.encode()).hexdigest(), "fixture"),),
         file_count=1,
         symbol_count=2,
         limitations=("synthetic infrastructure fixture only",),
     )
     return DatasetManifest("synthetic-dataset", "v1", (project,))
+
+
+def evidence_registry(*, candidates=None):
+    source = "def target():\n    pass\n\ndef support():\n    pass\n"
+    digest = sha256(source.encode()).hexdigest()
+    candidates = candidates or (
+        AuthoritativeCandidate("fixture-python", RetrievalUnit.SYMBOL, symbol(), digest, 0, 23),
+        AuthoritativeCandidate("fixture-python", RetrievalUnit.SYMBOL, symbol("support"), digest, 25, len(source)),
+        AuthoritativeCandidate("fixture-python", RetrievalUnit.FILE, FileIdentity("src/a.py"), digest),
+        AuthoritativeCandidate("fixture-python", RetrievalUnit.CHUNK, ChunkIdentity("src/a.py", 0, len(source)), digest),
+    )
+    return DatasetEvidenceRegistry(
+        dataset(),
+        (RuntimeDatasetFile("fixture-python", "src/a.py", source, digest),),
+        tuple(candidates),
+    )
 
 
 def query(query_id="q-1", truth_id="gt-1", task="symbol_lookup"):
@@ -114,7 +141,8 @@ def truth(query_id="q-1", truth_id="gt-1", target=None, relevance=2):
 
 def config_for(queries, truths, *, strategy=Strategy.LEXICAL, unit=RetrievalUnit.SYMBOL,
                run_kind=RunKind.SYNTHETIC, semantic_mode=SemanticMode.NONE,
-               fingerprint=None, graph_enabled=False):
+               fingerprint=None, graph_enabled=False, matrix_run_id=None,
+               population=Population.ENGLISH_DEV):
     manifest = dataset()
     if strategy is Strategy.EMBEDDING:
         hybrid = HybridExperimentConfig(lexical_weight=0.0, semantic_weight=1.0)
@@ -126,6 +154,19 @@ def config_for(queries, truths, *, strategy=Strategy.LEXICAL, unit=RetrievalUnit
         )
     else:
         hybrid = HybridExperimentConfig()
+    if matrix_run_id is None:
+        if run_kind is RunKind.SYNTHETIC:
+            matrix_run_id = "SYNTHETIC-SMOKE"
+        elif strategy is Strategy.EMBEDDING:
+            matrix_run_id = "RQ2-E5"
+        elif strategy is Strategy.WEIGHTED:
+            matrix_run_id = "RQ3-GRAPH-ON" if graph_enabled else "RQ3-GRAPH-OFF"
+        elif unit is RetrievalUnit.FILE:
+            matrix_run_id = "RQ1-FILE"
+        elif unit is RetrievalUnit.CHUNK:
+            matrix_run_id = "RQ1-CHUNK"
+        else:
+            matrix_run_id = "RQ1-SYMBOL"
     return BenchmarkConfig(
         dataset_version=manifest.version,
         dataset_hash=manifest.dataset_hash,
@@ -135,6 +176,8 @@ def config_for(queries, truths, *, strategy=Strategy.LEXICAL, unit=RetrievalUnit
         ground_truth_hash=canonical_hash([item.to_record() for item in sorted(truths, key=lambda x: x.query_id)]),
         strategy=strategy,
         retrieval_unit=unit,
+        matrix_run_id=matrix_run_id,
+        population=population,
         run_kind=run_kind,
         semantic_mode=semantic_mode,
         embedding_fingerprint=fingerprint,
@@ -163,6 +206,19 @@ def runtime():
 
 def metadata_for(config, *, index_identity="index-v1", run_id="synthetic-run-1"):
     manifest = dataset()
+    fingerprint = config.embedding_fingerprint
+    fingerprint_record = None if fingerprint is None else {
+        "runtime_kind": fingerprint.runtime_kind,
+        "model_repository": fingerprint.model_repository,
+        "revision": fingerprint.revision,
+        "dimension": fingerprint.dimension,
+        "normalization": fingerprint.normalization,
+        "similarity_metric": fingerprint.similarity_metric,
+        "query_instruction": fingerprint.query_instruction,
+        "document_instruction": fingerprint.document_instruction,
+        "max_input_policy": fingerprint.max_input_policy,
+        "fingerprint_hash": fingerprint.fingerprint_hash,
+    }
     return RunMetadata(
         run_id=run_id,
         protocol_id="phase6",
@@ -171,7 +227,7 @@ def metadata_for(config, *, index_identity="index-v1", run_id="synthetic-run-1")
         dataset_id=manifest.dataset_id,
         dataset_version=manifest.version,
         dataset_hash=manifest.dataset_hash,
-        path_manifest_hash="d" * 64,
+        path_manifest_hash=manifest.path_manifest_hash,
         query_set_version=config.query_set_version,
         query_set_hash=config.query_set_hash,
         ground_truth_version=config.ground_truth_version,
@@ -180,7 +236,7 @@ def metadata_for(config, *, index_identity="index-v1", run_id="synthetic-run-1")
         self_repository_commit="12391233daa2149ead4f451e920b2e0d8a1a6beb",
         runner_code_commit="7a224c456f7615e4f4dbc79b1065755df3c8033f",
         dirty_state=True,
-        embedding_fingerprint=None,
+        embedding_fingerprint=fingerprint_record,
         model_cache_verified=None,
         index_identity=index_identity,
         runtime=runtime(),
@@ -213,10 +269,15 @@ class TinyStrategy:
     def retrieve(self, query, config):
         if query.query_id == self.fail_query:
             raise RuntimeError("provider detail must not leak")
+        candidate = self.candidates[0]
+        span = (0, 23) if isinstance(candidate, SymbolId) and candidate.qualified_name == "target" else (25, 48)
         hit = StrategyHit(
             self.candidates[0],
             self.candidates[0].relative_path,
+            rank=1,
             symbol_id=self.candidates[0] if isinstance(self.candidates[0], SymbolId) else None,
+            start_offset=span[0] if isinstance(candidate, SymbolId) else None,
+            end_offset=span[1] if isinstance(candidate, SymbolId) else None,
             raw_lexical_score=2.0,
             normalized_lexical_score=1.0,
             final_score=1.0,
@@ -245,6 +306,10 @@ def test_config_identity_is_immutable_deterministic_sensitive_and_path_free():
         base.top_k = 5
     with pytest.raises(ConfigValidationError):
         replace(base, dataset_version="/Users/person/private")
+    with pytest.raises(ConfigValidationError, match="unstable"):
+        replace(base, dataset_version="<Thing object at 0xABCDEF>")
+    with pytest.raises(ConfigValidationError, match="unstable"):
+        replace(base, dataset_version="550e8400-e29b-41d4-a716-446655440000")
 
 
 def test_config_identity_covers_metric_hybrid_graph_embedding_and_chunk_fields():
@@ -420,6 +485,7 @@ def test_runner_raw_aggregate_groups_and_failed_query_denominator():
         config=config,
         strategy=TinyStrategy((target,), fail_query="q-2"),
         metadata=metadata,
+        evidence_registry=evidence_registry(),
         matrix_run_id="SYNTHETIC-SMOKE",
     )
     assert [item.query_id for item in result.raw_results] == ["q-1", "q-2"]
@@ -444,6 +510,7 @@ def test_runner_serialization_is_deterministic_under_input_permutations():
         return BenchmarkRunner(clock_ns=lambda: next(ticks)).run(
             dataset=dataset(), queries=qs, truth=ts, config=config,
             strategy=TinyStrategy((target,)), metadata=metadata_for(config),
+            evidence_registry=evidence_registry(),
             matrix_run_id="SYNTHETIC-SMOKE",
         )
 
@@ -481,6 +548,7 @@ def test_runner_phase61_formal_execution_gate_and_degraded_formal_guard():
     args = dict(
         dataset=dataset(), queries=queries, truth=truths, config=lexical_formal,
         strategy=TinyStrategy((symbol(),)), metadata=metadata_for(lexical_formal),
+        evidence_registry=evidence_registry(),
         matrix_run_id="FORMAL-FORBIDDEN",
     )
     with pytest.raises(FormalRunGuardError, match="Phase 6.1"):
@@ -502,15 +570,32 @@ def test_runner_phase61_formal_execution_gate_and_degraded_formal_guard():
         semantic_mode = SemanticMode.REAL_E5
         embedding_fingerprint = real
 
-    with pytest.raises(FormalRunGuardError, match="degraded"):
-        BenchmarkRunner(allow_formal=True, clock_ns=iter((0, 1)).__next__).run(
-            **{
-                **args,
-                "config": semantic_formal,
-                "metadata": metadata_for(semantic_formal),
-                "strategy": DegradedRealStrategy((symbol(),), degraded=True),
-            }
-        )
+    formal_runtime = replace(
+        runtime(),
+        dependencies=(("torch", "2.8.0"), ("transformers", "4.56.2")),
+        network_disabled=True,
+        model_local_files_only=True,
+    )
+    formal_metadata = replace(
+        metadata_for(semantic_formal),
+        dirty_state=False,
+        runtime=formal_runtime,
+        model_cache_verified=True,
+        formal_gate=FormalGateEvidence(True, True, "7a224c456f7615e4f4dbc79b1065755df3c8033f"),
+    )
+    result = BenchmarkRunner(allow_formal=True, clock_ns=iter((0, 1)).__next__).run(
+        **{
+            **args,
+            "config": semantic_formal,
+            "metadata": formal_metadata,
+            "strategy": DegradedRealStrategy((symbol(),), degraded=True),
+            "evidence_registry": evidence_registry(),
+            "matrix_run_id": semantic_formal.matrix_run_id,
+        }
+    )
+    assert result.aggregate.run_status == "invalid"
+    assert result.raw_results[0].status == "invalid"
+    assert result.raw_results[0].degradation_reason == "semantic_branch_failure"
 
 
 def test_strategy_semantic_mode_and_fingerprint_must_match_config():
@@ -524,6 +609,7 @@ def test_strategy_semantic_mode_and_fingerprint_must_match_config():
         BenchmarkRunner().run(
             dataset=dataset(), queries=queries, truth=truths, config=config,
             strategy=TinyStrategy((symbol(),)), metadata=metadata_for(config),
+            evidence_registry=evidence_registry(),
             matrix_run_id="SYNTHETIC",
         )
 
@@ -535,6 +621,7 @@ def test_append_only_artifacts_checksums_and_collision(tmp_path):
     result = BenchmarkRunner(clock_ns=iter((0, 5)).__next__).run(
         dataset=dataset(), queries=queries, truth=truths, config=config,
         strategy=TinyStrategy((symbol(),)), metadata=metadata,
+        evidence_registry=evidence_registry(),
         matrix_run_id="SYNTHETIC-SMOKE",
     )
     run_path = write_run_artifacts(tmp_path, result, metadata)
@@ -576,3 +663,224 @@ def test_no_formal_dataset_truth_or_result_artifacts_were_added():
     assert not (root / "docs" / "experiments" / "queries").exists()
     assert not (root / "docs" / "experiments" / "ground_truth").exists()
     assert not (root / "docs" / "experiments" / "runs").exists()
+
+
+def test_hardening_truth_denominator_is_authoritative_not_strategy_controlled():
+    targets = (symbol(), symbol("support"))
+    record = replace(
+        truth(),
+        evidence=(
+            EvidenceRecord("src/a.py", targets[0], None, None, 1, 2, 2, "direct"),
+            EvidenceRecord("src/a.py", targets[1], None, None, 4, 5, 1, "support"),
+        ),
+    )
+    queries, truths = (query(),), (record,)
+    config = config_for(queries, truths)
+    result = BenchmarkRunner(clock_ns=iter((0, 1)).__next__).run(
+        dataset=dataset(), queries=queries, truth=truths, config=config,
+        strategy=TinyStrategy((targets[0],)), metadata=metadata_for(config),
+        evidence_registry=evidence_registry(),
+    )
+    assert result.raw_results[0].metrics.recall_at_1 == 0.5
+    assert len(result.raw_results[0].metric_inputs) == 2
+
+
+def test_hardening_registry_rejects_path_hash_candidate_and_truth_outside_manifest():
+    source = "def target():\n    pass\n\ndef support():\n    pass\n"
+    digest = sha256(source.encode()).hexdigest()
+    with pytest.raises(SchemaValidationError, match="manifest source evidence"):
+        DatasetEvidenceRegistry(
+            dataset(),
+            (RuntimeDatasetFile("fixture-python", "src/a.py", source, digest),),
+            (AuthoritativeCandidate("fixture-python", RetrievalUnit.SYMBOL, symbol(), "0" * 64, 0, 5),),
+        )
+    with pytest.raises(SchemaValidationError, match="path set"):
+        DatasetEvidenceRegistry(
+            dataset(),
+            (RuntimeDatasetFile("fixture-python", "src/other.py", source, digest),),
+            (),
+        )
+    registry = evidence_registry()
+    with pytest.raises(SchemaValidationError, match="unique"):
+        DatasetEvidenceRegistry(
+            registry.manifest,
+            (RuntimeDatasetFile("fixture-python", "src/a.py", source, digest),),
+            registry._candidates + (registry._candidates[0],),
+        )
+    outside = replace(
+        truth(),
+        evidence=(EvidenceRecord("src/missing.py", None, 0, 1, 1, 1, 2, "outside"),),
+    )
+    queries, truths = (query(),), (outside,)
+    config = config_for(queries, truths)
+    with pytest.raises(SchemaValidationError, match="outside the manifest"):
+        BenchmarkRunner().run(
+            dataset=dataset(), queries=queries, truth=truths, config=config,
+            strategy=TinyStrategy((symbol(),)), metadata=metadata_for(config),
+            evidence_registry=evidence_registry(),
+        )
+
+
+def test_hardening_population_selects_one_explicit_split_without_pooling():
+    queries = (
+        query("q-dev", "gt-dev"),
+        replace(query("q-test", "gt-test"), split="english_test"),
+        replace(query("q-zh", "gt-zh"), split="chinese_coverage"),
+    )
+    truths = tuple(truth(item.query_id, item.ground_truth_id) for item in queries)
+    config = config_for(queries, truths, population=Population.ENGLISH_TEST)
+    result = BenchmarkRunner(clock_ns=iter((0, 1)).__next__).run(
+        dataset=dataset(), queries=queries, truth=truths, config=config,
+        strategy=TinyStrategy((symbol(),)), metadata=metadata_for(config),
+        evidence_registry=evidence_registry(),
+    )
+    assert [item.query_id for item in result.raw_results] == ["q-test"]
+    assert result.aggregate.population_filters["population"] == "english_test"
+    assert result.aggregate.population_filters["role"] == "primary"
+
+
+def _three_query_result():
+    queries = tuple(query(f"q-{index}", f"gt-{index}") for index in range(1, 4))
+    truths = tuple(truth(f"q-{index}", f"gt-{index}") for index in range(1, 4))
+    config = config_for(queries, truths)
+    result = BenchmarkRunner(clock_ns=iter((0, 10, 20, 30, 40, 50)).__next__).run(
+        dataset=dataset(), queries=queries, truth=truths, config=config,
+        strategy=TinyStrategy((symbol(),), fail_query="q-2"),
+        metadata=metadata_for(config), evidence_registry=evidence_registry(),
+    )
+    return result, metadata_for(config)
+
+
+def test_hardening_artifact_writer_recomputes_raw_hash_counts_metrics_and_strata(tmp_path):
+    result, metadata = _three_query_result()
+    corruptions = (
+        replace(result.aggregate, raw_results_sha256="f" * 64),
+        replace(
+            result.aggregate,
+            run_status="success",
+            overall=replace(result.aggregate.overall, failure_count=0, success_count=3),
+        ),
+        replace(
+            result.aggregate,
+            overall=replace(result.aggregate.overall, metrics=result.aggregate.overall.metrics.zero()),
+        ),
+        replace(result.aggregate, strata=result.aggregate.strata[:-1]),
+    )
+    for index, aggregate in enumerate(corruptions):
+        with pytest.raises(ValueError, match="recompute"):
+            write_run_artifacts(tmp_path / str(index), replace(result, aggregate=aggregate), metadata)
+
+
+def test_hardening_independent_multi_query_failed_aggregate_oracle():
+    expected = json.loads((FIXTURE_DIR / "aggregate_oracle.json").read_text(encoding="utf-8"))
+    result, _ = _three_query_result()
+    assert result.aggregate.overall.to_record() == expected
+    assert result.aggregate.run_status == "failed"
+
+
+def test_hardening_matrix_binding_rejects_e5_symbol_masquerading_as_rq1_file():
+    queries, truths = (query(),), (truth(),)
+    real = EmbeddingFingerprint(
+        runtime_kind="transformers-torch",
+        model_repository="intfloat/multilingual-e5-base",
+        revision="d128750597153bb5987e10b1c3493a34e5a4502a",
+        dimension=768,
+    )
+    with pytest.raises(ConfigValidationError, match="matrix_run_id"):
+        config_for(
+            queries, truths, strategy=Strategy.EMBEDDING, run_kind=RunKind.FORMAL,
+            semantic_mode=SemanticMode.REAL_E5, fingerprint=real,
+            matrix_run_id="RQ1-FILE",
+        )
+
+
+def test_hardening_formal_runtime_and_gate_fail_closed():
+    queries, truths = (query(),), (truth(),)
+    config = config_for(queries, truths, run_kind=RunKind.FORMAL)
+    metadata = metadata_for(config)
+    with pytest.raises(FormalRunGuardError, match="runtime evidence"):
+        BenchmarkRunner(allow_formal=True).run(
+            dataset=dataset(), queries=queries, truth=truths, config=config,
+            strategy=TinyStrategy((symbol(),)), metadata=metadata,
+            evidence_registry=evidence_registry(),
+        )
+
+
+def test_hardening_explicit_rank_makes_hit_input_permutations_invariant():
+    class RankedStrategy(TinyStrategy):
+        def __init__(self, hits):
+            self.hits = tuple(hits)
+
+        def retrieve(self, query, config):
+            return StrategyResult(self.hits)
+
+    targets = (symbol(), symbol("support"))
+    record = replace(
+        truth(),
+        evidence=(
+            EvidenceRecord("src/a.py", targets[0], None, None, 1, 2, 2, "direct"),
+            EvidenceRecord("src/a.py", targets[1], None, None, 4, 5, 1, "support"),
+        ),
+    )
+    queries, truths = (query(),), (record,)
+    config = config_for(queries, truths)
+    hits = (
+        StrategyHit(targets[0], "src/a.py", 1, symbol_id=targets[0], start_offset=0, end_offset=23, final_score=0.9),
+        StrategyHit(targets[1], "src/a.py", 2, symbol_id=targets[1], start_offset=25, end_offset=48, final_score=0.8),
+    )
+    outputs = set()
+    for seed in range(100):
+        shuffled = list(hits)
+        random.Random(seed).shuffle(shuffled)
+        result = BenchmarkRunner(clock_ns=iter((0, 1)).__next__).run(
+            dataset=dataset(), queries=queries, truth=truths, config=config,
+            strategy=RankedStrategy(shuffled), metadata=metadata_for(config),
+            evidence_registry=evidence_registry(),
+        )
+        assert result.aggregate.run_status == "success"
+        outputs.add(canonical_json(result.raw_results[0].metrics))
+    assert len(outputs) == 1
+    duplicate_rank = (
+        hits[0], replace(hits[1], rank=1),
+    )
+    result = BenchmarkRunner(clock_ns=iter((0, 1)).__next__).run(
+        dataset=dataset(), queries=queries, truth=truths, config=config,
+        strategy=RankedStrategy(duplicate_rank), metadata=metadata_for(config),
+        evidence_registry=evidence_registry(),
+    )
+    assert result.aggregate.run_status == "failed"
+    assert result.raw_results[0].failure_type == "BenchmarkRunnerError"
+
+
+def test_hardening_privacy_failed_raw_bool_and_duplicate_checksum_guards():
+    with pytest.raises(SchemaValidationError, match="safe code"):
+        StrategyResult((), True, "SECRET_MARKER SOURCE_MARKER")
+    with pytest.raises(SerializationError, match="credential-like"):
+        canonical_json({"reason": "SOURCE_MARKER"})
+    result, metadata = _three_query_result()
+    successful = result.raw_results[0]
+    with pytest.raises(SchemaValidationError, match="zero metrics"):
+        replace(successful, status="failed", failure_type="X", failure_stage="retrieval")
+    with pytest.raises(SchemaValidationError, match="file_count"):
+        replace(dataset().projects[0], file_count=True)
+    with pytest.raises(SchemaValidationError, match="unique"):
+        replace(metadata, output_checksums=(("a.json", "a" * 64), ("a.json", "b" * 64)))
+
+
+def test_hardening_performance_schema_and_hash_seed_canonicalization():
+    performance = PerformanceMetadata(
+        dataset_file_count=1, document_count=2, vector_count=2, vector_dimension=768,
+        cache_condition="warm", warmup_query_count=5, measured_query_count=30,
+        context_measurement_count=30, model_load_ns=10, index_build_ns=20,
+        performance_artifact_sha256="a" * 64,
+    )
+    assert performance.to_record()["measured_query_count"] == 30
+    with pytest.raises(SchemaValidationError):
+        replace(performance, vector_count=True)
+    script = "import json; print(json.dumps({x:x for x in sorted({'c','a','b'})},sort_keys=True))"
+    outputs = []
+    for seed in ("1", "7", "31"):
+        environment = dict(os.environ)
+        environment["PYTHONHASHSEED"] = seed
+        outputs.append(subprocess.check_output([sys.executable, "-c", script], env=environment, text=True))
+    assert len(set(outputs)) == 1

@@ -8,8 +8,8 @@ from code_maintenance import SymbolId
 from project_intelligence import BM25Config, tokenize
 
 from .config import ChunkExperimentConfig, FileExperimentConfig, RetrievalUnit
-from .schemas import GroundTruthRecord, SchemaValidationError, symbol_identity
-from .serialization import normalize_lf, normalize_relative_path
+from .schemas import DatasetManifest, GroundTruthRecord, SchemaValidationError, symbol_identity
+from .serialization import normalize_lf, normalize_relative_path, sha256_hex
 
 
 class BaselineValidationError(ValueError):
@@ -251,6 +251,206 @@ class SymbolSourceRange:
             or self.end_offset <= self.start_offset
         ):
             raise SchemaValidationError("symbol range requires a non-empty source span")
+
+
+@dataclass(frozen=True)
+class RuntimeDatasetFile:
+    project_id: str
+    relative_path: str
+    source_text: str
+    content_hash: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.project_id, str) or not self.project_id:
+            raise SchemaValidationError("runtime file project_id must be non-empty")
+        object.__setattr__(self, "relative_path", normalize_relative_path(self.relative_path))
+        object.__setattr__(self, "source_text", normalize_lf(self.source_text))
+        if self.content_hash != sha256_hex(self.source_text):
+            raise SchemaValidationError("runtime file content hash does not match source evidence")
+
+
+@dataclass(frozen=True)
+class AuthoritativeCandidate:
+    project_id: str
+    retrieval_unit: RetrievalUnit
+    identity: CandidateIdentity
+    content_hash: str
+    start_offset: int | None = None
+    end_offset: int | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.project_id, str) or not self.project_id:
+            raise SchemaValidationError("candidate project_id must be non-empty")
+        if not isinstance(self.retrieval_unit, RetrievalUnit):
+            raise SchemaValidationError("candidate retrieval_unit is invalid")
+        serialize_candidate_identity(self.identity)
+        expected_type = {
+            RetrievalUnit.FILE: FileIdentity,
+            RetrievalUnit.CHUNK: ChunkIdentity,
+            RetrievalUnit.SYMBOL: SymbolId,
+        }[self.retrieval_unit]
+        if not isinstance(self.identity, expected_type):
+            raise SchemaValidationError("candidate identity does not match retrieval unit")
+        if len(self.content_hash) != 64 or any(c not in "0123456789abcdef" for c in self.content_hash):
+            raise SchemaValidationError("candidate content_hash must be SHA-256")
+        if self.retrieval_unit is RetrievalUnit.SYMBOL:
+            if (
+                type(self.start_offset) is not int
+                or type(self.end_offset) is not int
+                or self.start_offset < 0
+                or self.end_offset <= self.start_offset
+            ):
+                raise SchemaValidationError("symbol candidate requires an authoritative source range")
+        elif self.start_offset is not None or self.end_offset is not None:
+            raise SchemaValidationError("only symbol candidates carry separate source ranges")
+
+    @property
+    def relative_path(self) -> str:
+        return self.identity.relative_path
+
+
+class DatasetEvidenceRegistry:
+    """Validated, frozen candidate universe; retrievers cannot define metric truth."""
+
+    def __init__(
+        self,
+        manifest: DatasetManifest,
+        files: Iterable[RuntimeDatasetFile],
+        candidates: Iterable[AuthoritativeCandidate],
+    ) -> None:
+        if not isinstance(manifest, DatasetManifest):
+            raise SchemaValidationError("registry requires a DatasetManifest")
+        file_values = tuple(files)
+        candidate_values = tuple(candidates)
+        manifest_files = {
+            (project.project_id, item.relative_path): item.content_hash
+            for project in manifest.projects
+            for item in project.files
+        }
+        runtime_files = {(item.project_id, item.relative_path): item for item in file_values}
+        if len(runtime_files) != len(file_values):
+            raise SchemaValidationError("runtime dataset file identities must be unique")
+        if set(runtime_files) != set(manifest_files):
+            raise SchemaValidationError("runtime dataset path set does not match manifest")
+        for key, item in runtime_files.items():
+            if item.content_hash != manifest_files[key]:
+                raise SchemaValidationError("runtime dataset file hash does not match manifest")
+        keys: set[tuple[str, RetrievalUnit, str]] = set()
+        for item in candidate_values:
+            if not isinstance(item, AuthoritativeCandidate):
+                raise SchemaValidationError("registry candidates are invalid")
+            file_item = runtime_files.get((item.project_id, item.relative_path))
+            if file_item is None or file_item.content_hash != item.content_hash:
+                raise SchemaValidationError("candidate is not backed by manifest source evidence")
+            if isinstance(item.identity, ChunkIdentity) and item.identity.end_offset > len(file_item.source_text):
+                raise SchemaValidationError("chunk candidate exceeds frozen source")
+            if item.retrieval_unit is RetrievalUnit.SYMBOL and item.end_offset > len(file_item.source_text):
+                raise SchemaValidationError("symbol candidate exceeds frozen source")
+            key = (item.project_id, item.retrieval_unit, serialize_candidate_identity(item.identity))
+            if key in keys:
+                raise SchemaValidationError("authoritative candidate IDs must be unique")
+            keys.add(key)
+        for project in manifest.projects:
+            project_candidates = tuple(
+                item for item in candidate_values if item.project_id == project.project_id
+            )
+            expected_files = {item.relative_path for item in project.files}
+            candidate_files = {
+                item.relative_path for item in project_candidates
+                if item.retrieval_unit is RetrievalUnit.FILE
+            }
+            if candidate_files != expected_files:
+                raise SchemaValidationError("file candidate population must exactly match manifest")
+            symbol_candidates = tuple(
+                item for item in project_candidates
+                if item.retrieval_unit is RetrievalUnit.SYMBOL
+            )
+            if len(symbol_candidates) != project.symbol_count:
+                raise SchemaValidationError("symbol candidate population must match manifest count")
+            expected_chunks = {
+                document.identity
+                for document in build_chunk_documents(
+                    _runtime_file_source(runtime_files[(project.project_id, item.relative_path)])
+                    for item in project.files
+                )
+            }
+            candidate_chunks = {
+                item.identity for item in project_candidates
+                if item.retrieval_unit is RetrievalUnit.CHUNK
+            }
+            if candidate_chunks != expected_chunks:
+                raise SchemaValidationError("chunk candidate population must match frozen construction")
+        self.manifest = manifest
+        self._files = runtime_files
+        self._candidates = tuple(sorted(candidate_values, key=lambda item: (
+            item.project_id, item.retrieval_unit.value, serialize_candidate_identity(item.identity)
+        )))
+
+    def candidates_for(self, project_id: str, unit: RetrievalUnit) -> tuple[CandidateIdentity, ...]:
+        result = tuple(
+            item.identity for item in self._candidates
+            if item.project_id == project_id and item.retrieval_unit is unit
+        )
+        if not result:
+            raise SchemaValidationError("authoritative candidate population is empty")
+        return result
+
+    def symbol_ranges_for(self, project_id: str) -> tuple[SymbolSourceRange, ...]:
+        return tuple(
+            SymbolSourceRange(item.identity, item.start_offset, item.end_offset)
+            for item in self._candidates
+            if item.project_id == project_id and item.retrieval_unit is RetrievalUnit.SYMBOL
+        )
+
+    def validate_truth(self, truth: GroundTruthRecord) -> None:
+        symbol_ids = {
+            item.identity for item in self._candidates
+            if item.project_id == truth.project_id and item.retrieval_unit is RetrievalUnit.SYMBOL
+        }
+        for evidence in truth.evidence:
+            if (truth.project_id, evidence.relative_path) not in self._files:
+                raise SchemaValidationError("ground-truth path is outside the manifest")
+            if evidence.symbol_id is not None and evidence.symbol_id not in symbol_ids:
+                raise SchemaValidationError("ground-truth SymbolId is outside authoritative evidence")
+            source = self._files[(truth.project_id, evidence.relative_path)].source_text
+            if evidence.end_offset is not None and evidence.end_offset > len(source):
+                raise SchemaValidationError("ground-truth span exceeds frozen source")
+
+    def validate_retrieved(
+        self,
+        project_id: str,
+        unit: RetrievalUnit,
+        identity: CandidateIdentity,
+        relative_path: str,
+        symbol_id: SymbolId | None,
+        start_offset: int | None,
+        end_offset: int | None,
+    ) -> None:
+        serialized = serialize_candidate_identity(identity)
+        candidates = {
+            serialize_candidate_identity(item.identity): item
+            for item in self._candidates
+            if item.project_id == project_id and item.retrieval_unit is unit
+        }
+        authoritative = candidates.get(serialized)
+        if authoritative is None:
+            raise SchemaValidationError("retrieved candidate is outside authoritative dataset evidence")
+        if normalize_relative_path(relative_path) != authoritative.relative_path:
+            raise SchemaValidationError("retrieved candidate path does not match authoritative identity")
+        if unit is RetrievalUnit.SYMBOL and symbol_id != identity:
+            raise SchemaValidationError("retrieved SymbolId does not match authoritative identity")
+        expected_span = (
+            (authoritative.start_offset, authoritative.end_offset)
+            if unit is RetrievalUnit.SYMBOL else
+            (identity.start_offset, identity.end_offset) if unit is RetrievalUnit.CHUNK else
+            (None, None)
+        )
+        if (start_offset, end_offset) != expected_span:
+            raise SchemaValidationError("retrieved source span does not match authoritative evidence")
+
+
+def _runtime_file_source(item: RuntimeDatasetFile) -> FileSource:
+    return FileSource(item.relative_path, item.source_text)
 
 
 class TruthMapper:
