@@ -242,6 +242,23 @@
 - V3.1.0 Phase 6: `STARTED`
 - V3.1.0 Phase 6.0 — Experiment Protocol Documentation Freeze:
   `COMPLETED / PROTOCOL FROZEN`
+- V3.1.0 Phase 6.0.1 — Annotation Protocol Clarification:
+  `ANNOTATION PROTOCOL CLARIFICATION COMPLETED`
+- V3.1.0 Annotation Protocol: `CLARIFIED / FROZEN` by Addendum A (`v1`) at
+  `docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md`
+- V3.1.0 Phase 6 human annotation: single primary annotator `wang`; second human
+  annotator `ABSENT`; review method `delayed_blinded_self_review`; minimum delay
+  `48 hours`
+- V3.1.0 Phase 6 reviewer/adjudicator semantics: `reviewer_id=wang` denotes delayed
+  blinded self-review, not second-person review; `adjudicator_id=null` without
+  adjudication and `adjudicator_id=wang` when a recorded disagreement is adjudicated
+- V3.1.0 Phase 6 independent model/data audit may validate manifests, hashes, leakage,
+  masked samples, and dataset consistency, but is not a human second annotator and
+  cannot produce human inter-annotator agreement
+- V3.1.0 Phase 6 annotation limitation: single-human ground truth and absence of
+  second-human annotation/human IAA must be disclosed under thesis Threats to
+  Validity / Annotation Limitations; at-least-48-hour delayed blinded self-review is
+  a mitigation, not a substitute for a second annotator
 - V3.1.0 Experiment Protocol: `FROZEN` at
   `docs/experiments/Experiment_Protocol_V3_1_0.md`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
@@ -293,6 +310,8 @@
 - V3.1.0 Phase 6.1 reports: `docs/development/Development_Report_V3_1_0_Phase_6_1.md`
   and `docs/qa/QA_Report_V3_1_0_Phase_6_1.md`
 - V3.1.0 Phase 6.2: `ALLOWED BUT NOT STARTED`
+- V3.1.0 Phase 6.0.1 formal dataset/query/ground truth: `NOT CREATED`
+- V3.1.0 Phase 6.3: `NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`

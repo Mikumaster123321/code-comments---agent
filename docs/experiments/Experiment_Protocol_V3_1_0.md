@@ -5,6 +5,8 @@
 **Phase 6.0: COMPLETED / PROTOCOL FROZEN**
 
 - Protocol version: `v3.1-phase6-protocol-v1`
+- Annotation clarification: Addendum A (`v1`), **CLARIFIED / FROZEN** at
+  `docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md`
 - Self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`
 - Formal RQ1–RQ4: **NOT STARTED**
@@ -269,18 +271,30 @@ metadata and are excluded from relevance decisions.
 
 1. The primary annotator reads the frozen query and source and assigns evidence,
    grades, and rationale without retrieval rankings.
-2. A second reviewer independently checks every English test query and every grade-2
-   item. Dev and Chinese coverage receive at least a second-person consistency review.
-3. Disagreements on relevance, identity, or span are adjudicated and recorded before
-   freeze. The final record never erases the fact that adjudication occurred.
+2. As clarified and frozen by **Annotation Protocol Clarification Addendum A (`v1`)**,
+   the sole human annotator is `wang`; a second human annotator is absent. Every English
+   test query and every grade-2 item receives a delayed blinded self-review by `wang`
+   after at least 48 hours. Dev and Chinese coverage receive the same delayed blinded
+   self-review for consistency.
+3. The delayed reviewer sees only the query and frozen source evidence until a new
+   judgment is recorded; the initial grade is revealed only for the subsequent
+   comparison. Disagreements on relevance, identity, or span set an ambiguity flag and
+   require an adjudication note before freeze. Any material correction requires a
+   ground-truth version/hash bump. The final record never erases the disagreement or
+   the fact that adjudication occurred.
 4. Automated validation checks IDs, paths, spans, Symbol identities, allowed grades,
    duplicate evidence, and the existence of at least one relevant item.
 5. Phase 6.2 freezes the query and truth hashes together. Later typo-only corrections
    require a version bump and audit note. A relevance change invalidates prior formal
    results for the affected result namespace.
 
-Inter-annotator agreement may be reported as annotation-process evidence, but it is
-not a retrieval metric and is not combined with retrieval scores.
+`reviewer_id = wang` denotes delayed blinded self-review, not second-person review.
+`adjudicator_id` is null when no adjudication occurs and `wang` when the recorded
+disagreement is adjudicated. Independent model/data audit may validate manifests,
+hashes, leakage, masked samples, and dataset consistency, but it is not human
+annotation. Human inter-annotator agreement is unavailable and must not be claimed or
+calculated from self-review or model audit. Addendum A is authoritative for the full
+workflow, audit fields, reviewer/adjudicator semantics, and thesis limitation.
 
 ### 5.5 Leakage controls
 
@@ -759,9 +773,10 @@ The final research report must discuss at least:
 - **construct validity:** relevance grades and unit mapping may imperfectly represent
   maintenance usefulness; File/Chunk use path enrichment while Symbol uses qualified
   name enrichment; retrieval metrics do not measure final patch correctness;
-- **internal validity:** annotator judgment, incomplete unjudged pools, query wording,
-  truncation, parser limitations, Graph resolution, and implementation defects may
-  affect rankings;
+- **internal validity:** single-annotator judgment, incomplete unjudged pools, query
+  wording, truncation, parser limitations, Graph resolution, and implementation
+  defects may affect rankings; delayed blinded self-review mitigates but does not
+  eliminate single-annotator bias;
 - **external validity:** one self-repository, constructed fixtures, Python emphasis,
   limited Java support, one real embedding model, CPU execution, and a modest corpus
   limit generalization;
@@ -773,8 +788,10 @@ The final research report must discuss at least:
   with frozen revisions.
 
 Mitigations are frozen manifests/hashes, paired queries, one canonical truth model,
-independent review/adjudication, raw per-query results, exact configs/fingerprints,
-separate coverage tables, explicit failures, and independent Phase 6.5 audit.
+at-least-48-hour delayed blinded self-review/adjudication, raw per-query results,
+exact configs/fingerprints, separate coverage tables, explicit failures, and
+independent Phase 6.5 model/data audit. The thesis must disclose that ground truth has
+one human annotator and no second-human annotation or human inter-annotator agreement.
 
 ## 15. Phase 6 Subphases and Gates
 
