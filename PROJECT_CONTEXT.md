@@ -1335,10 +1335,30 @@ source slice returned for that symbol; neither hash is part of `SymbolId`.
 
 ## Collaboration
 
-- Codex / GPT: primary implementation.
-- Trae Work / DeepSeek: cost-effective independent QA, boundary tests, README/documentation, and small explicit assistance tasks.
-- Cursor / Claude: advanced architecture reviewer and second opinion for complex refactors.
-- ChatGPT: roadmap and architecture arbitration, thesis writing, and experiment design.
+- GPT-5.6 Sol: overall workflow control, cross-phase audit, and consistency across
+  prompts, gates, thesis claims, and engineering evidence.
+- Codex: repository implementation, testing, Git operations, and documentation
+  materialization.
+- DeepSeek R1: independent QA, directed retest, and adversarial verification; it
+  does not overturn frozen architecture or methodology.
+- Claude (highest available Opus model with high reasoning): preferred Primary
+  Research Architecture & Methodology Reviewer for architecture research review,
+  RQs and experiment protocols, dataset and ground-truth methodology, and
+  methodological review of research results.
+- Grok 4.7: normally the Independent Research Cross-Reviewer / Alternative
+  Methodology Reviewer, covering independent review of Claude/GPT research design,
+  dataset bias and leakage, threats to validity, negative results, and claim
+  discipline.
+- Grok 4.7 temporarily assumes Claude's Primary Research/Methodology Reviewer role
+  only when the user explicitly states that Claude is currently unavailable. Grok
+  never replaces Claude automatically. Once Claude is available again, the Primary
+  role returns to Claude and Grok returns to independent cross-review.
+- Formal prompts and execution reports should primarily use Simplified Chinese;
+  precise English technical terms may be retained.
+- An important external-model decision that determines code, formal experiment, or
+  release behavior must be recorded in a Git-tracked specification or decision
+  document before any later phase relies on it; chat history alone is not a
+  repository Source of Truth.
 - The user makes final decisions and acceptance.
 
 After each phase, update only facts that changed in **Current State**, **Test Baseline**, or **Known Debt**.
