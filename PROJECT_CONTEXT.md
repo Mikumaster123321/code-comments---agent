@@ -245,14 +245,19 @@
 - V3.1.0 Experiment Protocol: `FROZEN` at
   `docs/experiments/Experiment_Protocol_V3_1_0.md`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
-- V3.1.0 Phase 6.1 — Benchmark Infrastructure: `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 6.1 — Benchmark Infrastructure: `COMPLETED`
 - V3.1.0 Phase 6.1 Initial Independent QA: `FAIL / BLOCKED`
 - V3.1.0 Phase 6.1 Initial QA findings: Critical `4`; Medium `7`; Low `3`
-- V3.1.0 Phase 6.1.1 — Benchmark Evidence Integrity Hardening: `IMPLEMENTED`
-- V3.1.0 Phase 6.1.1 C1–C4: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
-- V3.1.0 Phase 6.1.1 Medium findings M1–M7: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
-- V3.1.0 Phase 6.1 Directed Retest: `REQUIRED / PENDING`
-- V3.1.0 Phase 6.1 Gate: `OPEN`
+- V3.1.0 Phase 6.1.1 — Benchmark Evidence Integrity Hardening: `COMPLETED`
+- V3.1.0 Phase 6.1.1 C1–C4: `CLOSED / RESOLVED`
+- V3.1.0 Phase 6.1.1 Medium findings M1–M7: `CLOSED / RESOLVED`
+- V3.1.0 Phase 6.1 Directed Retest: `PASS WITH LOW NOTES`
+- V3.1.0 Phase 6.1 Final QA: `PASS FOR PHASE 6.1 WITH LOW NOTES`
+- V3.1.0 Phase 6.1 Final Critical / Medium / Phase blocker: `0 / 0 / 0`
+- V3.1.0 Phase 6.1 residual defensive Low: `1`; future UUID-like version/run
+  identifiers may receive stricter canonical validation; non-blocking
+- V3.1.0 Phase 6.1.2: `NOT REQUIRED`
+- V3.1.0 Phase 6.1 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 6.1 implementation: isolated experiment-only infrastructure in
   `experiments/` for immutable deterministic benchmark configuration identity,
   strict dataset/query/ground-truth and result contracts, canonical credential-free
@@ -277,9 +282,18 @@
   `14 passed`; Phase 1 `41 passed`; offline LLM-contract smoke `6 passed`; full
   regression `607 passed`; no real model, formal query, formal ground truth, formal
   benchmark, network LLM request, or credential was used
+- V3.1.0 Phase 6.1 Directed Retest independent probes: `41 passed` (`8` C1/C2,
+  `10` C3/C4, `16` M1–M7, `7` extra); not included in pytest `607 passed`
+- V3.1.0 Phase 6.1 determinism: `120` input permutations and `PYTHONHASHSEED`
+  `1 / 7 / 31` passed deterministically
+- V3.1.0 Phase 6.1 protocol drift: `0`; frozen
+  `docs/experiments/Experiment_Protocol_V3_1_0.md` unchanged
 - V3.1.0 Phase 6.1 formal dataset/query/ground truth: `ABSENT / PHASE 6.2 NOT STARTED`
 - V3.1.0 Phase 6.1 formal benchmark: `NOT RUN`; no RQ1–RQ4 result or conclusion exists
-- V3.1.0 Phase 6.2: `BLOCKED / NOT STARTED`
+- V3.1.0 Phase 6.1 reports: `docs/development/Development_Report_V3_1_0_Phase_6_1.md`
+  and `docs/qa/QA_Report_V3_1_0_Phase_6_1.md`
+- V3.1.0 Phase 6.2: `ALLOWED BUT NOT STARTED`
+- V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`
 - V3.1.0 Phase 6 formal test rule: once formal test results exist, they must not be
