@@ -498,9 +498,28 @@
   existing offline regression tests retain their synthetic/stub retrieval checks;
   production, experiment infrastructure, dependencies, frozen research documents,
   AGENTS/CLAUDE and user `docs/thesis/` content remain unchanged
+- V3.1.0 Phase 6.2A Independent Draft Data QA: DeepSeek V4.1 Flash reply summary
+  `PASS WITH LOW NOTES`, reported Critical / Medium `0 / 0`; QA Documentation
+  Closure `CLOSED` at `docs/qa/QA_Report_V3_1_0_Phase_6_2A_Independent_Draft_Data.md`
+  for the draft report only. Current repository verification independently matched
+  dataset/query/truth hashes, 34 raw checksums, 72 drafted GT and 72 drafted audit
+  entries; offline Phase 6.2 contract `94 passed`, full pytest `722 passed`, both
+  exit code 0 with `-p no:debugging`. The repository-external `probe1`–`probe9`
+  scripts/raw outputs were not supplied or archived; their detail remains attributed
+  to the DeepSeek reply, not to this repository execution.
+- V3.1.0 Phase 6.2A Independent Draft Data QA Low notes: L1 blinded masking and
+  L2 Chinese non-translation/semantic judgments remain Phase 6.2B human work;
+  L3 compliant cross-record reuse, L4 corrected QA-probe error, and L5 single-human
+  annotation/no human IAA are observations or methodology limits, not confirmed
+  dataset defects. The reply's displayed escaped end marker was not authenticated
+  against an original message record; remote push state was not checked. Current
+  identity field `retrieval_runs_before_freeze=0` and absent run artifacts do not
+  establish historical absence of temporary/untracked retrieval activity.
 - V3.1.0 Phase 6.2 Gate: `OPEN`
 - V3.1.0 Phase 6.2B: `PENDING`; delayed review, adjudication if needed, independent
-  data QA and final freeze are still required; Phase 6.2 is not completed
+  final Data QA and freeze are still required; next entrance is actual ≥48-hour
+  delayed blinded self-review with masking and independent-in-time judgment;
+  Phase 6.2 is not completed
 - V3.1.0 Phase 6.3: `BLOCKED / NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
