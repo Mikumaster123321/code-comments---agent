@@ -531,6 +531,16 @@
   Same-account access to the full repository remains an actual masking limitation;
   only a separate GT-free bundle may be handed to `wang`, and future human behavior
   cannot be certified by preparation checks
+- V3.1.0 Phase 6.2B blinded review preparation independent QA:
+  `PASS WITH LOW NOTES`; its Documentation Closure is `CLOSED` at
+  `docs/qa/QA_Report_V3_1_0_Phase_6_2B_Blinded_Review_Preparation.md`. The
+  existing external bundle passed current read-only verification for 72 unique
+  Query and 93 frozen source files with blank judgments and no symlinks; offline
+  Phase 6.2 contract `94 passed`, full regression `722 passed`. DeepSeek's
+  37 independent assertions and separate byte-identical regeneration are reply
+  claims without archived raw scripts/outputs. Actual GT-free delivery and human
+  masking remain unproven; this closure does not complete the human review,
+  final Data QA, or Dataset Freeze
 - V3.1.0 Phase 6.3: `BLOCKED / NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
