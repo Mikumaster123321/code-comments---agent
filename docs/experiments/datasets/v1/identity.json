@@ -1,0 +1,26 @@
+{
+  "annotation_status": "drafted",
+  "authoring_audit_sha256": "9901a556d34d322381d93ee16c660fe47a93d737a3eab5f51b0064e5ccea5969",
+  "checksum_scope": "All regular formal data files under datasets/v1, queries/v1 and ground_truth/v1 except checksums.sha256 itself; engineering tests/context are tracked by Git.",
+  "created_at": "2026-09-23T04:00:42.357095+00:00",
+  "dataset_hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "dataset_id": "v3.1-phase6-dataset-v1",
+  "dataset_version": "v1",
+  "documentation_sha256": {
+    "Dataset_Query_GroundTruth_Specification_V3_1_0.md": "4e72ceb84f06df361e10a24a6ab273ed3f6eba4d3649b96177a810c6a0c30a92",
+    "Experiment_Protocol_Addendum_A_V3_1_0.md": "6a09088733d18d03e04efcbfc208a00c7860fef5b00efa95acf987aebd99686b",
+    "Experiment_Protocol_Addendum_B_V3_1_0.md": "34406b3dad94cf21c3422176cedd7b94221f18518b82c97e8c061e52b3972a5d",
+    "Experiment_Protocol_Addendum_C_V3_1_0.md": "3a3e125b1245206ec49fe22c59cd95b625a7ec28d4c75f10dcc361770f238c79",
+    "Experiment_Protocol_V3_1_0.md": "214360ac17633db7d77caec2ea2a135bf4372a773f9343b2fcb91bff8ee4e341"
+  },
+  "earliest_allowed_review_at": "2026-09-25T04:00:42.357095+00:00",
+  "ground_truth_hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+  "ground_truth_version": "v3.1-phase6-truth-v1",
+  "path_manifest_hash": "9adddbc3e69716b899352185d22b15df74b9c03e6d25aac9857a958fe7c33978",
+  "protocol_version": "v3.1-phase6-protocol-v1",
+  "query_set_hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+  "query_set_version": "v3.1-phase6-queries-v1",
+  "retrieval_runs_before_freeze": 0,
+  "self_source_revision": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+  "truth_hash_policy": "Existing schema to_record, including created_at, as explicitly required by the materialization prompt and Dataset Specification section 12."
+}

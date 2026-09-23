@@ -426,14 +426,82 @@
   retrieval configuration remain unchanged
 - V3.1.0 Query Leakage Conflict: `CLOSED / RESOLVED BY ADDENDUM C`
 - V3.1.0 Phase 6.2A blocker: `LIFTED AFTER ADDENDUM C`
-- V3.1.0 Phase 6.2A: `ALLOWED BUT NOT STARTED`
-- V3.1.0 Phase 6.2 dataset/query/ground truth: `NOT CREATED / NOT CREATED / NOT CREATED`
-- V3.1.0 Phase 6.2 annotation: `NOT STARTED`
-- V3.1.0 Phase 6.2 delayed review clock: `NOT STARTED`; future successful draft
-  materialization must establish its own truthful `created_at`, new query-set hash,
-  and consistent identity chain from Git; discarded draft bytes must not be reused
+- V3.1.0 Phase 6.2A — Dataset / Query / Ground Truth Draft Materialization:
+  `COMPLETED`; clean regeneration from the frozen Git specification plus Addenda
+  A/B/C, beginning at `e97a0e03afeaf2a16127c81577f9ef0760db3611`; discarded drafts
+  were not restored or reused
+- V3.1.0 Phase 6.2 dataset/query/ground truth: `DRAFTED / DRAFTED / DRAFTED`;
+  primary manifest has `4` projects, `93` files and `1299` symbols; the independent
+  incremental fixture is excluded from this dataset and its query population
+- V3.1.0 Phase 6.2 annotation: `INITIAL ANNOTATION COMPLETE / DRAFTED`;
+  Codex mechanically materialized the user-authorized frozen relevance decisions
+  and source-grounded rationales, with protocol-designated annotator `wang` and
+  future self-reviewer `wang`; no second human, completed review, or human IAA is
+  represented; `reviewed_at=null`, `adjudicator_id=null`
+- V3.1.0 Phase 6.2 successful draft `created_at`:
+  `2026-09-23T04:00:42.357095+00:00`; delayed review clock `STARTED`;
+  earliest allowed review `2026-09-25T04:00:42.357095+00:00` (exactly 48 hours);
+  Delayed Blinded Self-Review `PENDING`, not automatically executed or scheduled
+- V3.1.0 Phase 6.2A frozen self-repository recomputation: Python/Java `72/0`,
+  production/test `44/28`, symbols `1233` (class/method/function `190/377/666`),
+  zero-symbol files `8`, File/Chunk documents `72/857`, symbols over 1200 chars
+  `151`, multi-chunk symbols `747`; source is raw blobs from the frozen commit,
+  with scanner/root-ignore agreement, not the working tree
+- V3.1.0 Phase 6.2A primary fixtures: route-ledger `8 files / 28 symbols`,
+  intake-queue `7 / 15`, desk-queue `6 / 23`; required defects preserved;
+  Java exact local imports `7`, unique top-level types `6`, distinct overload
+  signatures with no fallback identity; no wildcard/static imports, inheritance,
+  enums, or nested classes
+- V3.1.0 Phase 6.2A incremental evidence: base/update each `3 files / 7 symbols`;
+  direct edit set `3/2/2`; production SnapshotDiff `5/2/2/0`, including enclosing
+  `Bin` and `Shelf`; future changed-plus-added batch `7` documents / `1` call;
+  actual embedding calls `0`
+- V3.1.0 Phase 6.2A actual query distribution: English test/dev/Chinese `48/12/12`,
+  every task `8/2/2`; Python/Java `36/12`, `10/2`, `12/0`; project allocation
+  self/route/intake/Java `32/13/13/14`; Addendum C corrections `4/4` verified;
+  non-lookup targets `60`, multi-token targets `39`, leakage failures `0`
+- V3.1.0 Phase 6.2A truth: `72` records, `134` evidence items; grades 2/1/0
+  `72/62/0`; all six SymbolId fields, source spans, raw hashes, and rationale
+  provenance verified against real adapter output; no orphan or duplicate evidence
+- V3.1.0 Phase 6.2A English-test multi-relevant/cross-file actual counts, each out
+  of 8: lookup `1/0`, feature `7/4`, dependency `8/5`, bug `7/5`, maintenance
+  `7/5`, cross-file `8/6`; Grade-1 overlap audit `23` symbol groups,
+  Chinese-English overlap audit `7` groups; all `2556` query pairs pass Jaccard
+  threshold `0.55`; Chinese non-translation judgment remains pending delayed review
+- V3.1.0 Phase 6.2A RQ1 mechanical probes: normalization symbol `1689` characters
+  overlaps chunks `[0,1200)` and `[1000,1917)`; rejection explanation `[20,141)`
+  and final-record decision `[1834,1916)` share no chunk; all three named
+  cross-file probes pass; File/Symbol/Chunk maximum-grade mapping and endpoint
+  non-overlap verified without retrieval; Java test subsets CONTAINS/IMPORTS `5/7`
+- V3.1.0 Phase 6.2A dataset hash:
+  `164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7`
+- V3.1.0 Phase 6.2A query-set hash:
+  `5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba`
+- V3.1.0 Phase 6.2A drafted truth hash:
+  `d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87`
+- V3.1.0 Phase 6.2A path-manifest hash:
+  `9adddbc3e69716b899352185d22b15df74b9c03e6d25aac9857a958fe7c33978`;
+  identity records all five frozen document hashes and the authoring-audit hash;
+  `checksums.sha256` verifies all `34` formal data files other than itself
+- V3.1.0 Phase 6.2A validation: new offline dataset contract `94 passed`;
+  Phase 6.1/lifecycle `52`, Phase 5 `48`, Phase 4 `37`, Phase 3.2 `10`,
+  Phase 3.1 `12`, Phase 2 `14`, Phase 1 `41`, offline LLM smoke `6`;
+  full regression `722 passed` from baseline `628 passed`, with
+  `python -m pytest -p no:debugging`
+- V3.1.0 Phase 6.2A authorized scope extension: the user explicitly approved
+  migration of `test_no_formal_dataset_truth_or_result_artifacts_were_added` in
+  `tests/test_experiment_benchmark_infrastructure.py`; the test is retained,
+  allows only drafted GT, rejects completed review/adjudication/freeze, and keeps
+  runs forbidden; no test was deleted/skipped and Phase 6.1 still has `52` tests
+- V3.1.0 Phase 6.2A authoring `retrieval_runs_before_freeze=0`; no authoring
+  Retriever/Graph ranking, E5 inference, network call, Dry Run or formal RQ run;
+  existing offline regression tests retain their synthetic/stub retrieval checks;
+  production, experiment infrastructure, dependencies, frozen research documents,
+  AGENTS/CLAUDE and user `docs/thesis/` content remain unchanged
 - V3.1.0 Phase 6.2 Gate: `OPEN`
-- V3.1.0 Phase 6.3: `NOT STARTED`
+- V3.1.0 Phase 6.2B: `PENDING`; delayed review, adjudication if needed, independent
+  data QA and final freeze are still required; Phase 6.2 is not completed
+- V3.1.0 Phase 6.3: `BLOCKED / NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`

@@ -1,0 +1,645 @@
+{
+  "dataset_hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "dataset_id": "v3.1-phase6-dataset-v1",
+  "projects": [
+    {
+      "file_count": 6,
+      "files": [
+        {
+          "content_hash": "8e334589cff72cc1e799dbb3995462908e05791b4b63242f23fc4af8d1c6684d",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/audit/DeskAudit.java"
+        },
+        {
+          "content_hash": "5befd7b7fb56b4272b34368fe91b590c89864283f3c54a5df497f3cd3130027c",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/model/DeskClock.java"
+        },
+        {
+          "content_hash": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/model/Ticket.java"
+        },
+        {
+          "content_hash": "64ea2ca947df8e5b72d5c1509745988d8378c645204cfca333d3259175da33c6",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/notify/DeskMail.java"
+        },
+        {
+          "content_hash": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/service/DeskQueue.java"
+        },
+        {
+          "content_hash": "db1f81c6b57c8e54bbc0f75ab3e94db7be161d76c2166e8634d4da5cc50c358a",
+          "language": "java",
+          "path_role": "fixture",
+          "relative_path": "src/com/desk/store/TicketFolder.java"
+        }
+      ],
+      "fixture_hash": "b511160d6851cfd61bb1dd28b5108db4799de2a9fa7edfbfd9d6a6acb51cbbd8",
+      "language": "java",
+      "limitations": [
+        "Single human annotator wang; no human IAA; delayed blinded self-review pending.",
+        "Fixture-design bias and fixed heuristics; self-repository author-familiarity bias.",
+        "Python from-import targets may remain external under current graph semantics.",
+        "Java fixture-only coverage uses the lightweight parser, not compiler-grade analysis.",
+        "Zero-symbol files remain in File/Chunk baselines; identity enrichment and candidate pools affect construct validity.",
+        "Python-heavy dataset; one pinned E5 model; no required external project; no superiority claim."
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "source_kind": "fixture",
+      "source_revision": "fixture-v1",
+      "symbol_count": 23,
+      "version": "v1"
+    },
+    {
+      "file_count": 7,
+      "files": [
+        {
+          "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/__init__.py"
+        },
+        {
+          "content_hash": "54d79ecad8ff0aec3b45551acf2ba2a37a185d894216ca6607e112c573ebf146",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/audit.py"
+        },
+        {
+          "content_hash": "33db34d914770187d0e23380bd5b7d18650d433a5ee5097cc166327be5894bf3",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/dispatcher.py"
+        },
+        {
+          "content_hash": "dd146b5c1f3ad62b578d2cba1c810ab98e9fd87ae7577e0b1b432ce454c2887a",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/envelope.py"
+        },
+        {
+          "content_hash": "4354f41c42d78b90cfa8a31fa4bb73af84878552630c75ac5d6f0874e9be94c5",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/parser.py"
+        },
+        {
+          "content_hash": "d94e63b78bb6cd8f32f270af79e9036b0e973e49d2ac797f3fcce72bbc6eab91",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "intake_queue/rules.py"
+        },
+        {
+          "content_hash": "3b81ef0c0ccebb03ef6e4c64d550b074501cbdf5a0222c18edd55b100e036b57",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "tests/test_intake.py"
+        }
+      ],
+      "fixture_hash": "86406e36f5e0c6ad2f00e64794d3cc2ddf805e5e928636e21828572f3c49b685",
+      "language": "python",
+      "limitations": [
+        "Single human annotator wang; no human IAA; delayed blinded self-review pending.",
+        "Fixture-design bias and fixed heuristics; self-repository author-familiarity bias.",
+        "Python from-import targets may remain external under current graph semantics.",
+        "Java fixture-only coverage uses the lightweight parser, not compiler-grade analysis.",
+        "Zero-symbol files remain in File/Chunk baselines; identity enrichment and candidate pools affect construct validity.",
+        "Python-heavy dataset; one pinned E5 model; no required external project; no superiority claim."
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "source_kind": "fixture",
+      "source_revision": "fixture-v1",
+      "symbol_count": 15,
+      "version": "v1"
+    },
+    {
+      "file_count": 8,
+      "files": [
+        {
+          "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/__init__.py"
+        },
+        {
+          "content_hash": "269210b32245d9a78a73f8b8e8d0471a90cd518c4ccedfc13c18a3b13659dd16",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/models.py"
+        },
+        {
+          "content_hash": "85ada73c0ce56c7f4798cacd04e713927acfb549a3c127e4e34f795566920c06",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/notify.py"
+        },
+        {
+          "content_hash": "96c9e24ebf340ab062a56735b6155e6c6d2291691ff33c3399b171b1aeabfe9e",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/policy.py"
+        },
+        {
+          "content_hash": "f57b44b4fc9e7ff91f5539536c320be88434dd413b422180bb6ba58f94046ce8",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/report.py"
+        },
+        {
+          "content_hash": "aa98b122f9097b88015cdfaa726083b0d8b21f59a6b4c35c0a92691871fcc74c",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/service.py"
+        },
+        {
+          "content_hash": "3bfcb8ff3e16411bbc5212d6627750aea2768a8f4b2da6de795edd7bdfa01245",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "route_ledger/store.py"
+        },
+        {
+          "content_hash": "83190a44a0c953b04769f25a6c6c1ca18b62700f4110f52fc4a09950c7ae3e73",
+          "language": "python",
+          "path_role": "fixture",
+          "relative_path": "tests/test_route_service.py"
+        }
+      ],
+      "fixture_hash": "850ea55734eeceb3cb020257bb463c166a42c837f40cc88b88e7610a76e29097",
+      "language": "python",
+      "limitations": [
+        "Single human annotator wang; no human IAA; delayed blinded self-review pending.",
+        "Fixture-design bias and fixed heuristics; self-repository author-familiarity bias.",
+        "Python from-import targets may remain external under current graph semantics.",
+        "Java fixture-only coverage uses the lightweight parser, not compiler-grade analysis.",
+        "Zero-symbol files remain in File/Chunk baselines; identity enrichment and candidate pools affect construct validity.",
+        "Python-heavy dataset; one pinned E5 model; no required external project; no superiority claim."
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "source_kind": "fixture",
+      "source_revision": "fixture-v1",
+      "symbol_count": 28,
+      "version": "v1"
+    },
+    {
+      "file_count": 72,
+      "files": [
+        {
+          "content_hash": "685603764af2ba4a4e4d720bc9604c6491f0c15a21bfdab25009c81d4cf537ab",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Java/__init__.py"
+        },
+        {
+          "content_hash": "5a69faf414944da0c63cba75a80d55a547155c45cb317cbd4069e39ce68f7bad",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Java/java_annotator.py"
+        },
+        {
+          "content_hash": "45ac805b74ffc4bab64c3e6b2dbf67de2105c943b5bab39cc37a7b9916da7f1f",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Java/java_parser.py"
+        },
+        {
+          "content_hash": "c96d446d7504ef737f68e4648f1ff1ae3ffe3344f2c09d89680b1f0ec08fa7d5",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Py/__init__.py"
+        },
+        {
+          "content_hash": "a086ecfcb60723502a479f5127aa126d56b0a7dbf0517df42054ef256b3f067d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Py/analyzer.py"
+        },
+        {
+          "content_hash": "ea0cc6df3ad9455e1eb934d03f752f8eb205fa50859fd32832bb5ec762312cbf",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Py/annotator.py"
+        },
+        {
+          "content_hash": "dc619eef500b263e80b8a6236c5fea6b6ab9955836b0e1d17c4b1b2b3cb6d462",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "Py/parser.py"
+        },
+        {
+          "content_hash": "3eb845e8d2f63e484e4566300194e2c63fa674f576fe2071fa152391d99835f7",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "admin_operations/__init__.py"
+        },
+        {
+          "content_hash": "58a5089d587c26d9ff33b343ebb66fd470a64b21ac4e77d8d25cfbb53e3e4127",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "admin_operations/domain.py"
+        },
+        {
+          "content_hash": "15be266b7a8a4b819a97cec2d8e7ab8c59b29034984d9490f8b0203f841d63a5",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "admin_operations/service.py"
+        },
+        {
+          "content_hash": "592800f7f20d7fbd032c3135fab39e1dd57484cb9c49cca226beccda490ff0f0",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/__init__.py"
+        },
+        {
+          "content_hash": "60be7cda0c1c817bcff2ed6f47302b130320cc9da91344c46221317edbee2fc5",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/adapters.py"
+        },
+        {
+          "content_hash": "4823f29b4959483408750b97e25589879ee9bc2ed8c67736e0beea44346a7986",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/analysis.py"
+        },
+        {
+          "content_hash": "96f89b371e2c190b7150ffdf55619ea2eb35bbfed70e801b139ce9db3fa2020d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/domain.py"
+        },
+        {
+          "content_hash": "0c4c1fc778a06bd989e7e3d0b856cfb0c06122162284f448e174aa9507dbeefb",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/graph.py"
+        },
+        {
+          "content_hash": "d2a798c75379eb0ac08bb41f36f5218ce51e59fa66b976c8ff7df9d806faf55d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/scanner.py"
+        },
+        {
+          "content_hash": "723a0a4d511807d5f0fe614614ef3780fe035e10bac99b4693d82c79362a95b4",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "code_maintenance/snapshot.py"
+        },
+        {
+          "content_hash": "021f3b30a185763b5996d9cd6583a706733a55c66035ac33d6720410d49fff27",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "config.py"
+        },
+        {
+          "content_hash": "fe422806f8f5931a7995e8deb6c3f1c115438290e2b635a133ce73c161bee4d0",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "credits/__init__.py"
+        },
+        {
+          "content_hash": "eea51c85b5447754e1de3cc747404a3f9002f57c2abc53b30316ad8add108625",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "credits/domain.py"
+        },
+        {
+          "content_hash": "3a6277138e68fe960fec27b43a189149f3c734b47f7fc6eb5df377cc9d156da4",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "credits/ledger.py"
+        },
+        {
+          "content_hash": "186c0cdcced72c21a152043dd92b602750a2ddb81c82fa4bcad84c5a8b1b2c78",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "credits/sqlite_ledger.py"
+        },
+        {
+          "content_hash": "088269822c79b7a6e98be51d96a798442c0e4652986723881eb8a10193de495d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "i18n.py"
+        },
+        {
+          "content_hash": "88f9755ae26c8762f54953b92e4d1304648677601b664d9f3be927dd7a2e1c74",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "llm_provider.py"
+        },
+        {
+          "content_hash": "8456192264b56fd16fb210ee6c7ef8606e67daa06e47eca0a5edaa682668d9f6",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "llm_service.py"
+        },
+        {
+          "content_hash": "8e010eaffdb558d17cd377004e2e273f871843ab0571ddd12e0bd370bd45aabe",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "main.py"
+        },
+        {
+          "content_hash": "500a056704d8e565d1d81e4465d2eb3472b58a1643c27eacf91ba7a298febdc2",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "managed_access/__init__.py"
+        },
+        {
+          "content_hash": "c10b2bb5e1386c77d6c724ed20c67904c8515425d55705804cde921086b8bc39",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "managed_access/domain.py"
+        },
+        {
+          "content_hash": "b61225bacd8448787e21b7f479efcd0ef6c810638a445d1d348f76575c91ac36",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "managed_access/pricing.py"
+        },
+        {
+          "content_hash": "4d720ad25ff2083ec8d086ff8944af0ef5345755fb1ee5e48ef88f8a8b39bd0d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "managed_access/service.py"
+        },
+        {
+          "content_hash": "baf3ebd8ab61100e931e3feead10861493db97b4a8481a9ec013ad6ae96db685",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "processor.py"
+        },
+        {
+          "content_hash": "edf9dad795acd89ad08f95dcae576d883228acf37acb4411bf159ea3ce1d9294",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/__init__.py"
+        },
+        {
+          "content_hash": "6b8ee919eca06f9ac34a741825ff9c2431df3ada2dc2a23e8c1f9bc2559fcf5a",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/context.py"
+        },
+        {
+          "content_hash": "4238f886983db2b3dee3f7fef846925638fd6aa103452592a490cb47b9a8f90a",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/corpus.py"
+        },
+        {
+          "content_hash": "40f8223fbea2ae907aeefde0addfecd6013e69d070116198a8eb441be1245e79",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/domain.py"
+        },
+        {
+          "content_hash": "377367c9f2393bb11ac55dc04a893723681c98a8f6aa073646f12d1ced65b060",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/embedding.py"
+        },
+        {
+          "content_hash": "a3a921c719d7bbb874ebf2b4a7ed79b93b58695f3012658291d378cc54f12b7d",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/graph_expansion.py"
+        },
+        {
+          "content_hash": "15fb4318bcd75cf8b45d2498d7406a046546df9ae7dc5d4c530da7caf79551e1",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/hybrid.py"
+        },
+        {
+          "content_hash": "565ce3f1ecd2aadd6d276f47e08234d95e0bdc9e4ee3ba5f57cc40425db6b079",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/index.py"
+        },
+        {
+          "content_hash": "9e9e9101c4702bd4de6bd62013def5e76d4dc1e64932c8f9d47fa4b8f750d3ca",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/lexical.py"
+        },
+        {
+          "content_hash": "0516cfe7ef38e422ce599dcc0fdd511942fedb6fc95bc960fbdca9479c0d62f4",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/local_embedding.py"
+        },
+        {
+          "content_hash": "3f14b567dda350920aea61b6dfd805fefaf8511b6ef41d50d12b534ab0e701bc",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "project_intelligence/service.py"
+        },
+        {
+          "content_hash": "78a4e29affe9a74753c0e40d718de06b3a55af635bf2ca58960444c7658e75e5",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "scripts/validate_phase32_real_model.py"
+        },
+        {
+          "content_hash": "82360233e114e007116948dfddff2966bb73d98ed242bb6a3ea1c423c3191797",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_admin_credit_service.py"
+        },
+        {
+          "content_hash": "afbad1bc837d7e5448d0e2c8641a9f0b48bae8ab6139fafcdc901bd5cbed8cf4",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_credits_domain.py"
+        },
+        {
+          "content_hash": "43a20d789c0100c0ae3ed34846a1835cd51ac6eb3ab91b8b0a0e497e7314d789",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_domain.py"
+        },
+        {
+          "content_hash": "b4e454908a97af3438997a114105d5456f1d2a4db51d06800cc3c6b39907b084",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_java_adapter.py"
+        },
+        {
+          "content_hash": "6972f6678aec1c5ae44217b2ebb60ce5bef53bdac13e69761f84586716b61184",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_java_parser.py"
+        },
+        {
+          "content_hash": "eaf16198bff1bfee6b643ecf673fcaf9a1a1691a6f91c214c6e0fad8e395a861",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_llm_contracts.py"
+        },
+        {
+          "content_hash": "0cf1630a2b3f079f8d366311fdfd6c446121bd8a5321d9b9d11ad9053566b1f6",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_managed_access.py"
+        },
+        {
+          "content_hash": "0e5801b54e7c1c810dceb9df0819d8e0770137a6a8be24b001470459c2988c4e",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_managed_token_pricing.py"
+        },
+        {
+          "content_hash": "9401583d7527506f52c6df0600341f57e5bd10fec83ae57442a49fd68ef52464",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_phase3_hardening.py"
+        },
+        {
+          "content_hash": "eedc2d2711f493fd2c43bf375cde2a3d8c6f4845f7e003b823522c733e69c14e",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_processor_regressions.py"
+        },
+        {
+          "content_hash": "f2e4fdb7d64c86a479e3aab6961dc69e82a2248486f0af56e6f3a00b6b6a3505",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_analysis.py"
+        },
+        {
+          "content_hash": "b8ebf7aacf405a972e5b658dc6d039ba568484d4ab932bfc1cfbdf86b9e6bc3d",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_graph.py"
+        },
+        {
+          "content_hash": "5b0f7dc3e704b8f6eeba3f138bfcbd52802dd34827e57bcd4d574036b647ea83",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_context.py"
+        },
+        {
+          "content_hash": "cdd79959a41221fae372e40eed89e83f036372243af5f417b26e9d7b3f09cac3",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_corpus.py"
+        },
+        {
+          "content_hash": "351abcbdf8305420e78b2f4dbb5c175cc2fb016439a4aaf9c83dda8b3f7bdda8",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_embedding.py"
+        },
+        {
+          "content_hash": "560f1a34f0d01fcdc3a4327fc4273207ac3c8305c40b0020177640eb97675994",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_graph_expansion.py"
+        },
+        {
+          "content_hash": "10b1fe32985527f15569dce24b87532b4f730c2bb6434869ad32be44d936723b",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_hybrid.py"
+        },
+        {
+          "content_hash": "39a348e4ef707474def63549b0dff4c3f82a63c69d71019860cee26f3865ced4",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_index.py"
+        },
+        {
+          "content_hash": "9638760304147927d6e30e8862364b6df69b20b2428d57584675efb011b9c161",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_lexical.py"
+        },
+        {
+          "content_hash": "df3f8739ff36a4584e0ebe325e20c7f7983505b351c0721167af19bc1be2ccf4",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_local_embedding.py"
+        },
+        {
+          "content_hash": "18300b8475e069387c2cdd8e6c92e6cb780ee56410f64ae1e70ce4ce299b3818",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_intelligence_service.py"
+        },
+        {
+          "content_hash": "d41a21f5a3774b94b830c7ee02f1d81961a904eba55059e1c67291356fac4918",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_scanner.py"
+        },
+        {
+          "content_hash": "66294ba89fe615f0cccb77b795220f3167793aa1320c70d5212a5848bb7da929",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_project_snapshot.py"
+        },
+        {
+          "content_hash": "c500698168a4daa12ea0e4b12b5011aa70c2de5fa5913ee64626537a20c5eeda",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_provider_foundation.py"
+        },
+        {
+          "content_hash": "1c094771abebcf205d3eb690d70920158b9e950a4694a76992ffc55658af3093",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_python_adapter.py"
+        },
+        {
+          "content_hash": "4a7037313203c4af94eb9b7e6ea58c84a4354680111b62b90e994d70389d9185",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_python_parser.py"
+        },
+        {
+          "content_hash": "453f14689df2000f39e9bf2dbb41691990d54b2e14e98e98384bb80fe101db17",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_sqlite_credit_ledger.py"
+        },
+        {
+          "content_hash": "1734713aa06626706195813999890046d54771bf3fe60a1d8563e8e9f24acf40",
+          "language": "python",
+          "path_role": "test",
+          "relative_path": "tests/test_usage_pricing.py"
+        },
+        {
+          "content_hash": "2fc181d0909fefcb0f7aa3b0c1ec93bacc4f26e198aadd829a7de69ccc796030",
+          "language": "python",
+          "path_role": "production",
+          "relative_path": "ui.py"
+        }
+      ],
+      "fixture_hash": null,
+      "language": "python",
+      "limitations": [
+        "Single human annotator wang; no human IAA; delayed blinded self-review pending.",
+        "Fixture-design bias and fixed heuristics; self-repository author-familiarity bias.",
+        "Python from-import targets may remain external under current graph semantics.",
+        "Java fixture-only coverage uses the lightweight parser, not compiler-grade analysis.",
+        "Zero-symbol files remain in File/Chunk baselines; identity enrichment and candidate pools affect construct validity.",
+        "Python-heavy dataset; one pinned E5 model; no required external project; no superiority claim."
+      ],
+      "project_id": "self-code-comments-agent",
+      "source_kind": "self_repository",
+      "source_revision": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+      "symbol_count": 1233,
+      "version": "v1"
+    }
+  ],
+  "version": "v1"
+}

@@ -782,9 +782,19 @@ def test_run_metadata_separates_deterministic_identity_from_environment_and_time
 
 def test_no_formal_dataset_truth_or_result_artifacts_were_added():
     root = Path(__file__).parents[1]
-    assert not (root / "docs" / "experiments" / "datasets").exists()
-    assert not (root / "docs" / "experiments" / "queries").exists()
-    assert not (root / "docs" / "experiments" / "ground_truth").exists()
+    artifacts = root / "docs" / "experiments"
+    draft_paths = (
+        artifacts / "datasets" / "v1" / "manifest.json",
+        artifacts / "queries" / "v1" / "queries.jsonl",
+        artifacts / "ground_truth" / "v1" / "ground_truth.jsonl",
+    )
+    if any(path.exists() for path in draft_paths):
+        assert all(path.is_file() for path in draft_paths)
+        records = load_ground_truth(draft_paths[2])
+        assert records
+        assert all(record.annotation_status == "drafted" for record in records)
+        assert all(record.reviewed_at is None for record in records)
+        assert all(record.adjudicator_id is None for record in records)
     assert not (root / "docs" / "experiments" / "runs").exists()
 
 
