@@ -520,6 +520,17 @@
   final Data QA and freeze are still required; next entrance is actual ≥48-hour
   delayed blinded self-review with masking and independent-in-time judgment;
   Phase 6.2 is not completed
+- V3.1.0 Phase 6.2B blinded review preparation:
+  `PREPARATION COMPLETE / NOT REVIEWED`;
+  `docs/experiments/blind_review/` contains a reproducible GT-free query/source bundle
+  generator, 72-query blank second-judgment packet, blinded reviewer instructions,
+  and operator-only preparation/comparison procedure. The verified bundle contains
+  all 93 frozen source files, no GT/audit/ranking file or query-specific candidate
+  selection; blank packet raw-byte SHA-256 is
+  `eb031f55870a35e74824454cdae9fd6d2ab5654e1906a1205761b4658678f095`.
+  Same-account access to the full repository remains an actual masking limitation;
+  only a separate GT-free bundle may be handed to `wang`, and future human behavior
+  cannot be certified by preparation checks
 - V3.1.0 Phase 6.3: `BLOCKED / NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
