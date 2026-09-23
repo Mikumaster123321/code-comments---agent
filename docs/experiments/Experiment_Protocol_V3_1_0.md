@@ -10,6 +10,9 @@
 - **Incremental fixture correction:** Section 10.3's historical `3/2/2`
   SnapshotDiff and `5` embedding-document expectations are superseded by
   `docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`.
+- **Query leakage correction:** Addendum C (`v1`), **FROZEN** at
+  `docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md`, supersedes four
+  historical query wordings and defines Grade-2 full-identifier-token matching.
 - Self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`
 - Formal RQ1–RQ4: **NOT STARTED**
@@ -300,6 +303,14 @@ calculated from self-review or model audit. Addendum A is authoritative for the 
 workflow, audit fields, reviewer/adjudicator semantics, and thesis limitation.
 
 ### 5.5 Leakage controls
+
+**Addendum C applies:**
+`docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md` supplies the mandatory
+replacement wording for `et-bl-py-01`, `et-bl-py-03`, `et-mt-py-03`, and
+`et-cf-py-01`, and the `code-lexical-v1` Grade-2 full-identifier-token leakage
+algorithm. Protocol plus
+Addenda A, B, and C govern within their respective scopes; the other controls below
+remain effective. Historical wording is retained in the Dataset Specification.
 
 - English test queries and truth are frozen before the first formal run.
 - Dev results may validate infrastructure and presentation only; the weights, model,

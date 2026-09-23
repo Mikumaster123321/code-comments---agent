@@ -22,6 +22,16 @@ the historical incremental SnapshotDiff and embedding-document counts in Section
 3.4 and 13. Within that scope, Addendum B is the latest normative authority;
 the original figures below remain as the frozen historical record.
 
+**Query leakage correction:** Addendum C at
+`docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md` supersedes only the
+wording of `et-bl-py-01`, `et-bl-py-03`, `et-mt-py-03`, and `et-cf-py-01`, and the
+matching rule for Grade-2 simple-name leakage in Section 6. Future materialization must use its
+replacement wording and full-identifier-token algorithm. The authority list below
+is historical: the governing sources are Protocol + Addendum A (annotation
+lifecycle) + Addendum B (incremental SnapshotDiff) + Addendum C (query wording and
+identifier leakage); this specification is subordinate within each Addendum's
+scope. All three Addenda must be read for Phase 6.2A.
+
 Authority order is:
 
 1. the frozen Experiment Protocol plus Addendum A;
@@ -248,6 +258,13 @@ Task mapping: `sl=symbol_lookup`, `fl=feature_localization`,
 
 ### 4.1 English test — self repository
 
+**SUPERSEDED WORDING — Addendum C:** The query-text cells for `et-bl-py-01`,
+`et-bl-py-03`, `et-mt-py-03`, and `et-cf-py-01` below are retained solely as
+historical wording.
+Use the four replacement texts in
+`docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md` for materialization.
+Their IDs, allocation, and Grade-1/Grade-2 evidence remain unchanged.
+
 | Query ID | Query text | Grade 2 evidence | Grade 1 evidence | Notes |
 | --- | --- | --- | --- | --- |
 | `et-sl-py-01` | Where is the symbol tokenize used to split a lexical query into terms? | `project_intelligence/lexical.py::tokenize` | — | — |
@@ -390,6 +407,13 @@ bare opinion or bare `IMPORTS`/`CONTAINS` statement is invalid. If a Graph relat
 mentioned, the same rationale must also give a source line/range and behavior.
 
 ## 6. Corrected leakage policy
+
+**Addendum C supersedes simple-name matching:**
+`docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md` defines the Grade-2
+full-identifier-token rule using `tokenize(simple_name)[0]` after extracting the
+simple name. Empty token output fails closed; compound identifier components are
+allowed by this rule, and `len(tokenize(simple_name)) == 1` must not be required.
+The remaining controls below continue to apply.
 
 1. English dev and English test Grade 2 primary targets are disjoint. An unavoidable
    real maintenance overlap must be an explicit audited exception; no API may be
@@ -666,6 +690,11 @@ Hybrid helping only some tasks, or Symbol not being best for every query—must 
 admissible and must not trigger dataset redesign.
 
 ## 16. Phase 6.2A execution entry
+
+**Addendum C entry reference:** Read
+`docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md` together with Addenda A
+and B; its replacement wordings and precedence supplement the historical entry
+paragraph below. Failed, discarded drafts must be regenerated from these Git sources.
 
 A future Phase 6.2A executor must read only the frozen Protocol, Addendum A, this
 specification, and `PROJECT_CONTEXT.md`, then materialize the artifacts above. It must

@@ -381,10 +381,57 @@
   RetrievalIndex, and hashing `UNCHANGED`; RQ1–RQ4 methodology `UNAFFECTED`;
   Protocol + Addendum A + Addendum B govern, with Dataset Specification subordinate
   to Addendum B only for the corrected incremental fixture counts
-- V3.1.0 Phase 6.2A blocker: `LIFTED AGAIN AFTER ADDENDUM B`
+- V3.1.0 Phase 6.2A blocker after Addendum B (historical):
+  `LIFTED AGAIN AFTER ADDENDUM B`
+- V3.1.0 subsequent Phase 6.2A failed materialization attempt: `STOPPED`;
+  Query wording / leakage policy conflict `IDENTIFIED`; this was separate from
+  the resolved Addendum B incremental conflict
+- V3.1.0 invalid Phase 6.2A draft history: `34` untracked artifacts under
+  `docs/experiments/datasets/v1/`, `docs/experiments/queries/v1/`, and
+  `docs/experiments/ground_truth/v1/` were discarded before this documentation
+  correction; `INVALID / NOT AUTHORITATIVE / NOT COMMITTED / NOT REUSABLE`;
+  no Phase 6.2 dataset-contract test was created, and `docs/thesis/` was untouched
+- V3.1.0 Query Leakage Methodology Review: `COMPLETED`; Multi-token Clarification:
+  `COMPLETED`; the earlier uncommitted `len(tokenize(simple_name)) == 1` proposal
+  was rejected because the frozen tokenizer retains identifier components
+- V3.1.0 Phase 6 Query Leakage Control Addendum C: `FROZEN` at
+  `docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md`;
+  raw-byte SHA-256 `3a3e125b1245206ec49fe22c59cd95b625a7ec28d4c75f10dcc361770f238c79`
+- V3.1.0 Addendum C corrected queries: `4` — originally authorized
+  `et-bl-py-01`, `et-bl-py-03`, `et-mt-py-03`, plus `et-cf-py-01` explicitly
+  authorized by the user after full-table validation found `_document -> document`;
+  the fourth replacement uses `retrieval unit`; all IDs, Grade-1/2 anchors,
+  allocation, and the 72-query count remain unchanged
+- V3.1.0 Addendum C leakage rule: extract
+  `simple_name = qualified_name.rsplit(".", 1)[-1]`, use frozen `code-lexical-v1`,
+  fail closed on empty tokens, and prohibit `tokenize(simple_name)[0]` in
+  `tokenize(query_text)` for non-`symbol_lookup`; `FULL IDENTIFIER TOKEN ONLY`;
+  compound component tokens `ALLOWED BY THIS GATE`; manual allowlist `NONE`;
+  no single-token-count requirement or NLP / ordinary-English exception
+- V3.1.0 Addendum C validation: `8` tokenizer examples verified; all `4` old texts
+  fail and all replacements pass this token gate; frozen table `72` queries,
+  `12` lookup exemptions, `60` non-lookup targets, `39` multi-token simple names,
+  `0` remaining full-identifier-token failures after replacements; full regression
+  `628 passed`; this is documentation/tokenizer evidence, not Dataset/GT validation
+  or a formal RQ result
+- V3.1.0 current Protocol reference-updated SHA-256:
+  `214360ac17633db7d77caec2ea2a135bf4372a773f9343b2fcb91bff8ee4e341`;
+  current Dataset Specification reference-updated SHA-256:
+  `4e72ceb84f06df361e10a24a6ab273ed3f6eba4d3649b96177a810c6a0c30a92`;
+  all original and earlier reference-updated hashes remain recorded in Addenda B/C
+- V3.1.0 current Source of Truth: Protocol + Addendum A (annotation lifecycle) +
+  Addendum B (incremental SnapshotDiff) + Addendum C (four wordings and identifier
+  leakage); Dataset Specification is subordinate within each Addendum's scope;
+  Addenda A/B, production/tokenizer, infrastructure/tests, RQ1–RQ4, and frozen
+  retrieval configuration remain unchanged
+- V3.1.0 Query Leakage Conflict: `CLOSED / RESOLVED BY ADDENDUM C`
+- V3.1.0 Phase 6.2A blocker: `LIFTED AFTER ADDENDUM C`
 - V3.1.0 Phase 6.2A: `ALLOWED BUT NOT STARTED`
 - V3.1.0 Phase 6.2 dataset/query/ground truth: `NOT CREATED / NOT CREATED / NOT CREATED`
 - V3.1.0 Phase 6.2 annotation: `NOT STARTED`
+- V3.1.0 Phase 6.2 delayed review clock: `NOT STARTED`; future successful draft
+  materialization must establish its own truthful `created_at`, new query-set hash,
+  and consistent identity chain from Git; discarded draft bytes must not be reused
 - V3.1.0 Phase 6.2 Gate: `OPEN`
 - V3.1.0 Phase 6.3: `NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
