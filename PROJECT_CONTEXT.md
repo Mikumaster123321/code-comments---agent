@@ -360,7 +360,28 @@
 - V3.1.0 Phase 6.2 research specification source: Grok 4.7 review + corrected
   specification + GPT-5.6 Sol cross-audit; these are design/review provenance, not
   empirical evidence
-- V3.1.0 Phase 6.2A blocker: `LIFTED`
+- V3.1.0 Phase 6.1.3 annotation-lifecycle blocker: `LIFTED / RESOLVED`;
+  the earlier Phase 6.2A `blocker=LIFTED` was the correct historical state
+- V3.1.0 later Phase 6.2A materialization attempt:
+  `STOPPED ON NEW INCREMENTAL FIXTURE SPECIFICATION CONFLICT`; no dataset,
+  query, or ground-truth artifact was created
+- V3.1.0 Grok 4.7 Incremental Fixture Semantics methodology review: `COMPLETED`;
+  this is review provenance, not formal experiment evidence
+- V3.1.0 Phase 6 Incremental Fixture SnapshotDiff Semantics Addendum B:
+  `FROZEN` at `docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`;
+  raw-byte SHA-256 `34406b3dad94cf21c3422176cedd7b94221f18518b82c97e8c061e52b3972a5d`
+- V3.1.0 Incremental Fixture Specification Conflict:
+  `CLOSED / RESOLVED BY ADDENDUM B`; direct edit set `3 changed / 2 added /
+  2 removed`; enclosing symbol effect `Bin / Shelf`; authoritative SnapshotDiff
+  `5 changed / 2 added / 2 removed / 0 unchanged`
+- V3.1.0 incremental fixture embedding contract: `7` new documents from
+  `changed ∪ added`; `embed_documents` is one batch of seven texts; removed and
+  unchanged require zero new document embeddings
+- V3.1.0 Addendum B scope: production parser, SymbolId, Snapshot, SnapshotDiff,
+  RetrievalIndex, and hashing `UNCHANGED`; RQ1–RQ4 methodology `UNAFFECTED`;
+  Protocol + Addendum A + Addendum B govern, with Dataset Specification subordinate
+  to Addendum B only for the corrected incremental fixture counts
+- V3.1.0 Phase 6.2A blocker: `LIFTED AGAIN AFTER ADDENDUM B`
 - V3.1.0 Phase 6.2A: `ALLOWED BUT NOT STARTED`
 - V3.1.0 Phase 6.2 dataset/query/ground truth: `NOT CREATED / NOT CREATED / NOT CREATED`
 - V3.1.0 Phase 6.2 annotation: `NOT STARTED`

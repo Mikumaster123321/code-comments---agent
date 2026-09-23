@@ -16,6 +16,12 @@ and validation decisions beneath the research method frozen by
 `Experiment_Protocol_V3_1_0.md` and the annotation workflow clarified by
 `Experiment_Protocol_Addendum_A_V3_1_0.md`.
 
+**Incremental fixture correction:** Addendum B at
+`docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md` supersedes only
+the historical incremental SnapshotDiff and embedding-document counts in Sections
+3.4 and 13. Within that scope, Addendum B is the latest normative authority;
+the original figures below remain as the frozen historical record.
+
 Authority order is:
 
 1. the frozen Experiment Protocol plus Addendum A;
@@ -198,6 +204,9 @@ always calls `render` without checking open state. `minutesLate` calls
 only when status is open.
 
 ### 3.4 `fixture-py-incremental-delta`
+
+**Addendum B supersedes the incremental counts below:**
+`docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`.
 
 Base symbols are `Bin`, `Bin.put`, `Bin.remove`, `checksum`, `Shelf`, `Shelf.add`, and
 `Shelf.drop`. The update must produce exactly:
@@ -565,6 +574,9 @@ dataset/query/truth versions. `checksums.sha256` covers the raw bytes of every f
 Phase 6.2 delivery artifact.
 
 ## 13. Mechanical validation contract
+
+**Addendum B supersedes the incremental `3/2/2` validation count below:**
+`docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`.
 
 `tests/test_phase62_dataset_contract.py` remains offline and validates at least:
 

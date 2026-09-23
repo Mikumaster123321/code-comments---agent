@@ -7,6 +7,9 @@
 - Protocol version: `v3.1-phase6-protocol-v1`
 - Annotation clarification: Addendum A (`v1`), **CLARIFIED / FROZEN** at
   `docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md`
+- **Incremental fixture correction:** Section 10.3's historical `3/2/2`
+  SnapshotDiff and `5` embedding-document expectations are superseded by
+  `docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`.
 - Self-repository dataset commit:
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`
 - Formal RQ1–RQ4: **NOT STARTED**
@@ -606,6 +609,10 @@ No process is silently mixed between cold and warm conditions. Millisecond fixtu
 results are not presented as production scalability or an SLA.
 
 ### 10.3 Incremental experiment
+
+**Addendum B controls the incremental fixture counts in this section:**
+`docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md`. The `3/2/2`
+SnapshotDiff and `5` embedding-document figures below remain historical text.
 
 Incremental indexing is a secondary engineering experiment, not a fifth research
 question. Phase 6.2 freezes a base fixture snapshot and one update with exactly:
