@@ -288,7 +288,24 @@
   offline LLM-contract smoke `6 passed`; full regression `623 passed`; no dataset,
   query, ground-truth artifact, Retriever/E5 call, network request, or formal RQ run
   was performed
-- V3.1.0 Phase 6.2A schema blocker: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 6.1.2 Directed Retest: `NOT PASS`; new Critical `0`; new Medium `1`
+- V3.1.0 Phase 6.1.2 original drafted/null schema blocker: `CLOSED / RESOLVED`
+- V3.1.0 Phase 6.1.3 — Annotation Lifecycle Consistency Hardening:
+  `IMPLEMENTED / HARDENING COMPLETE`
+- V3.1.0 Phase 6.1.3 M-1 root cause: `annotation_status=reviewed` could retain a
+  non-null `adjudicator_id`, contradicting the frozen Addendum A meaning that review
+  completed without adjudication
+- V3.1.0 Phase 6.1.3 resolution: `reviewed` rejects every non-null
+  `adjudicator_id`; `adjudicated` still requires one; `frozen` continues to allow
+  either null or non-null adjudication provenance; generic identity remains outside
+  schema scope
+- V3.1.0 Phase 6.1.3 M-1: `FIX IMPLEMENTED / PENDING DIRECTED RETEST`
+- V3.1.0 Phase 6.1.3 validation: annotation lifecycle / Phase 6.1 benchmark
+  infrastructure `52 passed`; Phase 5 `48 passed`; Phase 4 `37 passed`; Phase 3.2
+  `10 passed`; Phase 3.1 `12 passed`; Phase 2 `14 passed`; Phase 1 `41 passed`;
+  offline LLM-contract smoke `6 passed`; full regression `628 passed`; no dataset,
+  query, ground-truth artifact, Retriever/E5 call, network request, or formal RQ run
+  was performed
 - V3.1.0 Phase 6.1 Documentation Gate: `CLOSED`
 - V3.1.0 Phase 6.1 implementation: isolated experiment-only infrastructure in
   `experiments/` for immutable deterministic benchmark configuration identity,

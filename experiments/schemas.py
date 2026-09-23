@@ -385,6 +385,8 @@ class GroundTruthRecord:
             raise SchemaValidationError("annotation_status is invalid")
         if self.adjudicator_id is not None:
             _non_empty("adjudicator_id", self.adjudicator_id)
+        if self.annotation_status == "reviewed" and self.adjudicator_id is not None:
+            raise SchemaValidationError("reviewed truth must not have adjudicator_id")
         if self.annotation_status == "adjudicated" and self.adjudicator_id is None:
             raise SchemaValidationError("adjudicated truth requires adjudicator_id")
         created_at = _timestamp("created_at", self.created_at)

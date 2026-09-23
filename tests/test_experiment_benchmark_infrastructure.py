@@ -438,14 +438,48 @@ def test_ground_truth_review_complete_states_accept_48_hour_delay(annotation_sta
         assert record.to_record()["reviewed_at"] == "2026-09-22T08:00:00+00:00"
 
 
+@pytest.mark.parametrize("adjudicator_id", ["wang", "independent-adjudicator"])
+def test_ground_truth_reviewed_rejects_adjudicator(adjudicator_id):
+    with pytest.raises(
+        SchemaValidationError, match="reviewed truth must not have adjudicator_id"
+    ):
+        replace(
+            truth(),
+            annotation_status="reviewed",
+            adjudicator_id=adjudicator_id,
+        )
+
+
 def test_ground_truth_adjudicated_accepts_48_hour_delay_with_adjudicator():
     record = replace(
         truth(),
         annotation_status="adjudicated",
-        adjudicator_id="annotator-a",
+        adjudicator_id="wang",
         reviewed_at="2026-09-22T08:00:00+00:00",
     )
-    assert record.adjudicator_id == "annotator-a"
+    assert record.adjudicator_id == "wang"
+
+
+def test_ground_truth_adjudicated_rejects_missing_adjudicator():
+    with pytest.raises(SchemaValidationError, match="requires adjudicator_id"):
+        replace(
+            truth(),
+            annotation_status="adjudicated",
+            adjudicator_id=None,
+        )
+
+
+def test_ground_truth_frozen_accepts_with_or_without_adjudicator():
+    without_adjudication = truth()
+    after_adjudication = replace(truth(), adjudicator_id="wang")
+
+    assert without_adjudication.adjudicator_id is None
+    assert after_adjudication.adjudicator_id == "wang"
+
+
+def test_ground_truth_review_delay_accepts_one_second_beyond_boundary():
+    record = replace(truth(), reviewed_at="2026-09-22T08:00:01+00:00")
+    assert record.reviewed_at == "2026-09-22T08:00:01+00:00"
 
 
 def test_ground_truth_hash_changes_when_draft_becomes_frozen():
