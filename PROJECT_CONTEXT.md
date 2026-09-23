@@ -516,6 +516,12 @@
   identity field `retrieval_runs_before_freeze=0` and absent run artifacts do not
   establish historical absence of temporary/untracked retrieval activity.
 - V3.1.0 Phase 6.2 Gate: `OPEN`
+- V3.1.0 Phase 6.2 single-judge LLM silver reference：方案提案待用户裁决，
+  `PROPOSED / NOT EFFECTIVE / NO LABELING AUTHORIZED`，见
+  [非生效 Addendum D 候选提案](docs/experiments/PROPOSED_NOT_EFFECTIVE_NO_LABELING_AUTHORIZED_Addendum_D_Single_Judge_Silver_Reference_V3_1_0.md)。
+  Addendum D 尚未生效，未执行 LLM 标注；现行 Protocol + Addenda A/B/C
+  继续有效，Dataset / Query / GT 仍 `DRAFTED`，Phase 6.2 Gate `OPEN`，
+  Phase 6.3 `BLOCKED / NOT STARTED`，Formal RQ1–RQ4 `NOT STARTED`。
 - V3.1.0 Phase 6.2B: `PENDING`; delayed review, adjudication if needed, independent
   final Data QA and freeze are still required; next entrance is actual ≥48-hour
   delayed blinded self-review with masking and independent-in-time judgment;
