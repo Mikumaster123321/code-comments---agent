@@ -536,6 +536,15 @@
   methodology review, actual 12 audits, Chinese non-translation verification,
   reference approval/schema/runner Gate migration and final independent Data QA
   remain pending. No LLM evidence audit or formal retrieval has run.
+- V3.1.0 Addendum D independent contract QA: user-provided reply reports
+  `PASS WITH NOTES`; the raw probes/full reply are not archived in Git, and its
+  documentation closure remains a separate pending decision.
+- V3.1.0 Phase 6.2 Java evidence audit inputs: `PREPARED / NOT EXECUTED` at
+  [evidence_audit/prepared](docs/experiments/evidence_audit/prepared/README.md).
+  All 12 preregistered English-test Java queries have individually hashed prompts,
+  complete cited frozen fixture files and blank execution records; no model call,
+  evidence judgment, Python/Chinese audit or GT change occurred. This preparation
+  does not approve the reference or close the Phase 6.2 Gate.
 - V3.1.0 Phase 6.2B under Addendum D: `PENDING`; next steps are the preregistered
   12-item evidence audit, independent source checks for doubts, bounded Chinese
   non-translation review, provenance/reference approval implementation, final Data
