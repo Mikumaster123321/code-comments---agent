@@ -25,6 +25,7 @@ from experiments import (
     validate_formal_eligibility, write_lifecycle_artifact,
 )
 from experiments.reference import REFERENCE_METHOD
+from experiments.eligibility import validate_current_gate
 from experiments.serialization import canonical_jsonl
 
 ROOT = Path(__file__).parents[1]
@@ -171,6 +172,94 @@ def test_current_gate_is_navigation_only():
         replace(gate, formal_execution_eligible=True)
     with pytest.raises(ValueError):
         CurrentGateIndex.from_record({**gate.to_record(), "unknown": True})
+
+
+def _navigation_gate(phase="6.2B.2", status="ALLOWED BUT NOT STARTED"):
+    return CurrentGateIndex("v1", phase, "OPEN", status, None, False, False,
+                            ("Phase 6.2 remains open",), "Phase 6.2B.2 Evidence Capture Proof",
+                            ("docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",),
+                            "8f931f73bf4b0630dff5e679104fbc025132cafa")
+
+
+def test_current_gate_frozen_phase_status_matrix():
+    expected = {
+        "6.2B.0": {"COMPLETED"},
+        "6.2B.1": {"ALLOWED BUT NOT STARTED", "IMPLEMENTATION IN PROGRESS",
+                   "IMPLEMENTED / QA PENDING", "QA PASS / DOCUMENTATION GATE PENDING",
+                   "COMPLETED", "CLOSED"},
+        **{f"6.2B.{stage}": {"ALLOWED BUT NOT STARTED", "IN PROGRESS", "BLOCKED", "COMPLETED"}
+           for stage in range(2, 7)},
+    }
+    all_statuses = set().union(*expected.values())
+    for phase, allowed in expected.items():
+        for status in all_statuses:
+            if status in allowed:
+                gate = _navigation_gate(phase, status)
+                assert CurrentGateIndex.from_record(gate.to_record()) == gate
+            else:
+                with pytest.raises(ValueError, match="current gate state is invalid"):
+                    _navigation_gate(phase, status)
+
+
+@pytest.mark.parametrize("phase", ["", "6.2B.7", "6.2C", "7.0", "V3.2", "random-phase",
+                                          "6.2B.2 ", " 6.2B.2", "6.2b.2"])
+def test_current_gate_rejects_unknown_phase(phase):
+    with pytest.raises(ValueError, match="schema/phase is invalid"):
+        _navigation_gate(phase=phase)
+
+
+@pytest.mark.parametrize("status", ["", "READY", "DONE", "APPROVED", "GO", "FORMAL READY",
+                                           "allowed but not started", "ALLOWED BUT NOT STARTED "])
+def test_current_gate_rejects_unknown_status(status):
+    with pytest.raises(ValueError, match="current gate state is invalid"):
+        _navigation_gate(status=status)
+
+
+def test_current_gate_navigation_strict_record_and_legacy_compatibility():
+    gate = _navigation_gate()
+    record = gate.to_record()
+    assert gate.current_gate == "OPEN" and gate.selected_reference_approval_identity is None
+    assert gate.dry_run_eligible is False and gate.formal_execution_eligible is False
+    assert CurrentGateIndex.from_record(json.loads(json.dumps(record))) == gate
+    assert CurrentGateIndex.from_record(dict(reversed(list(record.items())))).to_record() == record
+    for field, value in (("dry_run_eligible", "false"), ("dry_run_eligible", 0),
+                         ("formal_execution_eligible", "true"), ("formal_execution_eligible", 1)):
+        with pytest.raises(ValueError):
+            CurrentGateIndex.from_record({**record, field: value})
+    for field in ("dry_run_eligible", "formal_execution_eligible"):
+        with pytest.raises(ValueError):
+            replace(gate, **{field: True})
+    with pytest.raises(ValueError):
+        CurrentGateIndex.from_record({**record, "unknown": True})
+    legacy = RepositoryAuthority(ROOT).load_current_gate()
+    assert legacy.schema_version == "v1"
+    assert legacy.current_phase == "6.2B.1"
+    assert legacy.phase_status == "IMPLEMENTED / QA PENDING"
+    assert CurrentGateIndex.from_record(legacy.to_record()) == legacy
+
+
+def test_next_phase_navigation_cannot_grant_formal_authority(synthetic_authority):
+    root, config, approval, receipt, runtime, commit = synthetic_authority
+    for path in (f"docs/experiments/reference_approval/{approval}.json",
+                 "docs/experiments/reference_approval/phase62_closure.json", receipt):
+        (root / path).unlink()
+    gate = _navigation_gate()
+    _json(root, "docs/experiments/current_gate.json", gate.to_record())
+    _git(root, "add", "-A", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic navigation without authority")
+    authority = RepositoryAuthority(root)
+    assert authority.load_current_gate() == gate
+    assert validate_current_gate(authority, gate) is None
+    with pytest.raises(EligibilityError, match="current_gate_conflict"):
+        _validate_fixture(synthetic_authority)
+    forged = replace(gate, current_gate="CLOSED", phase_status="COMPLETED",
+                     selected_reference_approval_identity=approval,
+                     dry_run_eligible=True, formal_execution_eligible=True)
+    _json(root, "docs/experiments/current_gate.json", forged.to_record())
+    _git(root, "add", "docs/experiments/current_gate.json")
+    _git(root, "commit", "-qm", "synthetic forged gate")
+    with pytest.raises(EligibilityError, match="artifact_missing"):
+        _validate_fixture(synthetic_authority)
 
 
 def test_identity_is_process_and_order_independent():

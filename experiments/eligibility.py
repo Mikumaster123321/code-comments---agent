@@ -6,6 +6,7 @@ import subprocess
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from .config import BenchmarkConfig, Population, RunKind, SemanticMode
@@ -43,6 +44,18 @@ METHOD_DOCUMENTS = (
 ENGINEERING_DOCUMENT = "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md"
 ENGINEERING_SHA256 = "6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045"
 
+# Frozen Engineering Specification v1 Phase 6.2B navigation lifecycle.
+_CURRENT_GATE_PHASE_STATUSES = MappingProxyType({
+    "6.2B.0": frozenset({"COMPLETED"}),
+    "6.2B.1": frozenset({
+        "ALLOWED BUT NOT STARTED", "IMPLEMENTATION IN PROGRESS",
+        "IMPLEMENTED / QA PENDING", "QA PASS / DOCUMENTATION GATE PENDING",
+        "COMPLETED", "CLOSED",  # CLOSED preserves the original v1 record contract.
+    }),
+    **{f"6.2B.{stage}": frozenset({"ALLOWED BUT NOT STARTED", "IN PROGRESS", "BLOCKED", "COMPLETED"})
+       for stage in range(2, 7)},
+})
+
 
 def _require(condition: bool, code: str) -> None:
     if not condition:
@@ -64,9 +77,10 @@ class CurrentGateIndex:
     updated_by_commit: str
 
     def __post_init__(self) -> None:
-        if self.schema_version != "v1" or self.current_phase != "6.2B.1":
+        if type(self.schema_version) is not str or self.schema_version != "v1" or type(self.current_phase) is not str or self.current_phase not in _CURRENT_GATE_PHASE_STATUSES:
             raise SchemaValidationError("current gate schema/phase is invalid")
-        if self.current_gate not in {"OPEN", "CLOSED"} or self.phase_status not in {"IMPLEMENTATION IN PROGRESS", "IMPLEMENTED / QA PENDING", "CLOSED"}:
+        # current_gate is the overall Phase 6.2 gate; phase_status describes only the current subphase.
+        if type(self.current_gate) is not str or self.current_gate not in {"OPEN", "CLOSED"} or type(self.phase_status) is not str or self.phase_status not in _CURRENT_GATE_PHASE_STATUSES[self.current_phase]:
             raise SchemaValidationError("current gate state is invalid")
         if self.selected_reference_approval_identity is not None:
             from .schemas import _sha256

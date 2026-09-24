@@ -1073,6 +1073,13 @@
 - `docs/experiments/current_gate.json` is a navigation index only. Formal Java Evidence Audit: **0/12 COMPLETED**; Reference Approval: **NOT CREATED / NOT APPROVED**; Phase 6.2 Gate: **OPEN**; Phase 6.3: **BLOCKED / NOT STARTED**; Formal RQ1–RQ4: **NOT ELIGIBLE / NOT STARTED**; V3.2: **NOT STARTED**.
 - The historical Formal success expectation based on `allow_formal=True` and two legacy booleans was retired under the explicit STOP resolution. Separate tests now protect fail-closed authorization and synthetic degraded result provenance/metrics. Independent QA and directed retest remain required before Phase 6.2B.2.
 
+### V3.1.0 Phase 6.2B.1.1 — Current Gate Lifecycle Hardening
+
+- Original Phase 6.2B.1 Independent QA on `df5a85bb0af9dcf0809f78fc1c0484d6d040cbf5`: **PASS WITH LOW NOTES**, Critical 0, Medium 0, Low 2, 80/80 independent probes; the two Low notes (independent-session proof strength and credential-scanner coverage) remain open and outside this hardening.
+- A separate **Medium Documentation-Gate blocker** was found during closure: `CurrentGateIndex` v1 accepted only `6.2B.1` and lacked `ALLOWED BUT NOT STARTED`, preventing the next legal navigation state. Phase 6.2B.1.1 extends the strict v1 phase/status compatibility matrix to the frozen `6.2B.0`–`6.2B.6` lifecycle. The original v1 record remains readable; `current_gate` denotes the overall Phase 6.2 gate, while `phase_status` denotes the selected subphase. The index remains navigation only and does not grant approval, Dry Run or Formal authority.
+- Hardening state: **FIX IMPLEMENTED / PENDING DIRECTED RETEST**. The earlier Independent QA does not cover the new HEAD. The Phase 6.2B.1 Documentation Gate remains **BLOCKED PENDING DIRECTED RETEST**; `current_gate.json` retains its existing `6.2B.1 / IMPLEMENTED / QA PENDING` record and is not advanced here. Phase 6.2B.2 is **NOT ALLOWED YET**; Phase 6.2 stays **OPEN**, Phase 6.3 **BLOCKED / NOT STARTED**, Formal RQ1–RQ4 **NOT STARTED**, V3.2 **NOT STARTED**. Formal Java audit remains **0/12**, with no Reference Approval, Phase 6.2 Closure or Dry Run Receipt.
+- Next gate: DeepSeek V4.1 Flash directed retest of the narrow lifecycle and authority boundary. Only Critical 0 / Medium 0 and closure of this new blocker permit retrying Phase 6.2B.1 Documentation Gate Closure. The Engineering Specification v1 raw SHA-256 remains `6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045`.
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released
