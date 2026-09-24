@@ -244,21 +244,22 @@
   `COMPLETED / PROTOCOL FROZEN`
 - V3.1.0 Phase 6.0.1 — Annotation Protocol Clarification:
   `ANNOTATION PROTOCOL CLARIFICATION COMPLETED`
-- V3.1.0 Annotation Protocol: `CLARIFIED / FROZEN` by Addendum A (`v1`) at
+- V3.1.0 historical human Annotation Protocol: `CLARIFIED / FROZEN` by Addendum
+  A (`v1`) at
   `docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md`
-- V3.1.0 Phase 6 human annotation: single primary annotator `wang`; second human
-  annotator `ABSENT`; review method `delayed_blinded_self_review`; minimum delay
-  `48 hours`
+- V3.1.0 historical Addendum A human annotation path: single primary annotator
+  `wang`; second human annotator `ABSENT`; review method
+  `delayed_blinded_self_review`; minimum delay `48 hours`
 - V3.1.0 Phase 6 reviewer/adjudicator semantics: `reviewer_id=wang` denotes delayed
   blinded self-review, not second-person review; `adjudicator_id=null` without
   adjudication and `adjudicator_id=wang` when a recorded disagreement is adjudicated
 - V3.1.0 Phase 6 independent model/data audit may validate manifests, hashes, leakage,
   masked samples, and dataset consistency, but is not a human second annotator and
   cannot produce human inter-annotator agreement
-- V3.1.0 Phase 6 annotation limitation: single-human ground truth and absence of
-  second-human annotation/human IAA must be disclosed under thesis Threats to
-  Validity / Annotation Limitations; at-least-48-hour delayed blinded self-review is
-  a mitigation, not a substitute for a second annotator
+- V3.1.0 historical Addendum A annotation limitation: its single-human and
+  delayed-review claims apply only if that human path is actually completed. The
+  user-approved Addendum D specification-anchored path below does not inherit those
+  completion or mitigation claims; no per-query human review or human IAA occurred
 - V3.1.0 Experiment Protocol: `FROZEN` at
   `docs/experiments/Experiment_Protocol_V3_1_0.md`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
@@ -419,11 +420,16 @@
   current Dataset Specification reference-updated SHA-256:
   `4e72ceb84f06df361e10a24a6ab273ed3f6eba4d3649b96177a810c6a0c30a92`;
   all original and earlier reference-updated hashes remain recorded in Addenda B/C
-- V3.1.0 current Source of Truth: Protocol + Addendum A (annotation lifecycle) +
-  Addendum B (incremental SnapshotDiff) + Addendum C (four wordings and identifier
-  leakage); Dataset Specification is subordinate within each Addendum's scope;
-  Addenda A/B, production/tokenizer, infrastructure/tests, RQ1–RQ4, and frozen
-  retrieval configuration remain unchanged
+- V3.1.0 current Source of Truth: Protocol + Addenda A/B/C +
+  [Addendum D](docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md).
+  D supersedes only its enumerated human-review/reference-approval scope for the
+  72-query specification-anchored method, including a scoped exception to Phase 0
+  Architecture Decision §18's human-primary GT sentence; independent methodology
+  review is still required before formal reference approval. A remains historical
+  for old v1 fields; B/C and all unaffected Protocol/Specification clauses continue.
+  Production,
+  tokenizer, infrastructure/tests, RQ1–RQ4 and frozen retrieval configuration are
+  unchanged
 - V3.1.0 Query Leakage Conflict: `CLOSED / RESOLVED BY ADDENDUM C`
 - V3.1.0 Phase 6.2A blocker: `LIFTED AFTER ADDENDUM C`
 - V3.1.0 Phase 6.2A — Dataset / Query / Ground Truth Draft Materialization:
@@ -433,7 +439,7 @@
 - V3.1.0 Phase 6.2 dataset/query/ground truth: `DRAFTED / DRAFTED / DRAFTED`;
   primary manifest has `4` projects, `93` files and `1299` symbols; the independent
   incremental fixture is excluded from this dataset and its query population
-- V3.1.0 Phase 6.2 annotation: `INITIAL ANNOTATION COMPLETE / DRAFTED`;
+- V3.1.0 Phase 6.2 annotation: `MECHANICAL MATERIALIZATION COMPLETE / DRAFTED`;
   Codex mechanically materialized the user-authorized frozen relevance decisions
   and source-grounded rationales, with protocol-designated annotator `wang` and
   future self-reviewer `wang`; no second human, completed review, or human IAA is
@@ -516,15 +522,24 @@
   identity field `retrieval_runs_before_freeze=0` and absent run artifacts do not
   establish historical absence of temporary/untracked retrieval activity.
 - V3.1.0 Phase 6.2 Gate: `OPEN`
-- V3.1.0 Phase 6.2 single-judge LLM silver reference：方案提案待用户裁决，
+- V3.1.0 historical single-judge LLM silver reference proposal:
   `PROPOSED / NOT EFFECTIVE / NO LABELING AUTHORIZED`，见
   [非生效 Addendum D 候选提案](docs/experiments/PROPOSED_NOT_EFFECTIVE_NO_LABELING_AUTHORIZED_Addendum_D_Single_Judge_Silver_Reference_V3_1_0.md)。
-  Addendum D 尚未生效，未执行 LLM 标注；现行 Protocol + Addenda A/B/C
-  继续有效，Dataset / Query / GT 仍 `DRAFTED`，Phase 6.2 Gate `OPEN`，
-  Phase 6.3 `BLOCKED / NOT STARTED`，Formal RQ1–RQ4 `NOT STARTED`。
-- V3.1.0 Phase 6.2B: `PENDING`; delayed review, adjudication if needed, independent
-  final Data QA and freeze are still required; next entrance is actual ≥48-hour
-  delayed blinded self-review with masking and independent-in-time judgment;
+  它不是当前执行路径，不与正式 D 并行生效。
+- V3.1.0 Phase 6.2 formal Addendum D: user-approved
+  `specification-anchored reference` method + preregistered limited TraeWork
+  `DeepSeek-V4.1-Flash` evidence audit, not full silver or human blind review;
+  Addendum D raw-byte SHA-256
+  `2e276bbcc63a75ce12760d3728894860a9a7328bd040fd21c6ba2ce27c160375`;
+  12 English-test IDs are the first two lexicographic IDs in each of six task types
+  and are all Java. Addendum D method/preregistration is tracked; independent
+  methodology review, actual 12 audits, Chinese non-translation verification,
+  reference approval/schema/runner Gate migration and final independent Data QA
+  remain pending. No LLM evidence audit or formal retrieval has run.
+- V3.1.0 Phase 6.2B under Addendum D: `PENDING`; next steps are the preregistered
+  12-item evidence audit, independent source checks for doubts, bounded Chinese
+  non-translation review, provenance/reference approval implementation, final Data
+  QA and explicit Gate decision. Old ≥48-hour human self-review is not the new route;
   Phase 6.2 is not completed
 - V3.1.0 Phase 6.2B blinded review preparation:
   `PREPARATION COMPLETE / NOT REVIEWED`;
@@ -535,8 +550,8 @@
   selection; blank packet raw-byte SHA-256 is
   `eb031f55870a35e74824454cdae9fd6d2ab5654e1906a1205761b4658678f095`.
   Same-account access to the full repository remains an actual masking limitation;
-  only a separate GT-free bundle may be handed to `wang`, and future human behavior
-  cannot be certified by preparation checks
+  under the historical A path only a separate GT-free bundle could be handed to
+  `wang`; future human behavior could not be certified by preparation checks
 - V3.1.0 Phase 6.2B blinded review preparation independent QA:
   `PASS WITH LOW NOTES`; its Documentation Closure is `CLOSED` at
   `docs/qa/QA_Report_V3_1_0_Phase_6_2B_Blinded_Review_Preparation.md`. The
@@ -546,7 +561,7 @@
   37 independent assertions and separate byte-identical regeneration are reply
   claims without archived raw scripts/outputs. Actual GT-free delivery and human
   masking remain unproven; this closure does not complete the human review,
-  final Data QA, or Dataset Freeze
+  final Data QA, or Dataset Freeze; this preparation remains historical under D
 - V3.1.0 Phase 6.3: `BLOCKED / NOT STARTED`
 - V3.1.0 formal RQ1–RQ4: `NOT STARTED`
 - V3.1.0 Phase 6 self-repository dataset commit:
