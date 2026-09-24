@@ -1057,6 +1057,14 @@
   under standard CPython / clean venv; the host-specific issue is not a release blocker
 - Current version: V3.0.1 — Managed AI Access & Credits (`RELEASED`; stable)
 
+### V3.1.0 Phase 6.2B.0 — Reference Lifecycle Engineering Specification Freeze
+
+- Recovery & Architecture Audit identified the main remaining Phase 6.2 obstacle as Addendum D evidence/approval engineering. Production Retrieval: **NO RESTRUCTURE REQUIRED**. The read-only architecture review selected **方案 B / Recommended Bounded Hardening**; neither a lasting Minimal Patch nor a large `experiments/` refactor is the implementation direction.
+- Phase 6.2B.0: **COMPLETED / ENGINEERING SPECIFICATION FROZEN (v1)**. Repository Source of Truth: [Reference Lifecycle Engineering Specification](docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md), version `v1`, raw-byte SHA-256 `6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045`. Its freeze commit is the Git commit containing this entry and the linked specification; the final commit ID is recorded in Git history rather than embedded into itself.
+- The specification freezes separate `ReferenceRecord`, `EvidenceAuditRecord`, and `ReferenceApprovalRecord` contracts; a single authoritative formal-eligibility validator; deauthorization of legacy gate booleans; a future current-gate navigation index and minimal closure artifact; exact identity/raw-byte checksum rules; and append-only audit/erratum/approval publication. It does not alter Protocol/Addenda, the 72 Queries, 72 drafted GT records, or 134 evidence items, and creates no actual audit, approval or closure artifact.
+- Phase 6.2B.1: **ALLOWED BUT NOT STARTED**. Formal Java Evidence Audit: **0/12 COMPLETED**. Reference Approval: **NOT CREATED / NOT APPROVED**. Phase 6.2 Gate: **OPEN**. Phase 6.3: **BLOCKED / NOT STARTED**. Formal RQ1–RQ4: **NOT STARTED**. V3.2: **NOT STARTED**.
+- Current host baseline: ordinary `python -m pytest` still segfaults in the Anaconda Python 3.13 debugging plugin before test execution; `python -m pytest -p no:debugging` is the verified offline regression command for this host. This is a host issue, not a repository regression.
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released
