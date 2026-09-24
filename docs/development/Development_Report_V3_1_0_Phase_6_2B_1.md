@@ -8,7 +8,8 @@
 - 首次 Documentation Closure 因 `CurrentGateIndex` 无法表示 `6.2B.2 / ALLOWED BUT NOT STARTED` 而 STOP；这是另一个 Medium 文档门禁 blocker，不改变原 QA verdict。6.2B.1.1 hardening commit `16ad2ac3392289362c0003ef94737348bbe877f8` 修复了状态矩阵，其[实施报告](Development_Report_V3_1_0_Phase_6_2B_1_1.md)保持独立。
 - 后续独立 Directed Retest：**PASS WITH EXISTING LOW NOTES**；新 Critical / Medium / Low **0 / 0 / 0**，既有 Low 2；29/29 独立 probes PASS，专项 205 passed，全量 775 passed，prepared verifier PASS。M-CurrentGate **CLOSED / RESOLVED**。两轮仓库外 probes 均为先前 QA 的报告结果，本次文档收口未重跑。
 - 第二次 Documentation Closure 在更新未提交的 `current_gate.json` 后运行 Git-backed 测试，触发预期的 `artifact_worktree_mismatch`，按当时 STOP 规则撤销改动。上层随后明确裁决事务顺序：先建立候选文档提交，再在候选 HEAD 上验证；不修改 loader、测试或 fail-closed 保护。
-- [正式 QA 收口报告](../qa/QA_Report_V3_1_0_Phase_6_2B_1.md)分别记录两轮 QA、两个 Low 和本次验证。仅当候选 HEAD 的 prepared verifier、targeted/full regression 与仓库安全检查均 PASS，Documentation Gate **CLOSED**、Phase 6.2B.1 **COMPLETED**、Phase 6.2B.2 **ALLOWED BUT NOT STARTED**。
+- 候选文档提交 `85d864ba21c676c144612e5f4c418cc64420cfa9` 的 post-commit 专项回归暴露另一个历史测试断言：它要求仓库当前阶段永远是 `6.2B.1`（204 passed / 1 failed），而合法导航现为 `6.2B.2`。上层批准 forward-only 迁移该断言，保留候选提交和 `artifact_worktree_mismatch` 保护。迁移后专项 **205 passed**、prepared verifier **PASS**、全量 **775 passed**；无实现或研究规格修改。
+- [正式 QA 收口报告](../qa/QA_Report_V3_1_0_Phase_6_2B_1.md)分别记录两轮 QA、两个 Low、失败候选与后继迁移的验证。整条 forward-only 提交链经 prepared verifier、targeted/full regression 与仓库安全检查 PASS 后，Documentation Gate **CLOSED**、Phase 6.2B.1 **COMPLETED**、Phase 6.2B.2 **ALLOWED BUT NOT STARTED**。
 - 整体 Phase 6.2 仍 **OPEN**：正式 Java audit **0/12**，Reference Approval、Phase 6.2 Closure、Dry Run Receipt 均 **NOT CREATED**；Phase 6.3 **BLOCKED / NOT STARTED**，Formal RQ1–RQ4 与 V3.2 **NOT STARTED**。`current_gate.json` 只是导航，Dry Run/Formal eligibility 均为 false。
 
 ## 状态与边界

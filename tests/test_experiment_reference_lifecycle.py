@@ -231,10 +231,17 @@ def test_current_gate_navigation_strict_record_and_legacy_compatibility():
             replace(gate, **{field: True})
     with pytest.raises(ValueError):
         CurrentGateIndex.from_record({**record, "unknown": True})
-    legacy = RepositoryAuthority(ROOT).load_current_gate()
-    assert legacy.schema_version == "v1"
-    assert legacy.current_phase == "6.2B.1"
-    assert legacy.phase_status == "IMPLEMENTED / QA PENDING"
+    authority = RepositoryAuthority(ROOT)
+    current = authority.load_current_gate()
+    assert current.schema_version == "v1"
+    assert CurrentGateIndex.from_record(current.to_record()) == current
+    assert validate_current_gate(authority, current) is None
+    assert current.current_gate == "OPEN"
+    assert current.selected_reference_approval_identity is None
+    assert current.dry_run_eligible is False
+    assert current.formal_execution_eligible is False
+    legacy = CurrentGateIndex.from_record({**record, "current_phase": "6.2B.1",
+                                           "phase_status": "IMPLEMENTED / QA PENDING"})
     assert CurrentGateIndex.from_record(legacy.to_record()) == legacy
 
 
@@ -252,6 +259,10 @@ def test_next_phase_navigation_cannot_grant_formal_authority(synthetic_authority
     assert validate_current_gate(authority, gate) is None
     with pytest.raises(EligibilityError, match="current_gate_conflict"):
         _validate_fixture(synthetic_authority)
+    gate_path = root / "docs/experiments/current_gate.json"
+    gate_path.write_bytes(gate_path.read_bytes() + b" ")
+    with pytest.raises(EligibilityError, match="artifact_worktree_mismatch"):
+        authority.load_current_gate()
     forged = replace(gate, current_gate="CLOSED", phase_status="COMPLETED",
                      selected_reference_approval_identity=approval,
                      dry_run_eligible=True, formal_execution_eligible=True)

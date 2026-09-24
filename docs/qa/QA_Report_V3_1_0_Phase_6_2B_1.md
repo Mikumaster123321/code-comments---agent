@@ -53,6 +53,8 @@
 
 ## Documentation Gate 决策与剩余状态
 
-本次按事务顺序先创建候选文档提交，再在其成为 HEAD 后执行 Git-backed authority 回归；只有 post-commit prepared verifier、targeted/full regression、schema/authority 与 Git 安全检查全部通过，该候选提交才保留并使本报告的 Documentation Gate 结论生效。候选提交本身不代表先验测试 PASS。`artifact_worktree_mismatch` 检查继续保留。
+本次按事务顺序先创建候选文档提交，再在其成为 HEAD 后执行 Git-backed authority 回归。候选提交本身不代表先验测试 PASS；首次回归暴露的历史测试断言由后继 forward-only 提交迁移。只有整条提交链的 prepared verifier、targeted/full regression、schema/authority 与 Git 安全检查全部通过，本报告的 Documentation Gate 结论才生效。`artifact_worktree_mismatch` 检查继续保留。
+
+**Forward-only 验证沿革：**候选提交 `85d864ba21c676c144612e5f4c418cc64420cfa9` 的首次 post-commit prepared verifier PASS，专项回归为 204 passed / 1 failed。此前未提交 gate 字节引起的 `artifact_worktree_mismatch` 已消失；唯一失败是历史测试把 repository-current `current_phase` 硬编码为 `6.2B.1`。上层裁决保留该候选提交，并迁移测试以验证 Git 已提交字节、严格 schema、合法生命周期组合、无批准及无 Dry Run/Formal 授权；旧 `6.2B.1` 兼容记录另行构造验证，且新增对 gate 工作区字节不匹配的负向断言。迁移后四文件专项 **205 passed**，prepared verifier **PASS**，全量回归 **775 passed**。没有修改 `experiments/` 实现或放宽 `RepositoryAuthority`。此修正由后继 forward-only commit 记录，原 85d864b 的失败史不被改写。
 
 72 Query / 72 GT / 134 evidence 保持冻结身份，72/72 GT 仍为 `drafted`。12 个 prepared Java 输入、23 项 prepared evidence 与 12 空白记录只是准备材料；正式 Java Evidence Audit **0/12 COMPLETED**。Reference Approval **NOT CREATED**；Phase 6.2 Closure artifact **NOT CREATED**；Dry Run Receipt **NOT CREATED**。Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**；Formal RQ1–RQ4 和 V3.2 **NOT STARTED**。`dry_run_eligible=false`、`formal_execution_eligible=false`。下一合法动作仅为 **Phase 6.2B.2 Evidence Capture Proof / ALLOWED BUT NOT STARTED**。
