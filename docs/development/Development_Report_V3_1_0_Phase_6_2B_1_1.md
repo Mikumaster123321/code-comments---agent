@@ -1,5 +1,9 @@
 # V3.1.0 Phase 6.2B.1.1 Current Gate Lifecycle Hardening
 
+## 后续 Directed Retest closure
+
+下方 **FIX IMPLEMENTED / PENDING DIRECTED RETEST** 是 hardening 提交时的历史状态。对提交 `16ad2ac3392289362c0003ef94737348bbe877f8` 的后续独立 Directed Retest 已报告 **PASS WITH EXISTING LOW NOTES**：29/29 仓库外独立 probes PASS，新 Critical / Medium / Low **0 / 0 / 0**，原两项 Low 仍未解决；专项回归 205 passed，全量 775 passed，prepared verifier PASS。M-CurrentGate 现为 **CLOSED / RESOLVED**，允许重试 Phase 6.2B.1 Documentation Gate Closure。探针属于先前独立复测，本次文档收口未重跑。最终收口判断见 [Phase 6.2B.1 QA 报告](../qa/QA_Report_V3_1_0_Phase_6_2B_1.md)。
+
 ## Gate 与根因
 
 - 起点：`v3.1.0-dev`，`df5a85bb0af9dcf0809f78fc1c0484d6d040cbf5`；tracked diff/staging 为空，用户的 `?? docs/thesis/` 受保护且未读取内部内容。

@@ -1,24 +1,29 @@
 {
   "schema_version": "v1",
-  "current_phase": "6.2B.1",
+  "current_phase": "6.2B.2",
   "current_gate": "OPEN",
-  "phase_status": "IMPLEMENTED / QA PENDING",
+  "phase_status": "ALLOWED BUT NOT STARTED",
   "selected_reference_approval_identity": null,
   "dry_run_eligible": false,
   "formal_execution_eligible": false,
   "blockers": [
     "Formal Java Evidence Audit: 0/12 completed",
     "Reference Approval: NOT CREATED / NOT APPROVED",
-    "Phase 6.2 Documentation Gate: OPEN",
+    "Phase 6.2 approval gate: OPEN",
     "Phase 6.3: BLOCKED / NOT STARTED",
     "Formal RQ1–RQ4: NOT ELIGIBLE / NOT STARTED",
     "V3.2: NOT STARTED"
   ],
-  "next_allowed_action": "Independent QA and directed retest for Phase 6.2B.1; no formal audit or approval is implied",
+  "next_allowed_action": "Phase 6.2B.2 Evidence Capture Proof; not started",
   "authoritative_documents": [
-    "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",
+    "docs/experiments/Experiment_Protocol_V3_1_0.md",
+    "docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md",
+    "docs/experiments/Experiment_Protocol_Addendum_B_V3_1_0.md",
+    "docs/experiments/Experiment_Protocol_Addendum_C_V3_1_0.md",
     "docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md",
-    "docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md"
+    "docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md",
+    "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",
+    "docs/qa/QA_Report_V3_1_0_Phase_6_2B_1.md"
   ],
-  "updated_by_commit": "8f931f73bf4b0630dff5e679104fbc025132cafa"
+  "updated_by_commit": "16ad2ac3392289362c0003ef94737348bbe877f8"
 }
