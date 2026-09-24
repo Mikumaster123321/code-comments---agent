@@ -8,6 +8,7 @@ from code_maintenance import SymbolId
 from project_intelligence import BM25Config, tokenize
 
 from .config import ChunkExperimentConfig, FileExperimentConfig, RetrievalUnit
+from .reference import ReferenceRecord
 from .schemas import DatasetManifest, GroundTruthRecord, SchemaValidationError, symbol_identity
 from .serialization import normalize_lf, normalize_relative_path, sha256_hex
 
@@ -402,7 +403,7 @@ class DatasetEvidenceRegistry:
             if item.project_id == project_id and item.retrieval_unit is RetrievalUnit.SYMBOL
         )
 
-    def validate_truth(self, truth: GroundTruthRecord) -> None:
+    def validate_truth(self, truth: GroundTruthRecord | ReferenceRecord) -> None:
         symbol_ids = {
             item.identity for item in self._candidates
             if item.project_id == truth.project_id and item.retrieval_unit is RetrievalUnit.SYMBOL
@@ -456,11 +457,11 @@ def _runtime_file_source(item: RuntimeDatasetFile) -> FileSource:
 class TruthMapper:
     def __init__(
         self,
-        truth: GroundTruthRecord,
+        truth: GroundTruthRecord | ReferenceRecord,
         symbol_ranges: Iterable[SymbolSourceRange] = (),
     ) -> None:
-        if not isinstance(truth, GroundTruthRecord):
-            raise SchemaValidationError("truth must be a GroundTruthRecord")
+        if not isinstance(truth, (GroundTruthRecord, ReferenceRecord)):
+            raise SchemaValidationError("truth must be a GroundTruthRecord or ReferenceRecord")
         ranges = tuple(symbol_ranges)
         if not all(isinstance(item, SymbolSourceRange) for item in ranges):
             raise SchemaValidationError("symbol_ranges must contain SymbolSourceRange values")

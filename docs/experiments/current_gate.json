@@ -1,0 +1,24 @@
+{
+  "schema_version": "v1",
+  "current_phase": "6.2B.1",
+  "current_gate": "OPEN",
+  "phase_status": "IMPLEMENTED / QA PENDING",
+  "selected_reference_approval_identity": null,
+  "dry_run_eligible": false,
+  "formal_execution_eligible": false,
+  "blockers": [
+    "Formal Java Evidence Audit: 0/12 completed",
+    "Reference Approval: NOT CREATED / NOT APPROVED",
+    "Phase 6.2 Documentation Gate: OPEN",
+    "Phase 6.3: BLOCKED / NOT STARTED",
+    "Formal RQ1–RQ4: NOT ELIGIBLE / NOT STARTED",
+    "V3.2: NOT STARTED"
+  ],
+  "next_allowed_action": "Independent QA and directed retest for Phase 6.2B.1; no formal audit or approval is implied",
+  "authoritative_documents": [
+    "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",
+    "docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md",
+    "docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md"
+  ],
+  "updated_by_commit": "8f931f73bf4b0630dff5e679104fbc025132cafa"
+}

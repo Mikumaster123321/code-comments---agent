@@ -665,7 +665,7 @@ def test_fake_vs_formal_semantic_guard_and_frozen_real_e5_identity():
     assert formal.semantic_mode is SemanticMode.REAL_E5
 
 
-def test_runner_phase61_formal_execution_gate_and_degraded_formal_guard():
+def test_legacy_boolean_formal_bypass_is_rejected_before_retrieval():
     queries, truths = (query(),), (truth(),)
     lexical_formal = config_for(queries, truths, run_kind=RunKind.FORMAL)
     args = dict(
@@ -674,7 +674,7 @@ def test_runner_phase61_formal_execution_gate_and_degraded_formal_guard():
         evidence_registry=evidence_registry(),
         matrix_run_id="FORMAL-FORBIDDEN",
     )
-    with pytest.raises(FormalRunGuardError, match="Phase 6.1"):
+    with pytest.raises(FormalRunGuardError, match="authoritative validated execution inputs"):
         BenchmarkRunner().run(**args)
 
     real = EmbeddingFingerprint(
@@ -706,19 +706,46 @@ def test_runner_phase61_formal_execution_gate_and_degraded_formal_guard():
         model_cache_verified=True,
         formal_gate=FormalGateEvidence(True, True, "7a224c456f7615e4f4dbc79b1065755df3c8033f"),
     )
-    result = BenchmarkRunner(allow_formal=True, clock_ns=iter((0, 1)).__next__).run(
-        **{
-            **args,
-            "config": semantic_formal,
-            "metadata": formal_metadata,
-            "strategy": DegradedRealStrategy((symbol(),), degraded=True),
-            "evidence_registry": evidence_registry(),
-            "matrix_run_id": semantic_formal.matrix_run_id,
-        }
+    class MustNotRetrieve(DegradedRealStrategy):
+        def retrieve(self, query, config):
+            pytest.fail("formal retrieval started without validated authority")
+
+    with pytest.raises(FormalRunGuardError, match="authoritative validated execution inputs"):
+        BenchmarkRunner(allow_formal=True, clock_ns=iter((0, 1)).__next__).run(
+            **{**args, "config": semantic_formal, "metadata": formal_metadata,
+               "strategy": MustNotRetrieve((symbol(),), degraded=True),
+               "matrix_run_id": semantic_formal.matrix_run_id}
+        )
+
+
+def test_synthetic_degraded_result_keeps_provenance_and_metrics():
+    queries, truths = (query(),), (truth(),)
+    real = EmbeddingFingerprint(
+        runtime_kind="transformers-torch",
+        model_repository="intfloat/multilingual-e5-base",
+        revision="d128750597153bb5987e10b1c3493a34e5a4502a",
+        dimension=768,
     )
-    assert result.aggregate.run_status == "invalid"
-    assert result.raw_results[0].status == "invalid"
+    config = config_for(
+        queries, truths, strategy=Strategy.WEIGHTED,
+        run_kind=RunKind.SYNTHETIC, semantic_mode=SemanticMode.REAL_E5,
+        fingerprint=real,
+    )
+
+    class DegradedSyntheticStrategy(TinyStrategy):
+        semantic_mode = SemanticMode.REAL_E5
+        embedding_fingerprint = real
+
+    result = BenchmarkRunner(clock_ns=iter((0, 1)).__next__).run(
+        dataset=dataset(), queries=queries, truth=truths, config=config,
+        strategy=DegradedSyntheticStrategy((symbol(),), degraded=True),
+        metadata=metadata_for(config), evidence_registry=evidence_registry(),
+    )
+    assert result.aggregate.run_status == "success"
+    assert result.raw_results[0].status == "success"
+    assert result.raw_results[0].degraded is True
     assert result.raw_results[0].degradation_reason == "semantic_branch_failure"
+    assert result.raw_results[0].metrics.recall_at_1 == 1.0
 
 
 def test_strategy_semantic_mode_and_fingerprint_must_match_config():

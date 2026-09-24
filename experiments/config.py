@@ -40,6 +40,7 @@ class Strategy(str, Enum):
 
 class RunKind(str, Enum):
     SYNTHETIC = "synthetic"
+    DRY_RUN = "dry_run"
     FORMAL = "formal"
 
 
@@ -285,6 +286,7 @@ class BenchmarkConfig:
     file: FileExperimentConfig = FileExperimentConfig()
     chunk: ChunkExperimentConfig = ChunkExperimentConfig()
     protocol_version: str = PROTOCOL_VERSION
+    approved_reference_identity: str | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -296,6 +298,11 @@ class BenchmarkConfig:
             "ground_truth_hash",
         ):
             _stable_identity(name, getattr(self, name))
+        if self.approved_reference_identity is not None:
+            if (type(self.approved_reference_identity) is not str or
+                len(self.approved_reference_identity) != 64 or
+                any(c not in "0123456789abcdef" for c in self.approved_reference_identity)):
+                raise ConfigValidationError("approved reference identity must be SHA-256")
         _stable_identity("matrix_run_id", self.matrix_run_id)
         for name, enum_type in (
             ("strategy", Strategy),
@@ -340,7 +347,7 @@ class BenchmarkConfig:
             raise ConfigValidationError("strategy weights do not match the frozen experiment matrix")
         if self.graph.enabled != (self.hybrid.graph_weight == 0.25):
             raise ConfigValidationError("Graph enabled state and frozen Graph weight must agree")
-        if self.run_kind is RunKind.FORMAL:
+        if self.run_kind in {RunKind.DRY_RUN, RunKind.FORMAL}:
             self.validate_formal_semantics()
             self._validate_formal_matrix_binding()
         elif not self.matrix_run_id.startswith("SYNTHETIC-"):
@@ -414,7 +421,7 @@ class BenchmarkConfig:
             raise ConfigValidationError("matrix_run_id is not bound to this formal configuration")
 
     def to_record(self) -> dict:
-        return {
+        record = {
             "protocol_version": self.protocol_version,
             "dataset": {"version": self.dataset_version, "hash": self.dataset_hash},
             "query_set": {
@@ -439,10 +446,23 @@ class BenchmarkConfig:
             "file": self.file.to_record(),
             "chunk": self.chunk.to_record(),
         }
+        if self.approved_reference_identity is not None:
+            record["approved_reference_identity"] = self.approved_reference_identity
+        return record
 
     @property
     def identity_hash(self) -> str:
         return canonical_hash(self.to_record())
+
+    @property
+    def experiment_family_identity(self) -> str:
+        """Bind a Dry Run and Formal run with the same frozen experiment settings."""
+        if self.run_kind not in {RunKind.DRY_RUN, RunKind.FORMAL}:
+            raise ConfigValidationError("synthetic config has no formal experiment family")
+        record = self.to_record()
+        del record["population"]
+        del record["run_kind"]
+        return canonical_hash({"schema_version": "formal-experiment-family-v1", "config": record})
 
     @property
     def config_hash(self) -> str:

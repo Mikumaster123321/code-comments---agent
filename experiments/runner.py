@@ -15,6 +15,10 @@ from .baselines import (
     serialize_candidate_identity,
 )
 from .config import BenchmarkConfig, Population, RunKind, SemanticMode
+from .eligibility import (
+    EligibilityError, ValidatedExecutionInputs, is_validator_issued,
+    validate_formal_eligibility,
+)
 from .metrics import MetricSummary, MetricValues, compute_metrics, summarize_metrics
 from .schemas import (
     DatasetManifest,
@@ -24,6 +28,7 @@ from .schemas import (
     SchemaValidationError,
     symbol_id_to_record,
 )
+from .reference import ReferenceRecord
 from .serialization import (
     canonical_hash,
     canonical_jsonl,
@@ -555,19 +560,38 @@ class BenchmarkRunner:
         *,
         dataset: DatasetManifest,
         queries: Iterable[QueryRecord],
-        truth: Iterable[GroundTruthRecord],
+        truth: Iterable[GroundTruthRecord | ReferenceRecord],
         config: BenchmarkConfig,
         strategy: BenchmarkStrategy,
         metadata: RunMetadata,
         evidence_registry: DatasetEvidenceRegistry,
         matrix_run_id: str | None = None,
+        validated_inputs: ValidatedExecutionInputs | None = None,
     ) -> BenchmarkRunResult:
         query_values = tuple(sorted(tuple(queries), key=lambda item: item.query_id))
         truth_values = tuple(truth)
-        if config.run_kind is RunKind.FORMAL and not self._allow_formal:
-            raise FormalRunGuardError(
-                "formal execution is disabled in the Phase 6.1 runner skeleton"
-            )
+        if config.run_kind in {RunKind.DRY_RUN, RunKind.FORMAL}:
+            if not is_validator_issued(validated_inputs):
+                raise FormalRunGuardError("runtime evidence requires authoritative validated execution inputs")
+            try:
+                renewed = validate_formal_eligibility(
+                    purpose=config.run_kind, repository_root=validated_inputs.repository_root,
+                    requested_config=config, selected_reference_approval=validated_inputs.approval_identity,
+                    runtime_evidence=validated_inputs.runtime_evidence,
+                    code_commit=validated_inputs.code_commit,
+                    dry_run_receipt=validated_inputs.dry_run_receipt_path,
+                )
+            except EligibilityError:
+                raise FormalRunGuardError("authoritative eligibility no longer validates") from None
+            if (dataset != renewed.dataset or query_values != renewed.queries or
+                truth_values != renewed.reference or
+                metadata.approved_reference_identity != renewed.approval_identity or
+                metadata.reference_hash != renewed.reference_identity or
+                metadata.runner_code_commit != renewed.code_commit or
+                canonical_hash(metadata.runtime.to_record()) != renewed.runtime_identity):
+                raise FormalRunGuardError("execution inputs differ from validated authority")
+        elif validated_inputs is not None:
+            raise FormalRunGuardError("synthetic execution cannot consume formal authority")
         self._validate_inputs(
             dataset, query_values, truth_values, config, strategy, metadata, evidence_registry
         )
@@ -593,7 +617,7 @@ class BenchmarkRunner:
                         query.project_id, config.retrieval_unit, hit.identity,
                         hit.relative_path, hit.symbol_id, hit.start_offset, hit.end_offset,
                     )
-                if config.run_kind is RunKind.FORMAL and config.semantic_required and output.degraded:
+                if config.run_kind in {RunKind.DRY_RUN, RunKind.FORMAL} and config.semantic_required and output.degraded:
                     ranked = ()
                     metrics = MetricValues.zero()
                     status = "invalid"
@@ -738,7 +762,7 @@ class BenchmarkRunner:
     def _validate_inputs(
         dataset: DatasetManifest,
         queries: Iterable[QueryRecord],
-        truth: Iterable[GroundTruthRecord],
+        truth: Iterable[GroundTruthRecord | ReferenceRecord],
         config: BenchmarkConfig,
         strategy: BenchmarkStrategy,
         metadata: RunMetadata,
@@ -758,8 +782,9 @@ class BenchmarkRunner:
         truth_values = tuple(truth)
         if not query_values or not all(isinstance(item, QueryRecord) for item in query_values):
             raise BenchmarkRunnerError("queries must be a non-empty QueryRecord collection")
-        if not truth_values or not all(isinstance(item, GroundTruthRecord) for item in truth_values):
-            raise BenchmarkRunnerError("truth must be a non-empty GroundTruthRecord collection")
+        truth_kind = ReferenceRecord if config.run_kind in {RunKind.DRY_RUN, RunKind.FORMAL} else GroundTruthRecord
+        if not truth_values or not all(type(item) is truth_kind for item in truth_values):
+            raise BenchmarkRunnerError("truth type does not match execution purpose")
         if len({item.query_id for item in query_values}) != len(query_values):
             raise BenchmarkRunnerError("query IDs must be unique")
         if len({item.ground_truth_id for item in truth_values}) != len(truth_values):
@@ -779,9 +804,11 @@ class BenchmarkRunner:
                 raise BenchmarkRunnerError("truth does not belong to query dataset/project")
             evidence_registry.validate_truth(annotation)
         query_hash = canonical_hash([item.to_record() for item in sorted(query_values, key=lambda item: item.query_id)])
-        truth_hash = canonical_hash([item.to_record() for item in sorted(truth_values, key=lambda item: item.query_id)])
+        truth_hash = (config.ground_truth_hash if truth_kind is ReferenceRecord else
+                      canonical_hash([item.to_record() for item in sorted(truth_values, key=lambda item: item.query_id)]))
         versions = {item.query_set_version for item in query_values}
-        truth_versions = {item.ground_truth_version for item in truth_values}
+        truth_versions = ({config.ground_truth_version} if truth_kind is ReferenceRecord else
+                          {item.ground_truth_version for item in truth_values})
         if (
             dataset.version != config.dataset_version
             or dataset.dataset_hash != config.dataset_hash
@@ -810,14 +837,11 @@ class BenchmarkRunner:
             or metadata.index_identity != strategy.index_identity
         ):
             raise BenchmarkRunnerError("run metadata does not match benchmark inputs")
-        if config.run_kind is RunKind.FORMAL:
+        if config.run_kind in {RunKind.DRY_RUN, RunKind.FORMAL}:
             gate = metadata.formal_gate
             dependencies = dict(metadata.runtime.dependencies)
             if (
-                gate is None
-                or not gate.phase_6_2_dataset_truth_frozen
-                or not gate.phase_6_3_dry_run_passed
-                or gate.runner_code_commit != metadata.runner_code_commit
+                (gate is not None and gate.runner_code_commit != metadata.runner_code_commit)
                 or metadata.self_repository_commit != "12391233daa2149ead4f451e920b2e0d8a1a6beb"
                 or metadata.dirty_state
                 or metadata.runtime.python_version != "3.12.14"

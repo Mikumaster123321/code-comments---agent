@@ -8,10 +8,61 @@ from .metrics import summarize_metrics
 from .runner import AggregateStratum, BenchmarkRunResult
 from .schemas import RunMetadata
 from .serialization import canonical_json, canonical_jsonl, normalize_relative_path, sha256_hex
+from .reference import (
+    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunReceipt,
+    ErratumRecord, EvidenceAuditRecord, EvidenceAuditSet, Phase62ClosureRecord,
+    Phase62DocumentationDecisionRecord,
+    ReferenceApprovalRecord, ReferenceRecord, ResolutionRecord,
+)
 
 
 class ArtifactCollisionError(FileExistsError):
     pass
+
+
+_LIFECYCLE_RECORD_TYPES = (
+    ReferenceRecord, EvidenceAuditRecord, EvidenceAuditSet, ErratumRecord,
+    ResolutionRecord, ApprovalPrerequisiteRecord, ApprovalDecisionRecord,
+    ReferenceApprovalRecord, Phase62ClosureRecord, DryRunReceipt,
+    Phase62DocumentationDecisionRecord,
+)
+
+
+def write_lifecycle_artifact(root: str | Path, record: object, raw_blobs: dict[str, bytes] | None = None) -> Path:
+    """Atomically publish one immutable evidence directory, never approval authority."""
+    if type(record) not in _LIFECYCLE_RECORD_TYPES:
+        raise TypeError("unsupported lifecycle artifact")
+    blobs = {} if raw_blobs is None else dict(raw_blobs)
+    if any(type(name) is not str or "/" in normalize_relative_path(name) or
+           name in {"record.json", "record.json.sha256", "checksums.sha256"} or type(payload) is not bytes
+           for name, payload in blobs.items()):
+        raise ValueError("raw blobs require safe one-component byte filenames")
+    for payload in blobs.values():
+        try:
+            canonical_json({"raw_evidence": payload.decode("utf-8")})
+        except UnicodeError:
+            raise ValueError("raw lifecycle evidence must be UTF-8") from None
+    identity = record.identity_hash
+    root_path = Path(root)
+    destination = root_path / identity
+    root_path.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        raise ArtifactCollisionError("append-only lifecycle artifact already exists")
+    record_bytes = canonical_json(record.to_record(), pretty=True).encode("utf-8")
+    contents = {"record.json": record_bytes, "record.json.sha256": (sha256_hex(record_bytes) + "\n").encode("ascii"), **blobs}
+    pending = Path(tempfile.mkdtemp(prefix=f".{identity}.pending-", dir=root_path))
+    try:
+        for name, payload in contents.items():
+            (pending / name).write_bytes(payload)
+        (pending / "checksums.sha256").write_text(
+            "".join(f"{sha256_hex(payload)}  {name}\n" for name, payload in sorted(contents.items())),
+            encoding="utf-8", newline="\n",
+        )
+        pending.rename(destination)
+    except Exception:
+        # Incomplete staging remains hidden and cannot be mistaken for publication.
+        raise
+    return destination
 
 
 def validate_run_result(result: BenchmarkRunResult) -> None:

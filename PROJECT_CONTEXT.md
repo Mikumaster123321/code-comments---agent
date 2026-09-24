@@ -1065,6 +1065,14 @@
 - Phase 6.2B.1: **ALLOWED BUT NOT STARTED**. Formal Java Evidence Audit: **0/12 COMPLETED**. Reference Approval: **NOT CREATED / NOT APPROVED**. Phase 6.2 Gate: **OPEN**. Phase 6.3: **BLOCKED / NOT STARTED**. Formal RQ1–RQ4: **NOT STARTED**. V3.2: **NOT STARTED**.
 - Current host baseline: ordinary `python -m pytest` still segfaults in the Anaconda Python 3.13 debugging plugin before test execution; `python -m pytest -p no:debugging` is the verified offline regression command for this host. This is a host issue, not a repository regression.
 
+### V3.1.0 Phase 6.2B.1 — Reference Eligibility Hardening
+
+- Phase 6.2B.1: **IMPLEMENTED / INDEPENDENT QA PENDING**. The implementation commit is the Git commit containing this entry; it is deliberately not embedded into its own content. The frozen Engineering Specification v1 SHA-256 remains `6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045`.
+- Separate immutable Reference, executed Evidence Audit, Erratum/Resolution, typed prerequisite, Reference Approval, Phase 6.2 Closure and Dry Run receipt contracts are implemented in `experiments/`; no real approval, closure, audit execution, receipt or formal benchmark result is published.
+- `validate_formal_eligibility` is the single authoritative Dry Run/Formal entry. It reloads committed repository evidence and raw checksums; legacy `FormalGateEvidence` booleans remain readable but cannot authorize execution. Formal/Dry Run runner input must be validator-issued and is revalidated at entry. Synthetic infrastructure and degraded-behavior tests remain available.
+- `docs/experiments/current_gate.json` is a navigation index only. Formal Java Evidence Audit: **0/12 COMPLETED**; Reference Approval: **NOT CREATED / NOT APPROVED**; Phase 6.2 Gate: **OPEN**; Phase 6.3: **BLOCKED / NOT STARTED**; Formal RQ1–RQ4: **NOT ELIGIBLE / NOT STARTED**; V3.2: **NOT STARTED**.
+- The historical Formal success expectation based on `allow_formal=True` and two legacy booleans was retired under the explicit STOP resolution. Separate tests now protect fail-closed authorization and synthetic degraded result provenance/metrics. Independent QA and directed retest remain required before Phase 6.2B.2.
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released

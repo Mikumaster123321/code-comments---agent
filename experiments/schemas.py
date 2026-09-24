@@ -706,6 +706,8 @@ class RunMetadata:
     independent_audit_status: str
     formal_gate: FormalGateEvidence | None = None
     performance: PerformanceMetadata | None = None
+    approved_reference_identity: str | None = None
+    reference_hash: str | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -755,9 +757,14 @@ class RunMetadata:
             raise SchemaValidationError("formal_gate must be FormalGateEvidence or null")
         if self.performance is not None and not isinstance(self.performance, PerformanceMetadata):
             raise SchemaValidationError("performance must be PerformanceMetadata or null")
+        if (self.approved_reference_identity is None) != (self.reference_hash is None):
+            raise SchemaValidationError("reference identity fields must appear together")
+        if self.approved_reference_identity is not None:
+            _sha256("approved_reference_identity", self.approved_reference_identity)
+            _sha256("reference_hash", self.reference_hash)
 
     def deterministic_record(self) -> dict:
-        return {
+        record = {
             "protocol": {"id": self.protocol_id, "version": self.protocol_version, "hash": self.protocol_hash},
             "dataset": {"id": self.dataset_id, "version": self.dataset_version, "hash": self.dataset_hash, "path_manifest_hash": self.path_manifest_hash},
             "query_set": {"version": self.query_set_version, "hash": self.query_set_hash},
@@ -774,6 +781,10 @@ class RunMetadata:
             "formal_gate": None if self.formal_gate is None else self.formal_gate.to_record(),
             "performance": None if self.performance is None else self.performance.to_record(),
         }
+        if self.approved_reference_identity is not None:
+            record["approved_reference_identity"] = self.approved_reference_identity
+            record["reference_hash"] = self.reference_hash
+        return record
 
     def to_record(self) -> dict:
         return {
