@@ -16,7 +16,8 @@ import pytest
 from code_maintenance import SymbolId, SymbolKind
 from experiments import (
     ApprovalDecisionRecord, ApprovalPrerequisiteRecord, Availability, BenchmarkConfig,
-    CurrentGateIndex, DatasetManifest, DryRunReceipt, EligibilityError, ErratumRecord,
+    CurrentGateIndex, DatasetManifest, DryRunArtifactRef, DryRunArtifactSet,
+    DryRunConfigurationSet, DryRunReceipt, DryRunReceiptV2, EligibilityError, ErratumRecord,
     EvidenceAuditRecord, EvidenceAuditSet, EvidenceRecord, EvidenceReview, FormalGateEvidence,
     GroundTruthRecord, IdentityRef, Phase62ClosureRecord, Phase62DocumentationDecisionRecord,
     Population, PrerequisiteReference,
@@ -28,6 +29,9 @@ from experiments import (
 from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
 from experiments.eligibility import _validate_source_resolution, validate_current_gate
 from experiments.serialization import canonical_jsonl
+from experiments.config import FROZEN_MATRIX_IDS
+from experiments.execution import executable_config
+from project_intelligence import LocalE5EmbeddingProvider
 
 ROOT = Path(__file__).parents[1]
 D = "a" * 64
@@ -98,6 +102,7 @@ def _json(root, path, value):
     if ("/reference/" in path or "/reference_approval/" in path or
         "/audits/" in path or "/executions/" in path):
         _write(root, path + ".sha256", (digest + "\n").encode("ascii"))
+    return digest
 
 
 def _capture(root, path, payload):
@@ -117,6 +122,86 @@ def _runtime():
     return RuntimeMetadata("CPython", "3.12.14", (("torch", "2.8.0"), ("transformers", "4.56.2")),
                            "synthetic-os", "synthetic-build", "synthetic-cpu", 4, 8, 16_000_000_000,
                            "synthetic", "cpu", "float32", (("OMP_NUM_THREADS", "1"),), True, True)
+
+
+def _synthetic_matrix_receipt(root, config, queries, approval, dataset_hash, query_hash,
+                              reference_hash, runtime, code_commit):
+    runtime_hash = canonical_hash(runtime.to_record())
+    template = replace(config, run_kind=RunKind.DRY_RUN, population=Population.ENGLISH_DEV,
+                       embedding_fingerprint=LocalE5EmbeddingProvider(local_files_only=True).fingerprint)
+    configs = tuple(executable_config(template, matrix_id) for matrix_id in FROZEN_MATRIX_IDS)
+    matrix = DryRunConfigurationSet("v1", tuple(
+        (item.matrix_run_id, item.experiment_family_identity, item.identity_hash)
+        for item in configs))
+    dev_queries = tuple(sorted((item for item in queries if item.split == "english_dev"),
+                               key=lambda item: item.query_id))
+    query_ids = tuple(item.query_id for item in dev_queries)
+    runs = []
+    for item in configs:
+        run_id = "synthetic-" + item.matrix_run_id
+        base = f"docs/experiments/runs/{run_id}/"
+        raw_path = base + "raw_results.jsonl"
+        raw = [{"run_id": run_id, "matrix_run_id": item.matrix_run_id,
+                "config_identity": item.identity_hash,
+                "protocol_version": config.protocol_version,
+                "query_id": query.query_id, "dataset_id": query.dataset_id,
+                "project_id": query.project_id, "language": query.language,
+                "split": "english_dev", "status": "success", "degraded": False}
+               for query in dev_queries]
+        raw_hash = _write(root, raw_path, canonical_jsonl(raw).encode())
+        aggregate_path = base + "aggregate_results.json"
+        aggregate = {"run_id": run_id, "matrix_run_id": item.matrix_run_id,
+                     "protocol_version": config.protocol_version,
+                     "config_hash": item.identity_hash, "raw_results_sha256": raw_hash,
+                     "query_set": {"hash": query_hash},
+                     "dataset": {"hash": dataset_hash},
+                     "code_commit": code_commit, "run_status": "success",
+                     "population_filters": {"split": "english_dev"},
+                     "denominator_count": 12,
+                     "counts": {"success": 12, "failure": 0, "invalid": 0, "degraded": 0}}
+        aggregate_hash = _json(root, aggregate_path, aggregate)
+        manifest_path = base + "run_manifest.json"
+        manifest = {"run_id": run_id,
+                    "protocol": {"version": config.protocol_version},
+                    "runner_code_commit": code_commit,
+                    "self_repository_commit": code_commit,
+                    "dirty_state": False, "environment": runtime.to_record(),
+                    "approved_reference_identity": approval, "reference_hash": reference_hash,
+                    "config_hashes": [item.identity_hash],
+                    "query_set": {"hash": query_hash}, "dataset": {"hash": dataset_hash},
+                    "output_checksums": {"raw_results.jsonl": raw_hash,
+                                         "aggregate_results.json": aggregate_hash}}
+        manifest_hash = _json(root, manifest_path, manifest)
+        runs.append(DryRunArtifactRef(item.matrix_run_id, run_id, item.identity_hash,
+                                      manifest_path, manifest_hash, aggregate_path,
+                                      aggregate_hash, raw_path, raw_hash))
+    artifact_set = DryRunArtifactSet("v1", approval, dataset_hash, query_hash,
+                                     reference_hash, matrix.identity_hash, runtime_hash,
+                                     code_commit, "dry_run", "english_dev", query_ids,
+                                     tuple(runs), 204, 0, 0)
+    set_path = "docs/experiments/audits/synthetic-dry-run-artifact-set.json"
+    _json(root, set_path, artifact_set.to_record())
+    evidence_hashes = {}
+    for kind in ("determinism", "leakage"):
+        path = f"docs/experiments/audits/synthetic-{kind}-evidence.json"
+        evidence = {"kind": kind, "status": "pass",
+                    "artifact_set_identity": artifact_set.identity_hash,
+                    "configuration_set_identity": matrix.identity_hash,
+                    "run_raw_sha256": [run.raw_sha256 for run in runs]}
+        if kind == "leakage":
+            evidence.update(english_test_count=0, chinese_count=0)
+        else:
+            evidence.update(comparison_scope="all_17_configurations",
+                            compared_query_count=204, observed_rank_mismatches=0)
+        evidence_hashes[kind] = (path, _json(root, path, evidence))
+    receipt = DryRunReceiptV2("v2", "pass", approval, dataset_hash, query_hash,
+                              reference_hash, matrix.identity_hash,
+                              artifact_set.identity_hash, set_path, runtime_hash,
+                              code_commit, config.protocol_version, "english_dev", 204,
+                              *evidence_hashes["determinism"], *evidence_hashes["leakage"])
+    directory = write_lifecycle_artifact(
+        root / "docs/experiments/audits/dry_run_receipts", receipt)
+    return (directory / "record.json").relative_to(root).as_posix()
 
 
 def test_reference_derivation_identity_and_immutability():
@@ -482,16 +567,11 @@ def synthetic_authority(tmp_path):
     runtime_evidence = _runtime()
     runtime_identity = canonical_hash(runtime_evidence.to_record())
     code_commit = _git(root, "rev-parse", "HEAD")
-    result_path = "docs/experiments/audits/synthetic-dry-run-result.json"
-    result_checksum = _write(root, result_path, b'{"synthetic_result":"pass"}\n')
-    receipt = DryRunReceipt("v1", "pass", approval.identity_hash, dataset.dataset_hash, query_hash,
-                            reference_hash, config.experiment_family_identity, runtime_identity, code_commit, D,
-                            "synthetic-dry-run-v1", "english_dev", None, result_path)
-    receipt = replace(receipt, result_checksum=result_checksum)
-    receipt_path = "docs/experiments/audits/synthetic-dry-run-receipt.json"
-    _json(root, receipt_path, receipt.to_record())
+    receipt_path = _synthetic_matrix_receipt(root, config, queries, approval.identity_hash,
+                                             dataset.dataset_hash, query_hash, reference_hash,
+                                             runtime_evidence, code_commit)
     gate = CurrentGateIndex("v1", "6.2B.1", "CLOSED", "CLOSED", approval.identity_hash,
-                            True, True, (), "synthetic formal validation",
+                            True, False, (), "synthetic formal validation",
                             ("docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",),
                             code_commit)
     _json(root, "docs/experiments/current_gate.json", gate.to_record())
@@ -517,6 +597,169 @@ def test_synthetic_repository_authority_passes_only_with_complete_dag(synthetic_
     assert len(result.queries) == 72
 
 
+def test_matrix_receipt_reloads_from_committed_head_with_false_navigation_flag(synthetic_authority):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    authority = RepositoryAuthority(root)
+    assert authority.load_current_gate().formal_execution_eligible is False
+    receipt = authority.load_typed(receipt_path, DryRunReceiptV2)
+    artifact_set = authority.load_typed(receipt.artifact_set_path, DryRunArtifactSet,
+                                        receipt.artifact_set_identity)
+    assert len(artifact_set.runs) == 17
+    assert artifact_set.coverage_count == 204
+    assert _validate_fixture(synthetic_authority).purpose is RunKind.FORMAL
+
+
+def test_uncommitted_receipt_cannot_be_authority(synthetic_authority):
+    root, config, approval, receipt_path, runtime, commit = synthetic_authority
+    copied_path = "docs/experiments/audits/uncommitted-receipt.json"
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    _json(root, copied_path, receipt.to_record())
+    with pytest.raises(EligibilityError, match="artifact_not_committed"):
+        validate_formal_eligibility(
+            purpose=RunKind.FORMAL, repository_root=root, requested_config=config,
+            selected_reference_approval=approval, runtime_evidence=runtime,
+            code_commit=commit, dry_run_receipt=copied_path)
+
+
+def test_committed_receipt_requires_content_addressed_identity(synthetic_authority):
+    root, config, approval, receipt_path, runtime, commit = synthetic_authority
+    copied_path = "docs/experiments/audits/dry_run_receipts/wrong-name/record.json"
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    _json(root, copied_path, receipt.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic wrong receipt identity path")
+    with pytest.raises(EligibilityError, match="dry_run_receipt_identity_mismatch"):
+        validate_formal_eligibility(
+            purpose=RunKind.FORMAL, repository_root=root, requested_config=config,
+            selected_reference_approval=approval, runtime_evidence=runtime,
+            code_commit=commit, dry_run_receipt=copied_path)
+
+
+def test_legacy_single_config_receipt_stays_readable_but_cannot_open_formal_gate(synthetic_authority):
+    root, config, approval, _, runtime, commit = synthetic_authority
+    legacy = DryRunReceipt("v1", "pass", approval, config.dataset_hash,
+                           config.query_set_hash, D, config.experiment_family_identity,
+                           canonical_hash(runtime.to_record()), commit, D,
+                           "legacy-v1", "english_dev", None,
+                           "docs/experiments/audits/legacy-result.json")
+    assert DryRunReceipt.from_record(legacy.to_record()) == legacy
+    path = "docs/experiments/audits/legacy-receipt.json"
+    _json(root, path, legacy.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic legacy receipt")
+    with pytest.raises(EligibilityError, match="artifact_schema_invalid"):
+        validate_formal_eligibility(
+            purpose=RunKind.FORMAL, repository_root=root, requested_config=config,
+            selected_reference_approval=approval, runtime_evidence=runtime,
+            code_commit=commit, dry_run_receipt=path)
+
+
+def test_frozen_matrix_exactness_and_canonical_identity():
+    rows = tuple((matrix_id, f"{index + 1:064x}", f"{index + 101:064x}")
+                 for index, matrix_id in enumerate(FROZEN_MATRIX_IDS))
+    matrix = DryRunConfigurationSet("v1", rows)
+    assert len(rows) == 17
+    assert DryRunConfigurationSet.from_record(matrix.to_record()).identity_hash == matrix.identity_hash
+    assert DryRunConfigurationSet("v1", tuple(reversed(rows))).identity_hash == matrix.identity_hash
+    for invalid in (rows[:-1], rows[:-1] + (rows[0],), rows + (("EXTRA", D, D),),
+                    rows[:-1] + (("UNKNOWN", D, D),)):
+        with pytest.raises(ValueError):
+            DryRunConfigurationSet("v1", invalid)
+
+
+def test_forged_navigation_boolean_cannot_replace_receipt(synthetic_authority):
+    root, config, approval, receipt_path, runtime, commit = synthetic_authority
+    gate_path = "docs/experiments/current_gate.json"
+    gate = RepositoryAuthority(root).load_current_gate()
+    _json(root, gate_path, replace(gate, formal_execution_eligible=True).to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic navigation update")
+    assert _validate_fixture(synthetic_authority).purpose is RunKind.FORMAL
+    (root / receipt_path).unlink()
+    _git(root, "add", "-A", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic receipt removal")
+    with pytest.raises(EligibilityError, match="artifact_missing"):
+        _validate_fixture(synthetic_authority)
+
+
+def _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record):
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    _json(root, receipt.artifact_set_path, artifact_set_record)
+    set_identity = canonical_hash(artifact_set_record)
+    hashes = [run["raw_sha256"] for run in artifact_set_record["runs"]]
+    updates = {}
+    for kind in ("determinism", "leakage"):
+        path = getattr(receipt, kind + "_evidence_path")
+        evidence = json.loads((root / path).read_text())
+        evidence["artifact_set_identity"] = set_identity
+        evidence["run_raw_sha256"] = hashes
+        updates[kind + "_evidence_sha256"] = _json(root, path, evidence)
+    updated = replace(receipt, artifact_set_identity=set_identity, **updates)
+    directory = write_lifecycle_artifact(
+        root / "docs/experiments/audits/dry_run_receipts", updated)
+    new_path = (directory / "record.json").relative_to(root).as_posix()
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic dry-run artifact mutation")
+    return new_path
+
+
+@pytest.mark.parametrize("change", ("missing", "english_test", "chinese"))
+def test_formal_gate_rejects_incomplete_or_leaking_coverage(synthetic_authority, change):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    artifact_set_record = json.loads((root / receipt.artifact_set_path).read_text())
+    run = artifact_set_record["runs"][0]
+    raw = [json.loads(line) for line in (root / run["raw_path"]).read_text().splitlines()]
+    if change == "missing":
+        raw.pop()
+    else:
+        raw[0]["split"] = "english_test" if change == "english_test" else "chinese_coverage"
+    run["raw_sha256"] = _write(root, run["raw_path"], canonical_jsonl(raw).encode())
+    aggregate = json.loads((root / run["aggregate_path"]).read_text())
+    aggregate["raw_results_sha256"] = run["raw_sha256"]
+    run["aggregate_sha256"] = _json(root, run["aggregate_path"], aggregate)
+    manifest = json.loads((root / run["manifest_path"]).read_text())
+    manifest["output_checksums"] = {"raw_results.jsonl": run["raw_sha256"],
+                                    "aggregate_results.json": run["aggregate_sha256"]}
+    run["manifest_sha256"] = _json(root, run["manifest_path"], manifest)
+    new_path = _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record)
+    with pytest.raises(EligibilityError, match="dry_run_coverage_mismatch|dry_run_raw_scope_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
+@pytest.mark.parametrize("change", ("missing", "duplicate", "extra"))
+def test_formal_gate_rejects_nonexact_artifact_matrix(synthetic_authority, change):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    artifact_set_record = json.loads((root / receipt.artifact_set_path).read_text())
+    if change == "missing":
+        artifact_set_record["runs"].pop()
+    elif change == "duplicate":
+        artifact_set_record["runs"][-1] = artifact_set_record["runs"][0]
+    else:
+        artifact_set_record["runs"].append(artifact_set_record["runs"][0])
+    new_path = _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record)
+    with pytest.raises(EligibilityError, match="artifact_schema_invalid"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
+def test_formal_gate_requires_committed_determinism_evidence(synthetic_authority):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    path = receipt.determinism_evidence_path
+    evidence = json.loads((root / path).read_text())
+    evidence["status"] = "fail"
+    new_hash = _json(root, path, evidence)
+    updated = replace(receipt, determinism_evidence_sha256=new_hash)
+    directory = write_lifecycle_artifact(
+        root / "docs/experiments/audits/dry_run_receipts", updated)
+    new_path = (directory / "record.json").relative_to(root).as_posix()
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic failed determinism")
+    with pytest.raises(EligibilityError, match="dry_run_evidence_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
 def test_synthetic_dry_run_eligibility_uses_dev_population_without_receipt(synthetic_authority):
     root, formal, approval, _, runtime, commit = synthetic_authority
     config = replace(formal, run_kind=RunKind.DRY_RUN, population=Population.ENGLISH_DEV)
@@ -526,6 +769,23 @@ def test_synthetic_dry_run_eligibility_uses_dev_population_without_receipt(synth
     )
     assert validated.purpose is RunKind.DRY_RUN
     assert validated.config_identity == config.identity_hash
+    assert validated.dry_run_receipt_path is None
+
+
+def test_dry_run_uses_closed_authority_even_when_navigation_flag_is_false(synthetic_authority):
+    root, formal, approval, _, runtime, commit = synthetic_authority
+    gate_path = "docs/experiments/current_gate.json"
+    gate = RepositoryAuthority(root).load_current_gate()
+    _json(root, gate_path, replace(gate, dry_run_eligible=False).to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic dry-run navigation update")
+    dry_config = replace(formal, run_kind=RunKind.DRY_RUN,
+                         population=Population.ENGLISH_DEV)
+    validated = validate_formal_eligibility(
+        purpose=RunKind.DRY_RUN, repository_root=root, requested_config=dry_config,
+        selected_reference_approval=approval, runtime_evidence=runtime,
+        code_commit=commit)
+    assert validated.purpose is RunKind.DRY_RUN
     assert validated.dry_run_receipt_path is None
 
 
@@ -672,7 +932,7 @@ def _commit_change(root, path, *, remove=False):
     "docs/experiments/audits/synthetic-methodology_review-output.txt",
     "docs/experiments/audits/synthetic-final_data_qa-output.txt",
     "docs/experiments/audits/synthetic-decision.json",
-    "docs/experiments/audits/synthetic-dry-run-result.json",
+    "docs/experiments/audits/synthetic-dry-run-artifact-set.json",
     "docs/experiments/reference_approval/phase62_closure.json",
 ))
 def test_committed_authority_or_raw_evidence_mutation_fails_closed(synthetic_authority, target):

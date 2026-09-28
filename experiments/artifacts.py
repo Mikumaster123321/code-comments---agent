@@ -9,7 +9,8 @@ from .runner import AggregateStratum, BenchmarkRunResult
 from .schemas import RunMetadata
 from .serialization import canonical_json, canonical_jsonl, normalize_relative_path, sha256_hex
 from .reference import (
-    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunReceipt,
+    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunArtifactSet,
+    DryRunConfigurationSet, DryRunReceipt, DryRunReceiptV2,
     ErratumRecord, EvidenceAuditRecord, EvidenceAuditSet, Phase62ClosureRecord,
     Phase62DocumentationDecisionRecord,
     ReferenceApprovalRecord, ReferenceRecord, ResolutionRecord,
@@ -24,6 +25,7 @@ _LIFECYCLE_RECORD_TYPES = (
     ReferenceRecord, EvidenceAuditRecord, EvidenceAuditSet, ErratumRecord,
     ResolutionRecord, ApprovalPrerequisiteRecord, ApprovalDecisionRecord,
     ReferenceApprovalRecord, Phase62ClosureRecord, DryRunReceipt,
+    DryRunReceiptV2, DryRunConfigurationSet, DryRunArtifactSet,
     Phase62DocumentationDecisionRecord,
 )
 

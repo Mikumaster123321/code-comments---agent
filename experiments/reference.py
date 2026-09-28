@@ -895,6 +895,173 @@ class DryRunReceipt:
         return cls(**value)
 
 
+@dataclass(frozen=True)
+class DryRunConfigurationSet:
+    schema_version: str
+    configurations: tuple[tuple[str, str, str], ...]
+
+    def __post_init__(self) -> None:
+        from .config import FROZEN_MATRIX_IDS
+        if self.schema_version != "v1" or type(self.configurations) is not tuple:
+            raise SchemaValidationError("dry-run configuration set schema is invalid")
+        if any(type(row) is not tuple or len(row) != 3 or type(row[0]) is not str
+               for row in self.configurations):
+            raise SchemaValidationError("dry-run configuration row is invalid")
+        ids = tuple(row[0] for row in self.configurations)
+        if len(ids) != len(FROZEN_MATRIX_IDS) or set(ids) != set(FROZEN_MATRIX_IDS):
+            raise SchemaValidationError("dry-run configuration set must contain exactly the frozen matrix")
+        for _, family, config in self.configurations:
+            _sha256("experiment family identity", family)
+            _sha256("dry-run config identity", config)
+        if len({row[1] for row in self.configurations}) != len(FROZEN_MATRIX_IDS) or len({row[2] for row in self.configurations}) != len(FROZEN_MATRIX_IDS):
+            raise SchemaValidationError("dry-run configuration identities must be unique")
+        positions = {matrix_id: index for index, matrix_id in enumerate(FROZEN_MATRIX_IDS)}
+        object.__setattr__(self, "configurations", tuple(sorted(
+            self.configurations, key=lambda row: positions[row[0]])))
+
+    def to_record(self) -> dict:
+        return {"schema_version": self.schema_version, "configurations": [list(row) for row in self.configurations]}
+
+    @property
+    def identity_hash(self) -> str:
+        return canonical_hash(self.to_record())
+
+    @classmethod
+    def from_record(cls, value: Mapping[str, Any]) -> DryRunConfigurationSet:
+        _exact(value, {"schema_version", "configurations"}, "DryRunConfigurationSet")
+        if type(value["configurations"]) is not list:
+            raise SchemaValidationError("dry-run configurations must be a list")
+        return cls(value["schema_version"], tuple(tuple(row) for row in value["configurations"]))
+
+
+@dataclass(frozen=True)
+class DryRunArtifactRef:
+    matrix_run_id: str
+    run_id: str
+    config_identity: str
+    manifest_path: str
+    manifest_sha256: str
+    aggregate_path: str
+    aggregate_sha256: str
+    raw_path: str
+    raw_sha256: str
+
+    def __post_init__(self) -> None:
+        _safe_text("matrix_run_id", self.matrix_run_id)
+        _safe_text("run_id", self.run_id)
+        for name in ("config_identity", "manifest_sha256", "aggregate_sha256", "raw_sha256"):
+            _sha256(name, getattr(self, name))
+        for name in ("manifest_path", "aggregate_path", "raw_path"):
+            _path(name, getattr(self, name))
+
+    def to_record(self) -> dict:
+        return {name: getattr(self, name) for name in self.__dataclass_fields__}
+
+    @classmethod
+    def from_record(cls, value: Mapping[str, Any]) -> DryRunArtifactRef:
+        _exact(value, set(cls.__dataclass_fields__), "DryRunArtifactRef")
+        return cls(**value)
+
+
+@dataclass(frozen=True)
+class DryRunArtifactSet:
+    schema_version: str
+    approved_reference_identity: str
+    dataset_identity: str
+    query_set_identity: str
+    reference_identity: str
+    configuration_set_identity: str
+    runtime_identity: str
+    code_commit: str
+    mode: str
+    split: str
+    query_ids: tuple[str, ...]
+    runs: tuple[DryRunArtifactRef, ...]
+    coverage_count: int
+    english_test_count: int
+    chinese_count: int
+
+    def __post_init__(self) -> None:
+        from .config import FROZEN_MATRIX_IDS
+        if self.schema_version != "v1" or self.mode != "dry_run" or self.split != "english_dev":
+            raise SchemaValidationError("dry-run artifact set scope is invalid")
+        for name in ("approved_reference_identity", "dataset_identity", "query_set_identity", "reference_identity", "configuration_set_identity", "runtime_identity"):
+            _sha256(name, getattr(self, name))
+        _safe_text("code_commit", self.code_commit)
+        if type(self.query_ids) is not tuple or len(self.query_ids) != 12 or tuple(sorted(set(self.query_ids))) != self.query_ids:
+            raise SchemaValidationError("dry-run query set must contain twelve sorted unique IDs")
+        if any(type(query_id) is not str or not query_id for query_id in self.query_ids):
+            raise SchemaValidationError("dry-run query ID is invalid")
+        if type(self.runs) is not tuple or not all(type(run) is DryRunArtifactRef for run in self.runs) or tuple(run.matrix_run_id for run in self.runs) != FROZEN_MATRIX_IDS:
+            raise SchemaValidationError("dry-run artifact set must contain exactly seventeen runs")
+        if len({run.run_id for run in self.runs}) != 17 or len({run.raw_path for run in self.runs}) != 17:
+            raise SchemaValidationError("dry-run run identities must be unique")
+        if (type(self.coverage_count) is not int or self.coverage_count != 204 or
+                type(self.english_test_count) is not int or self.english_test_count != 0 or
+                type(self.chinese_count) is not int or self.chinese_count != 0):
+            raise SchemaValidationError("dry-run coverage or leakage count is invalid")
+
+    def to_record(self) -> dict:
+        return {**{name: getattr(self, name) for name in self.__dataclass_fields__ if name not in {"query_ids", "runs"}},
+                "query_ids": list(self.query_ids), "runs": [run.to_record() for run in self.runs]}
+
+    @property
+    def identity_hash(self) -> str:
+        return canonical_hash(self.to_record())
+
+    @classmethod
+    def from_record(cls, value: Mapping[str, Any]) -> DryRunArtifactSet:
+        _exact(value, set(cls.__dataclass_fields__), "DryRunArtifactSet")
+        if type(value["query_ids"]) is not list or type(value["runs"]) is not list:
+            raise SchemaValidationError("dry-run artifact set arrays are invalid")
+        return cls(**{**value, "query_ids": tuple(value["query_ids"]),
+                      "runs": tuple(DryRunArtifactRef.from_record(run) for run in value["runs"])})
+
+
+@dataclass(frozen=True)
+class DryRunReceiptV2:
+    schema_version: str
+    status: str
+    approved_reference_identity: str
+    dataset_identity: str
+    query_set_identity: str
+    reference_identity: str
+    configuration_set_identity: str
+    artifact_set_identity: str
+    artifact_set_path: str
+    runtime_identity: str
+    code_commit: str
+    protocol_version: str
+    population: str
+    coverage_count: int
+    determinism_evidence_path: str
+    determinism_evidence_sha256: str
+    leakage_evidence_path: str
+    leakage_evidence_sha256: str
+
+    def __post_init__(self) -> None:
+        if self.schema_version != "v2" or self.status != "pass" or self.population != "english_dev" or type(self.coverage_count) is not int or self.coverage_count != 204:
+            raise SchemaValidationError("matrix receipt status or scope is invalid")
+        for name in ("approved_reference_identity", "dataset_identity", "query_set_identity", "reference_identity", "configuration_set_identity", "artifact_set_identity", "runtime_identity", "determinism_evidence_sha256", "leakage_evidence_sha256"):
+            _sha256(name, getattr(self, name))
+        for name in ("artifact_set_path", "determinism_evidence_path", "leakage_evidence_path"):
+            _path(name, getattr(self, name))
+        _safe_text("code_commit", self.code_commit)
+        _safe_text("protocol_version", self.protocol_version)
+
+    def to_record(self) -> dict:
+        return {name: getattr(self, name) for name in self.__dataclass_fields__}
+
+    @property
+    def identity_hash(self) -> str:
+        return canonical_hash(self.to_record())
+
+    @classmethod
+    def from_record(cls, value: Mapping[str, Any]) -> DryRunReceiptV2:
+        _exact(value, set(cls.__dataclass_fields__), "DryRunReceiptV2")
+        return cls(**value)
+
+
 def raw_sha256(payload: bytes) -> str:
     if type(payload) is not bytes:
         raise SchemaValidationError("raw payload must be bytes")

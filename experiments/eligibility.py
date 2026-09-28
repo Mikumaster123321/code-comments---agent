@@ -9,9 +9,10 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from .config import BenchmarkConfig, Population, RunKind, SemanticMode
+from .config import BenchmarkConfig, FROZEN_MATRIX_IDS, Population, RunKind, SemanticMode
 from .reference import (
-    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunReceipt,
+    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunArtifactSet,
+    DryRunConfigurationSet, DryRunReceiptV2,
     EvidenceAuditRecord, EvidenceAuditSet, Phase62ClosureRecord,
     Phase62DocumentationDecisionRecord,
     PrerequisiteReference, ReferenceApprovalRecord, ReferenceApprovalRequest, ReferenceRecord,
@@ -44,7 +45,7 @@ METHOD_DOCUMENTS = (
 ENGINEERING_DOCUMENT = "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md"
 ENGINEERING_SHA256 = "6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045"
 
-# Frozen Engineering Specification v1 Phase 6.2B navigation lifecycle.
+# Engineering Specification v1 navigation lifecycle, extended for Phase 6.3 status.
 _CURRENT_GATE_PHASE_STATUSES = MappingProxyType({
     "6.2B.0": frozenset({"COMPLETED"}),
     "6.2B.1": frozenset({
@@ -54,6 +55,7 @@ _CURRENT_GATE_PHASE_STATUSES = MappingProxyType({
     }),
     **{f"6.2B.{stage}": frozenset({"ALLOWED BUT NOT STARTED", "IN PROGRESS", "BLOCKED", "COMPLETED"})
        for stage in range(2, 7)},
+    "6.3": frozenset({"ALLOWED BUT NOT STARTED", "IN PROGRESS", "BLOCKED", "COMPLETED"}),
 })
 
 
@@ -536,8 +538,7 @@ def validate_formal_eligibility(
     authority.verify_commit("12391233daa2149ead4f451e920b2e0d8a1a6beb")
     gate = authority.load_current_gate()
     validate_current_gate(authority, gate)
-    _require(gate.dry_run_eligible if purpose == RunKind.DRY_RUN else gate.formal_execution_eligible,
-             "current_gate_conflict")
+    _require(gate.current_gate == "CLOSED", "current_gate_conflict")
     _require(selected_reference_approval is not None and gate.selected_reference_approval_identity == selected_reference_approval, "approval_not_selected")
     approval = authority.load_typed(f"docs/experiments/reference_approval/{selected_reference_approval}.json", ReferenceApprovalRecord, selected_reference_approval)
     _require(approval.approval_status == "approved", "approval_not_approved")
@@ -573,9 +574,14 @@ def validate_formal_eligibility(
     authority.verify_execution_code(code_commit)
     if purpose == RunKind.FORMAL:
         _require(dry_run_receipt is not None, "dry_run_receipt_missing")
-        receipt = authority.load_typed(dry_run_receipt, DryRunReceipt)
-        _require(authority.raw_checksum(receipt.result_artifact_path) == receipt.result_checksum, "dry_run_result_hash_mismatch")
-        _require(receipt.status == "pass" and receipt.approved_reference_identity == approval.identity_hash and receipt.dataset_identity == dataset.dataset_hash and receipt.query_set_identity == query_hash and receipt.reference_identity == approval.reference_identity.hash and receipt.config_identity == requested_config.experiment_family_identity and receipt.runtime_identity == runtime_identity and receipt.code_commit == code_commit, "dry_run_receipt_mismatch")
+        receipt = authority.load_typed(dry_run_receipt, DryRunReceiptV2)
+        _require(dry_run_receipt ==
+                 f"docs/experiments/audits/dry_run_receipts/{receipt.identity_hash}/record.json",
+                 "dry_run_receipt_identity_mismatch")
+        _validate_dry_run_receipt(authority, receipt, requested_config, queries,
+                                  approval.identity_hash, dataset.dataset_hash, query_hash,
+                                  approval.reference_identity.hash, runtime_identity,
+                                  runtime_evidence.to_record(), code_commit)
         _require(requested_config.semantic_mode != SemanticMode.FAKE_TEST, "formal_fake_model_forbidden")
     return _issue(repository_root=authority.root, purpose=purpose,
                   dataset_identity=dataset.dataset_hash, query_identity=query_hash,
@@ -585,3 +591,130 @@ def validate_formal_eligibility(
                   runtime_identity=runtime_identity, runtime_evidence=runtime_evidence,
                   dry_run_receipt_path=dry_run_receipt,
                   dataset=dataset, queries=queries, reference=reference)
+
+
+def _validate_dry_run_receipt(
+    authority: RepositoryAuthority, receipt: DryRunReceiptV2, formal_config: BenchmarkConfig,
+    queries: tuple[QueryRecord, ...], approval_identity: str, dataset_identity: str,
+    query_identity: str, reference_identity: str, runtime_identity: str,
+    runtime_record: dict, code_commit: str,
+) -> None:
+    from dataclasses import replace
+    from .execution import executable_config
+    from project_intelligence import LocalE5EmbeddingProvider
+
+    expected = (approval_identity, dataset_identity, query_identity, reference_identity,
+                runtime_identity, code_commit)
+    _require((receipt.approved_reference_identity, receipt.dataset_identity,
+              receipt.query_set_identity, receipt.reference_identity,
+              receipt.runtime_identity, receipt.code_commit) == expected,
+             "dry_run_receipt_mismatch")
+    _require(receipt.protocol_version == formal_config.protocol_version,
+             "dry_run_protocol_mismatch")
+    template = replace(formal_config, population=Population.ENGLISH_DEV,
+                       run_kind=RunKind.DRY_RUN,
+                       embedding_fingerprint=LocalE5EmbeddingProvider(local_files_only=True).fingerprint)
+    configs = tuple(executable_config(template, matrix_id) for matrix_id in FROZEN_MATRIX_IDS)
+    matrix = DryRunConfigurationSet("v1", tuple(
+        (config.matrix_run_id, config.experiment_family_identity, config.identity_hash)
+        for config in configs))
+    _require(receipt.configuration_set_identity == matrix.identity_hash,
+             "dry_run_matrix_mismatch")
+    artifact_set = authority.load_typed(receipt.artifact_set_path, DryRunArtifactSet,
+                                         receipt.artifact_set_identity)
+    expected_ids = tuple(sorted(query.query_id for query in queries if query.split == "english_dev"))
+    query_by_id = {query.query_id: query for query in queries}
+    _require(len(expected_ids) == 12 and artifact_set.query_ids == expected_ids,
+             "dry_run_query_scope_mismatch")
+    _require((artifact_set.approved_reference_identity, artifact_set.dataset_identity,
+              artifact_set.query_set_identity, artifact_set.reference_identity,
+              artifact_set.runtime_identity, artifact_set.code_commit) == expected and
+             artifact_set.configuration_set_identity == matrix.identity_hash and
+             artifact_set.coverage_count == receipt.coverage_count,
+             "dry_run_artifact_set_mismatch")
+    seen: set[tuple[str, str]] = set()
+    for run, config in zip(artifact_set.runs, configs):
+        _require(run.matrix_run_id == config.matrix_run_id and
+                 run.config_identity == config.identity_hash,
+                 "dry_run_config_mismatch")
+        base = f"docs/experiments/runs/{run.run_id}/"
+        _require((run.manifest_path, run.aggregate_path, run.raw_path) ==
+                 (base + "run_manifest.json", base + "aggregate_results.json",
+                  base + "raw_results.jsonl"), "dry_run_artifact_path_mismatch")
+        for path, digest in ((run.manifest_path, run.manifest_sha256),
+                             (run.aggregate_path, run.aggregate_sha256),
+                             (run.raw_path, run.raw_sha256)):
+            _require(authority.raw_checksum(path) == digest, "dry_run_artifact_hash_mismatch")
+        manifest = authority.json_record(run.manifest_path)
+        aggregate = authority.json_record(run.aggregate_path)
+        _require(all(type(manifest.get(name)) is dict for name in
+                     ("protocol", "query_set", "dataset", "output_checksums")) and
+                 all(type(aggregate.get(name)) is dict for name in
+                     ("query_set", "dataset", "population_filters", "counts")),
+                 "dry_run_result_mismatch")
+        _require(manifest.get("run_id") == run.run_id and
+                 manifest.get("protocol", {}).get("version") == formal_config.protocol_version and
+                 manifest.get("runner_code_commit") == code_commit and
+                 manifest.get("self_repository_commit") == code_commit and
+                 manifest.get("approved_reference_identity") == approval_identity and
+                 manifest.get("reference_hash") == reference_identity and
+                 manifest.get("environment") == runtime_record and
+                 manifest.get("config_hashes") == [config.identity_hash] and
+                 manifest.get("query_set", {}).get("hash") == query_identity and
+                 manifest.get("dataset", {}).get("hash") == dataset_identity and
+                 manifest.get("output_checksums", {}).get("raw_results.jsonl") == run.raw_sha256 and
+                 manifest.get("output_checksums", {}).get("aggregate_results.json") == run.aggregate_sha256 and
+                 aggregate.get("run_id") == run.run_id and
+                 aggregate.get("protocol_version") == formal_config.protocol_version and
+                 aggregate.get("matrix_run_id") == run.matrix_run_id and
+                 aggregate.get("config_hash") == config.identity_hash and
+                 aggregate.get("query_set", {}).get("hash") == query_identity and
+                 aggregate.get("dataset", {}).get("hash") == dataset_identity and
+                 aggregate.get("raw_results_sha256") == run.raw_sha256 and
+                 aggregate.get("code_commit") == code_commit and
+                 aggregate.get("run_status") == "success" and
+                 aggregate.get("population_filters", {}).get("split") == "english_dev" and
+                 aggregate.get("denominator_count") == 12 and
+                 aggregate.get("counts") == {"success": 12, "failure": 0, "invalid": 0, "degraded": 0},
+                 "dry_run_result_mismatch")
+        try:
+            raw = [json.loads(line) for line in authority.raw_bytes(run.raw_path).decode("utf-8").splitlines()]
+        except (UnicodeError, json.JSONDecodeError):
+            raise EligibilityError("dry_run_raw_invalid") from None
+        _require(len(raw) == 12 and {item.get("query_id") for item in raw if type(item) is dict} == set(expected_ids),
+                 "dry_run_coverage_mismatch")
+        for item in raw:
+            _require(type(item) is dict and item.get("run_id") == run.run_id and
+                     item.get("matrix_run_id") == run.matrix_run_id and
+                     item.get("config_identity") == config.identity_hash and
+                     item.get("protocol_version") == formal_config.protocol_version and
+                     item.get("split") == "english_dev" and
+                     item.get("dataset_id") == query_by_id[item["query_id"]].dataset_id and
+                     item.get("project_id") == query_by_id[item["query_id"]].project_id and
+                     item.get("language") == query_by_id[item["query_id"]].language and
+                     item.get("status") == "success" and item.get("degraded") is False,
+                     "dry_run_raw_scope_mismatch")
+            pair = (run.matrix_run_id, item["query_id"])
+            _require(pair not in seen, "dry_run_coverage_mismatch")
+            seen.add(pair)
+    _require(len(seen) == artifact_set.coverage_count == 204,
+             "dry_run_coverage_mismatch")
+    for path, digest, kind in (
+        (receipt.determinism_evidence_path, receipt.determinism_evidence_sha256, "determinism"),
+        (receipt.leakage_evidence_path, receipt.leakage_evidence_sha256, "leakage"),
+    ):
+        _require(authority.raw_checksum(path) == digest, "dry_run_evidence_hash_mismatch")
+        evidence = authority.json_record(path)
+        _require(evidence.get("kind") == kind and evidence.get("status") == "pass" and
+                 evidence.get("artifact_set_identity") == artifact_set.identity_hash and
+                 evidence.get("configuration_set_identity") == matrix.identity_hash and
+                 evidence.get("run_raw_sha256") == [run.raw_sha256 for run in artifact_set.runs],
+                 "dry_run_evidence_mismatch")
+        if kind == "determinism":
+            _require(evidence.get("comparison_scope") == "all_17_configurations" and
+                     evidence.get("compared_query_count") == 204 and
+                     evidence.get("observed_rank_mismatches") == 0,
+                     "dry_run_determinism_unverified")
+        else:
+            _require(evidence.get("english_test_count") == 0 and
+                     evidence.get("chinese_count") == 0, "dry_run_leakage_detected")

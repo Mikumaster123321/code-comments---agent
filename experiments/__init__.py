@@ -6,7 +6,9 @@ from .eligibility import (
     ValidatedExecutionInputs, validate_formal_eligibility, validate_reference_approval_readiness,
 )
 from .reference import (
-    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, Availability, DryRunReceipt,
+    ApprovalDecisionRecord, ApprovalPrerequisiteRecord, Availability,
+    DryRunArtifactRef, DryRunArtifactSet, DryRunConfigurationSet, DryRunReceipt,
+    DryRunReceiptV2,
     ErratumRecord, EvidenceAuditRecord, EvidenceAuditSet, EvidenceReview, IdentityRef,
     Phase62ClosureRecord, PrerequisiteReference, RawCapture, ReferenceApprovalRecord, ReferenceApprovalRequest,
     Phase62DocumentationDecisionRecord,
@@ -97,6 +99,10 @@ __all__ = [
     "DatasetManifest",
     "DatasetProject",
     "DryRunReceipt",
+    "DryRunReceiptV2",
+    "DryRunConfigurationSet",
+    "DryRunArtifactRef",
+    "DryRunArtifactSet",
     "EligibilityError",
     "ErratumRecord",
     "EvidenceAuditRecord",
