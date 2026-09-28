@@ -15,7 +15,7 @@ from .reference import (
     EvidenceAuditRecord, EvidenceAuditSet, Phase62ClosureRecord,
     Phase62DocumentationDecisionRecord,
     PrerequisiteReference, ReferenceApprovalRecord, ReferenceRecord,
-    REQUIRED_ROLES, ResolutionRecord, raw_sha256,
+    REQUIRED_ROLES, ResolutionRecord, parse_external_evidence_response, raw_sha256,
 )
 from .schemas import (
     DatasetManifest, GroundTruthRecord, QueryRecord, dataset_manifest_from_record,
@@ -230,16 +230,19 @@ class RepositoryAuthority:
             _require(audit.query_id == prepared["query_id"] and audit.prepared_input_hash == prepared["input_sha256"], "audit_prepared_identity_mismatch")
         if audit.reply_complete:
             _require(audit.visible_final.capture is not None, "audit_final_not_captured")
+            _require(audit.visible_final.capture.raw_sha256 == audit.raw_reply.raw_sha256,
+                     "audit_final_raw_reply_mismatch")
+            prepared_record = self.json_record("docs/experiments/evidence_audit/prepared/records/" + audit.query_id + ".json")
             try:
-                final = json.loads(self.raw_bytes(audit.visible_final.capture.artifact_path))
-            except (UnicodeError, json.JSONDecodeError):
-                raise EligibilityError("audit_final_not_parseable") from None
-            marker = "RESPONSE_END_" + audit.query_id.upper().replace("-", "_")
-            _require(type(final) is dict and final.get("query_id") == audit.query_id and
-                     final.get("end_marker") == marker and final.get("overall_status") == audit.overall_verdict,
-                     "audit_final_completeness_mismatch")
-            _require(final.get("evidence_reviews") == [item.to_record() for item in audit.evidence_reviews],
-                     "audit_reply_reviews_mismatch")
+                _, normalized = parse_external_evidence_response(
+                    self.raw_bytes(audit.raw_reply.artifact_path), audit.query_id,
+                    prepared_record["evidence_reviews"])
+            except (ValueError, TypeError, KeyError):
+                raise EligibilityError("audit_external_response_invalid") from None
+            _require(audit.overall_verdict == ("QUESTIONS" if any(x.verdict == "QUESTIONS" for x in normalized)
+                                               else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in normalized)
+                                               else "SUPPORTS"), "audit_final_completeness_mismatch")
+            _require(tuple(audit.evidence_reviews) == normalized, "audit_reply_reviews_mismatch")
             try:
                 transcription = json.loads(self.raw_bytes(audit.transcription_capture.artifact_path))
             except (UnicodeError, json.JSONDecodeError):

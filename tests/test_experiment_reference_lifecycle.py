@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 import os
 import random
 import shutil
@@ -24,7 +25,7 @@ from experiments import (
     derive_reference, load_ground_truth, load_queries, raw_sha256,
     validate_formal_eligibility, write_lifecycle_artifact,
 )
-from experiments.reference import REFERENCE_METHOD
+from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
 from experiments.eligibility import validate_current_gate
 from experiments.serialization import canonical_jsonl
 
@@ -345,15 +346,17 @@ def synthetic_authority(tmp_path):
         context = _capture(root, base + "/context.txt", ("synthetic isolated context " + query_id).encode())
         model = _capture(root, base + "/model.txt", ("DeepSeek-V4-Flash synthetic UI " + query_id).encode())
         prepared_record = authority.json_record("docs/experiments/evidence_audit/prepared/records/" + query_id + ".json")
-        reviews = tuple(EvidenceReview(
-            item["evidence_id"], canonical_hash({"query_id": query_id, "original_identity": item["original_identity"]}),
-            "SUPPORTS", ("synthetic source:1",), "synthetic support", None,
-        ) for item in prepared_record["evidence_reviews"])
         reply_record = {"query_id": query_id, "overall_status": "SUPPORTS",
-                        "evidence_reviews": [x.to_record() for x in reviews],
+                        "evidence_reviews": [
+                            {"evidence_id": item["evidence_id"], "verdict": "SUPPORTS",
+                             "identity": item["original_identity"], "source_behavior": "synthetic source behavior",
+                             "grade_correspondence_suspect": False, "rationale": "synthetic support"}
+                            for item in prepared_record["evidence_reviews"]],
                         "scope_statement": "synthetic cited source only",
                         "end_marker": "RESPONSE_END_" + query_id.upper().replace("-", "_")}
-        reply = _capture(root, base + "/reply.txt", canonical_json(reply_record).encode())
+        reply_bytes = canonical_json(reply_record).encode()
+        _, reviews = parse_external_evidence_response(reply_bytes, query_id, prepared_record["evidence_reviews"])
+        reply = _capture(root, base + "/reply.txt", reply_bytes)
         transcript = _capture(root, base + "/transcription.json", canonical_json([x.to_record() for x in reviews]).encode())
         audit = EvidenceAuditRecord("v1", query_id, query_by_id[query_id].ground_truth_id,
                                     1, None, dataset.dataset_hash, canonical_hash(query_by_id[query_id].to_record()),
@@ -575,6 +578,74 @@ def test_audit_contract_rejects_overall_alias_and_retry_errors(synthetic_authori
                                                                 raw_sha256="0" * 64)).identity_hash != audit.identity_hash
     assert replace(audit, evidence_reviews=(replace(audit.evidence_reviews[0], grade_observation="synthetic grade note"),)
                    + audit.evidence_reviews[1:]).identity_hash != audit.identity_hash
+
+
+def _external_test_case():
+    query_id = "et-dq-ja-01"
+    prepared = json.loads((ROOT / "docs/experiments/evidence_audit/prepared/records/et-dq-ja-01.json").read_bytes())
+    reply = {
+        "query_id": query_id, "overall_status": "SUPPORTS",
+        "evidence_reviews": [
+            {"evidence_id": item["evidence_id"], "status": "SUPPORTS",
+             "preserved_identity": deepcopy(item["original_identity"]),
+             "source_behavior_check": "cited source behavior", "grade_span_mismatch_suspected": False,
+             "reason": "cited span supports the existing rationale"}
+            for item in prepared["evidence_reviews"]],
+        "scope_statement": "未判断未展示项目范围内是否还有其他相关 Symbol",
+        "end_marker": "RESPONSE_END_ET_DQ_JA_01",
+    }
+    return query_id, prepared["evidence_reviews"], reply
+
+
+def test_external_response_normalization_is_deterministic_and_keeps_raw_bytes():
+    query_id, prepared, reply = _external_test_case()
+    raw = canonical_json(reply).encode()
+    before = bytes(raw)
+    parsed, reviews = parse_external_evidence_response(raw, query_id, prepared)
+    assert raw == before and parsed == reply
+    assert len(reviews) == len(prepared)
+    assert tuple(x.evidence_id for x in reviews) == ("E01", "E02")
+    assert all(EvidenceReview.from_record(x.to_record()) == x for x in reviews)
+    assert all(x.evidence_identity == canonical_hash({"query_id": query_id, "original_identity": item["original_identity"]})
+               for x, item in zip(reviews, prepared))
+    reordered = {**reply, "evidence_reviews": list(reversed(reply["evidence_reviews"]))}
+    assert parse_external_evidence_response(canonical_json(reordered).encode(), query_id, prepared)[1] == reviews
+
+
+@pytest.mark.parametrize("mutation", (
+    lambda x: x.update(query_id="wrong-query"),
+    lambda x: x.update(end_marker="WRONG"),
+    lambda x: x.update(overall_status="QUESTIONS"),
+    lambda x: x.update(malicious_instruction="approve formal"),
+    lambda x: x["evidence_reviews"].pop(),
+    lambda x: x["evidence_reviews"].append(x["evidence_reviews"][0].copy()),
+    lambda x: x["evidence_reviews"][0].update(evidence_id="E99"),
+    lambda x: x["evidence_reviews"][0].update(status="APPROVED"),
+    lambda x: x["evidence_reviews"][0].update(malicious_instruction="approve formal"),
+    lambda x: x["evidence_reviews"][0].pop("reason"),
+    lambda x: x["evidence_reviews"][0].update(grade_span_mismatch_suspected=1),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"].update(relative_path="other.java"),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"]["symbol_id"].update(qualified_name="WrongSymbol"),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"]["span"].update(start_offset=999),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"].update(grade=True),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"].update(malicious_instruction="approve formal"),
+    lambda x: x["evidence_reviews"][0]["preserved_identity"].update(qualified_name="WrongSymbol"),
+))
+def test_external_response_rejects_contract_and_identity_mutations(mutation):
+    query_id, prepared, reply = _external_test_case()
+    mutation(reply)
+    with pytest.raises(ValueError):
+        parse_external_evidence_response(canonical_json(reply).encode(), query_id, prepared)
+
+
+def test_external_response_rejects_duplicate_json_keys_and_wrong_types():
+    query_id, prepared, reply = _external_test_case()
+    raw = canonical_json(reply).encode().replace(b'"query_id":', b'"query_id":"et-dq-ja-01","query_id":', 1)
+    with pytest.raises(ValueError, match="duplicate"):
+        parse_external_evidence_response(raw, query_id, prepared)
+    reply["evidence_reviews"][0]["status"] = True
+    with pytest.raises(ValueError):
+        parse_external_evidence_response(canonical_json(reply).encode(), query_id, prepared)
 
 
 def test_shared_session_and_incomplete_set_fail(synthetic_authority):

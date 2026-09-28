@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import json
 from typing import Any, Mapping
 
 from .schemas import (
@@ -256,6 +257,141 @@ class EvidenceReview:
     def from_record(cls, value: Mapping[str, Any]) -> EvidenceReview:
         _exact(value, set(cls.__dataclass_fields__), "EvidenceReview")
         return cls(**{**value, "source_locations": tuple(value["source_locations"])})
+
+
+# The prepared prompt freezes the meaning of a review, not EvidenceReview's
+# internal field names. Each accepted external layout has an exact field set.
+_REPLY_LAYOUTS = (
+    ("status", "identity", "observed_source_behavior", "grade_rationale_check", "span_grade_doubt", "span_grade_doubt_note"),
+    ("verdict", "identity", "observed_behavior", "rationale_supported", "span_grade_suspected_mismatch", "span_grade_note"),
+    ("verdict", "source_identity", "observed_behavior", "grade_assessment", "span_grade_concern"),
+    ("status", "preserved_identity", "source_behavior_check", "grade_span_mismatch_suspected", "reason"),
+    ("verdict", "identity", "source_behavior", "grade_correspondence_suspect", "rationale"),
+    ("verdict", "file", "symbol_id", "span", "original_grade", "source_behavior", "rationale_supported", "span_grade_suspect", "notes"),
+    ("verdict", "identity_preserved", "source_behavior_verified", "grade_support", "span_grade_correspondence_suspect", "notes"),
+    ("verdict", "preserved_identity", "observed_source_behavior", "supports_grade_and_rationale", "span_grade_correspondence_doubt", "notes"),
+    ("verdict", "original_identity", "source_behavior", "span_check", "grade_support", "suspected_span_grade_mismatch"),
+    ("verdict", "identity", "observed_source_behavior", "grade_assessment", "span_grade_consistency_suspected"),
+)
+_REPLY_IDENTITY_KEYS = frozenset({"identity", "source_identity", "preserved_identity", "identity_preserved", "original_identity", "file", "symbol_id", "span", "original_grade"})
+_REPLY_BOOLEAN_KEYS = frozenset({"rationale_supported", "span_grade_doubt", "span_grade_suspected_mismatch", "span_grade_concern", "grade_span_mismatch_suspected", "grade_correspondence_suspect", "span_grade_suspect", "span_grade_correspondence_doubt", "supports_grade_and_rationale", "suspected_span_grade_mismatch", "span_grade_consistency_suspected"})
+_REPLY_TEXT_KEYS = frozenset({"observed_source_behavior", "grade_rationale_check", "span_grade_doubt_note", "observed_behavior", "span_grade_note", "grade_assessment", "source_behavior_check", "reason", "source_behavior", "rationale", "notes", "source_behavior_verified"})
+_SYMBOL_KEYS = frozenset({"language", "kind", "qualified_name", "relative_path", "semantic_disambiguator", "fallback_line"})
+_SPAN_KEYS = frozenset({"start_line", "end_line", "start_offset", "end_offset"})
+
+
+def _reply_object(pairs: list[tuple[str, Any]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise SchemaValidationError("duplicate external response field")
+        result[key] = value
+    return result
+
+
+def _reject_reply_constant(_: str) -> None:
+    raise SchemaValidationError("non-finite response value")
+
+
+def _external_identity(item: dict, original: dict) -> None:
+    identity = next((item[key] for key in ("identity", "source_identity", "preserved_identity", "identity_preserved", "original_identity") if key in item), None)
+    if identity is None:
+        identity = {"relative_path": item["file"], "symbol_id": item["symbol_id"], "span": item["span"], "original_grade": item["original_grade"]}
+    if type(identity) is not dict:
+        raise SchemaValidationError("external identity must be an object")
+    nested = {"relative_path", "symbol_id", "span"}
+    identity_shapes = (nested, nested | {"grade"}, nested | {"original_grade"}, nested | {"claimed_grade"},
+                       {"relative_path", "qualified_name", "semantic_disambiguator", "span"},
+                       {"relative_path", "qualified_name", "kind", "language", "semantic_disambiguator", "span"})
+    if set(identity) not in identity_shapes:
+        raise SchemaValidationError("external identity fields are invalid")
+    if type(identity["relative_path"]) is not str or identity["relative_path"] != original["relative_path"]:
+        raise SchemaValidationError("external source path mismatch")
+    span = identity["span"]
+    if type(span) is not dict or set(span) != _SPAN_KEYS or any(type(x) is not int for x in span.values()) or span != original["span"]:
+        raise SchemaValidationError("external span mismatch")
+    symbol = identity.get("symbol_id", {key: identity[key] for key in _SYMBOL_KEYS if key in identity})
+    nested_shapes = (_SYMBOL_KEYS, _SYMBOL_KEYS - {"fallback_line"}, _SYMBOL_KEYS - {"relative_path"})
+    flat_shapes = ({"relative_path", "qualified_name", "semantic_disambiguator"},
+                   {"relative_path", "qualified_name", "kind", "language", "semantic_disambiguator"})
+    if type(symbol) is not dict or set(symbol) not in (nested_shapes if "symbol_id" in identity else flat_shapes):
+        raise SchemaValidationError("external SymbolId fields are invalid")
+    if any(type(value) is not type(original["symbol_id"][key]) or value != original["symbol_id"][key] for key, value in symbol.items()):
+        raise SchemaValidationError("external SymbolId mismatch")
+    for name in ("grade", "original_grade", "claimed_grade"):
+        if name in identity and (type(identity[name]) is not int or identity[name] != original["grade"]):
+            raise SchemaValidationError("external Grade identity mismatch")
+
+
+def parse_external_evidence_response(raw: bytes, query_id: str, prepared_reviews: list[dict]) -> tuple[dict, tuple[EvidenceReview, ...]]:
+    """Validate raw external JSON and deterministically derive canonical reviews."""
+    if type(raw) is not bytes or type(query_id) is not str or type(prepared_reviews) is not list:
+        raise SchemaValidationError("external response inputs are invalid")
+    try:
+        reply = json.loads(raw.decode("utf-8"), object_pairs_hook=_reply_object,
+                           parse_constant=_reject_reply_constant)
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise SchemaValidationError("external response is not UTF-8 JSON") from error
+    if type(reply) is not dict or set(reply) != {"query_id", "overall_status", "evidence_reviews", "scope_statement", "end_marker"}:
+        raise SchemaValidationError("external response fields are invalid")
+    if reply["query_id"] != query_id or type(reply["query_id"]) is not str:
+        raise SchemaValidationError("external query_id mismatch")
+    _choice("external overall_status", reply["overall_status"], VERDICTS)
+    _safe_text("external scope_statement", reply["scope_statement"])
+    if type(reply["end_marker"]) is not str or reply["end_marker"] != "RESPONSE_END_" + query_id.upper().replace("-", "_"):
+        raise SchemaValidationError("external end_marker mismatch")
+    originals = {x["evidence_id"]: x["original_identity"] for x in prepared_reviews}
+    if len(originals) != len(prepared_reviews) or type(reply["evidence_reviews"]) is not list:
+        raise SchemaValidationError("external evidence list is invalid")
+    seen = set()
+    normalized = []
+    for item in reply["evidence_reviews"]:
+        if type(item) is not dict or type(item.get("evidence_id")) is not str or item["evidence_id"] not in originals or item["evidence_id"] in seen:
+            raise SchemaValidationError("external evidence ID is missing, duplicate, or unknown")
+        seen.add(item["evidence_id"])
+        if not any(set(item) == {"evidence_id", *layout} for layout in _REPLY_LAYOUTS):
+            raise SchemaValidationError("external evidence fields are invalid")
+        verdict = item.get("verdict", item.get("status"))
+        _choice("external verdict", verdict, VERDICTS)
+        original = originals[item["evidence_id"]]
+        _external_identity(item, original)
+        for key in set(item) & _REPLY_BOOLEAN_KEYS:
+            if type(item[key]) is not bool:
+                raise SchemaValidationError("external boolean field is invalid")
+        if verdict == "SUPPORTS" and (any(item[key] for key in set(item) & _REPLY_BOOLEAN_KEYS if key not in {"rationale_supported", "supports_grade_and_rationale"}) or
+                                      any(not item[key] for key in set(item) & {"rationale_supported", "supports_grade_and_rationale"})):
+            raise SchemaValidationError("external support contradicts grade doubt")
+        for key in set(item) & _REPLY_TEXT_KEYS:
+            _safe_text("external " + key, item[key])
+        if "grade_support" in item:
+            grade = item["grade_support"]
+            if type(grade) is dict:
+                if set(grade) != {"grade", "consistent", "reason"} or type(grade["grade"]) is not int or grade["grade"] != original["grade"] or type(grade["consistent"]) is not bool:
+                    raise SchemaValidationError("external grade_support is invalid")
+                _safe_text("external grade_support reason", grade["reason"])
+                if verdict == "SUPPORTS" and not grade["consistent"]:
+                    raise SchemaValidationError("external support contradicts grade assessment")
+            else:
+                _safe_text("external grade_support", grade)
+        if "span_check" in item:
+            check = item["span_check"]
+            if type(check) is not dict or set(check) != {"span_covers_whole_line_16", "span_length_chars", "line_16_char_length_no_newline", "declaration_present_in_span", "line_number_matches_symbol", "file_ascii_so_byte_equals_char_offset", "note"} or any(type(check[x]) is not bool for x in ("span_covers_whole_line_16", "line_number_matches_symbol", "file_ascii_so_byte_equals_char_offset")) or any(type(check[x]) is not int for x in ("span_length_chars", "line_16_char_length_no_newline")):
+                raise SchemaValidationError("external span_check is invalid")
+            _safe_text("external span_check declaration", check["declaration_present_in_span"])
+            _safe_text("external span_check note", check["note"])
+        path, span = original["relative_path"], original["span"]
+        reason = canonical_json({key: value for key, value in item.items() if key not in _REPLY_IDENTITY_KEYS | {"evidence_id", "verdict", "status"}})
+        grade_observation = canonical_json({key: value for key, value in item.items() if "grade" in key or key == "span_check"})
+        normalized.append(EvidenceReview(item["evidence_id"], canonical_hash({"query_id": query_id, "original_identity": original}),
+                                         verdict, (f"{path}:L{span['start_line']}-L{span['end_line']} [{span['start_offset']},{span['end_offset']})",),
+                                         reason, grade_observation))
+    if seen != set(originals):
+        raise SchemaValidationError("external evidence is missing")
+    normalized.sort(key=lambda x: x.evidence_id)
+    computed = "QUESTIONS" if any(x.verdict == "QUESTIONS" for x in normalized) else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in normalized) else "SUPPORTS"
+    if reply["overall_status"] != computed:
+        raise SchemaValidationError("external overall_status contradicts reviews")
+    return reply, tuple(normalized)
 
 
 @dataclass(frozen=True)

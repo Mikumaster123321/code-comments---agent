@@ -1088,6 +1088,14 @@
 - Existing schema expresses this boundary; no `experiments/` or test change is part of the clarification. The first user-reported `et-dq-ja-01` capture awaits validation under the frozen amendment and is **not materialized or counted** here. Phase 6.2B.2 is **ALLOWED BUT PROOF NOT YET COMPLETED**; `current_gate.json` retains its existing schema-valid `ALLOWED BUT NOT STARTED` navigation value. Formal Java Evidence Audit **0/12**; Reference Approval **NOT CREATED**; Phase 6.2 **OPEN**; Phase 6.3 **BLOCKED / NOT STARTED**; Formal RQ1–RQ4 **NOT ELIGIBLE / NOT STARTED**.
 - Synthetic schema validation **PASS**; document-only full regression **775 passed** before and after clarification. [Development report](docs/development/Development_Report_V3_1_0_Phase_6_2B_2_Raw_Reply_Boundary.md) records scope and limits.
 
+### V3.1.0 Phase 6.2 — Java Evidence 外部响应映射修复
+
+- 根因：prepared input 冻结外部审查语义及顶层五字段，但不要求 DeepSeek 输出内部 `EvidenceReview.to_record()` 六字段；旧 eligibility loader 对 raw `evidence_reviews` 与 canonical reviews 做完全相等比较，导致 READY capture 系统性 `audit_reply_reviews_mismatch`。
+- `experiments/reference.py` 以 exact 外部布局、严格类型、E 集合、prepared source/SymbolId/span/Grade 身份、verdict/overall/end marker 验证 raw JSON，确定性映射为 `EvidenceReview`；`experiments/eligibility.py` 用原始 bytes 重算并与内部记录及转录独立比较。未知布局 fail closed。原始 capture、冻结方法、prepared inputs、Dataset/Query/GT、Grade、检索及 Formal 授权链未变。
+- 现有 capture manifest 的 **10/10 CAPTURE_READY** 原始回复通过 SHA-256、外部解析、身份交叉核对及内部 review 构造的只读 dry validation；这不是正式 EvidenceAudit materialization。另外两条 capture 仍为 BLOCKED。
+- prepared verifier **PASS**；新增 19 个离线外部响应测试，相关生命周期文件 **71 passed**，全量回归 **794 passed**（此前 775）。[窄 Development Report](docs/development/Development_Report_V3_1_0_Phase_6_2_Java_Evidence_Response_Mapping.md) 记录字段映射与方法边界。
+- Formal Java Evidence Audit **0/12**；Reference Approval、Phase 6.2 Closure、Dry Run Receipt **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**。下一动作：对现有 10 条 READY capture 重新执行 batch materialization；本轮不增加独立 QA。
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released
