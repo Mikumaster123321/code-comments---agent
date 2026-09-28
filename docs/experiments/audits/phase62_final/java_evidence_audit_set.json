@@ -1,0 +1,125 @@
+{
+  "accepted_attempt_identities": [
+    [
+      "et-bl-ja-01",
+      "76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323"
+    ],
+    [
+      "et-bl-ja-02",
+      "789c919d08d254dd7ae66d6eace97c9d0907882a8c055d9cd9a23a6a2a0ec5df"
+    ],
+    [
+      "et-cf-ja-01",
+      "ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6"
+    ],
+    [
+      "et-cf-ja-02",
+      "cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04"
+    ],
+    [
+      "et-dq-ja-01",
+      "f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d"
+    ],
+    [
+      "et-dq-ja-02",
+      "36e64819624fbbf9ec7bff4f8e0e94ab927139fe081e2ed835c2b10c0eaed2e7"
+    ],
+    [
+      "et-fl-ja-01",
+      "2f83516ca22e438725713cffe335e14305176a53466e7e76888fd0b24c2b6cfc"
+    ],
+    [
+      "et-fl-ja-02",
+      "d8c74c81807533afe9169b2f5649f4ef557fdafed6804e2904a3e2feec23cd84"
+    ],
+    [
+      "et-mt-ja-01",
+      "53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f"
+    ],
+    [
+      "et-mt-ja-02",
+      "98ebbcd282e13d67d3db4cb472914429f9ef14d1c5c3546677361fb76d832932"
+    ],
+    [
+      "et-sl-ja-01",
+      "2d6026dfe88f43443c18656a1f1370ac9c8f27292c516aae97dc663fc63009ba"
+    ],
+    [
+      "et-sl-ja-02",
+      "8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c"
+    ]
+  ],
+  "accepted_attempt_paths": [
+    [
+      "et-bl-ja-01",
+      "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/record.json"
+    ],
+    [
+      "et-bl-ja-02",
+      "docs/experiments/evidence_audit/executions/789c919d08d254dd7ae66d6eace97c9d0907882a8c055d9cd9a23a6a2a0ec5df/record.json"
+    ],
+    [
+      "et-cf-ja-01",
+      "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/record.json"
+    ],
+    [
+      "et-cf-ja-02",
+      "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/record.json"
+    ],
+    [
+      "et-dq-ja-01",
+      "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/record.json"
+    ],
+    [
+      "et-dq-ja-02",
+      "docs/experiments/evidence_audit/executions/36e64819624fbbf9ec7bff4f8e0e94ab927139fe081e2ed835c2b10c0eaed2e7/record.json"
+    ],
+    [
+      "et-fl-ja-01",
+      "docs/experiments/evidence_audit/executions/2f83516ca22e438725713cffe335e14305176a53466e7e76888fd0b24c2b6cfc/record.json"
+    ],
+    [
+      "et-fl-ja-02",
+      "docs/experiments/evidence_audit/executions/d8c74c81807533afe9169b2f5649f4ef557fdafed6804e2904a3e2feec23cd84/record.json"
+    ],
+    [
+      "et-mt-ja-01",
+      "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/record.json"
+    ],
+    [
+      "et-mt-ja-02",
+      "docs/experiments/evidence_audit/executions/98ebbcd282e13d67d3db4cb472914429f9ef14d1c5c3546677361fb76d832932/record.json"
+    ],
+    [
+      "et-sl-ja-01",
+      "docs/experiments/evidence_audit/executions/2d6026dfe88f43443c18656a1f1370ac9c8f27292c516aae97dc663fc63009ba/record.json"
+    ],
+    [
+      "et-sl-ja-02",
+      "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/record.json"
+    ]
+  ],
+  "completeness_status": "complete",
+  "execution_contract_version": "v1+amendment-2",
+  "expected_population": "english_test_java",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "query_ids": [
+    "et-bl-ja-01",
+    "et-bl-ja-02",
+    "et-cf-ja-01",
+    "et-cf-ja-02",
+    "et-dq-ja-01",
+    "et-dq-ja-02",
+    "et-fl-ja-01",
+    "et-fl-ja-02",
+    "et-mt-ja-01",
+    "et-mt-ja-02",
+    "et-sl-ja-01",
+    "et-sl-ja-02"
+  ],
+  "resolution_identities": [
+    "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37",
+    "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d"
+  ],
+  "schema_version": "v1"
+}

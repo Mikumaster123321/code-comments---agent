@@ -1,0 +1,16 @@
+{
+  "authority": "本任务用户明确授权；readiness 成功后按已冻结 schema 物化",
+  "decision_maker": "Codex",
+  "prerequisite_identities": [
+    "054288894760683312c9b3acd7280e4516669c320bad5bb3abafe9133c7fa494",
+    "70508a9636519ff42713bf2e5dc1bfc4a035efdc1a5f11d007ad9500be0e7580",
+    "9920c292dbd5f46fc4acbc57ed63a6c9227bb9dbf96b049fa8653dc69e7358fb",
+    "a2c3c7f60c0f80dc323e41fda5278c1ddf5ab378d10e28234513b56cf5091a98",
+    "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+    "e16d79a93c119a52d60437da97f5223bd8d7828f5e8cdba269f1187db7eff517"
+  ],
+  "rationale": "用户明确授权在真实审查与 readiness PASS 后完成本次 Reference Approval。Grok 4.7 方法论审查及既有最终独立 Data QA 均 PASS WITH NON-BLOCKING NOTES；12 条中文原文已归档并绑定方法论审查身份。GT 72/72 drafted、reviewed_at=null，未完成 delayed blind review。Java 12/12 executed、10 structured SUPPORTS、2 execution-level CANNOT_ASSESS，后两条 model_verdict=unavailable、evidence_reviews=[]、response_contract_failure；reply_complete 只表示完整捕获。两个既有 source_verification/closed Resolution 明确绑定，未改 GT/Grade。四项 Low 保留且非阻塞。本批准仅确定 specification-anchored reference，不签发 Formal execution authority。",
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "schema_version": "v1",
+  "status": "approved"
+}

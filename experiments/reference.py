@@ -688,6 +688,55 @@ class ResolutionRecord:
 
 
 @dataclass(frozen=True)
+class ReferenceApprovalRequest:
+    """Candidate evidence bindings only; no decision or execution authority."""
+    dataset_id: str
+    dataset_identity: IdentityRef
+    query_set_identity: IdentityRef
+    reference_identity: IdentityRef
+    source_draft_identity: IdentityRef
+    methodology_identity: str
+    engineering_identity: IdentityRef
+    prerequisite_identities: tuple[PrerequisiteReference, ...]
+    resolution_identities: tuple[IdentityRef, ...]
+    reference_artifact_path: str
+
+    def __post_init__(self) -> None:
+        _safe_text("dataset_id", self.dataset_id)
+        for name in ("dataset_identity", "query_set_identity", "reference_identity", "source_draft_identity", "engineering_identity"):
+            if type(getattr(self, name)) is not IdentityRef:
+                raise SchemaValidationError(f"{name} must be IdentityRef")
+        _sha256("methodology_identity", self.methodology_identity)
+        _path("reference_artifact_path", self.reference_artifact_path)
+        _tuple_of("prerequisite_identities", self.prerequisite_identities, PrerequisiteReference, nonempty=False)
+        prerequisites = _sorted_unique(self.prerequisite_identities, lambda x: x.role, "readiness prerequisite roles")
+        if len({x.identity for x in prerequisites}) != len(prerequisites):
+            raise SchemaValidationError("readiness prerequisite identities must be unique")
+        object.__setattr__(self, "prerequisite_identities", prerequisites)
+        _tuple_of("resolution_identities", self.resolution_identities, IdentityRef, nonempty=False)
+        object.__setattr__(self, "resolution_identities", _sorted_unique(self.resolution_identities, lambda x: x.hash, "readiness resolutions"))
+
+    @classmethod
+    def from_approval(cls, approval: ReferenceApprovalRecord) -> ReferenceApprovalRequest:
+        return cls(**{name: getattr(approval, name) for name in cls.__dataclass_fields__})
+
+    def to_record(self) -> dict:
+        return {name: ([item.to_record() for item in value] if type(value) is tuple else
+                       value.to_record() if type(value) is IdentityRef else value)
+                for name in self.__dataclass_fields__ if (value := getattr(self, name)) is not None}
+
+    @classmethod
+    def from_record(cls, value: Mapping[str, Any]) -> ReferenceApprovalRequest:
+        _exact(value, set(cls.__dataclass_fields__), "ReferenceApprovalRequest")
+        result = dict(value)
+        for name in ("dataset_identity", "query_set_identity", "reference_identity", "source_draft_identity", "engineering_identity"):
+            result[name] = IdentityRef.from_record(value[name])
+        result["prerequisite_identities"] = tuple(PrerequisiteReference.from_record(x) for x in value["prerequisite_identities"])
+        result["resolution_identities"] = tuple(IdentityRef.from_record(x) for x in value["resolution_identities"])
+        return cls(**result)
+
+
+@dataclass(frozen=True)
 class ReferenceApprovalRecord:
     schema_version: str
     approval_version: str

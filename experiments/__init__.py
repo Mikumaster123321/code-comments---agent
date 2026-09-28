@@ -3,12 +3,12 @@
 from .artifacts import ArtifactCollisionError, validate_run_result, write_lifecycle_artifact, write_run_artifacts
 from .eligibility import (
     CurrentGateIndex, EligibilityError, RepositoryAuthority,
-    ValidatedExecutionInputs, validate_formal_eligibility,
+    ValidatedExecutionInputs, validate_formal_eligibility, validate_reference_approval_readiness,
 )
 from .reference import (
     ApprovalDecisionRecord, ApprovalPrerequisiteRecord, Availability, DryRunReceipt,
     ErratumRecord, EvidenceAuditRecord, EvidenceAuditSet, EvidenceReview, IdentityRef,
-    Phase62ClosureRecord, PrerequisiteReference, RawCapture, ReferenceApprovalRecord,
+    Phase62ClosureRecord, PrerequisiteReference, RawCapture, ReferenceApprovalRecord, ReferenceApprovalRequest,
     Phase62DocumentationDecisionRecord,
     ReferenceRecord, ResolutionRecord, VisiblePart, derive_reference, raw_sha256,
 )
@@ -124,6 +124,7 @@ __all__ = [
     "RawQueryResult",
     "RetrievalUnit",
     "ReferenceApprovalRecord",
+    "ReferenceApprovalRequest",
     "ReferenceRecord",
     "RepositoryAuthority",
     "ResolutionRecord",
@@ -156,5 +157,6 @@ __all__ = [
     "write_run_artifacts",
     "validate_run_result",
     "validate_formal_eligibility",
+    "validate_reference_approval_readiness",
     "write_lifecycle_artifact",
 ]

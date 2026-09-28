@@ -1,0 +1,37 @@
+{
+  "completed_at": "2026-09-28T06:11:25.918290+00:00",
+  "input_identities": [
+    [
+      "dataset",
+      "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7"
+    ],
+    [
+      "query_set",
+      "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba"
+    ],
+    [
+      "reference",
+      "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04"
+    ],
+    [
+      "resolution:1",
+      "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37"
+    ],
+    [
+      "resolution:2",
+      "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d"
+    ],
+    [
+      "source_draft",
+      "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87"
+    ]
+  ],
+  "output_artifact_path": "docs/experiments/audits/phase62_final/resolution_set_output.json",
+  "output_identity": "ac28311c30f74b946a8012499c37d70e1c4f89c9614df4e178da0a6d51e4181a",
+  "provenance_artifact_path": "docs/experiments/audits/phase62_final/resolution_set_provenance.json",
+  "provenance_identity": "ac46cc6045dbd3ff4a58b730bd90f074ebbe284e3538ea876d22d7fb7fa4fea0",
+  "resolution_status": "closed",
+  "role": "resolution_set",
+  "schema_version": "v1",
+  "status": "pass"
+}

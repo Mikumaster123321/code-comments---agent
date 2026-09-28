@@ -14,7 +14,7 @@ from .reference import (
     ApprovalDecisionRecord, ApprovalPrerequisiteRecord, DryRunReceipt,
     EvidenceAuditRecord, EvidenceAuditSet, Phase62ClosureRecord,
     Phase62DocumentationDecisionRecord,
-    PrerequisiteReference, ReferenceApprovalRecord, ReferenceRecord,
+    PrerequisiteReference, ReferenceApprovalRecord, ReferenceApprovalRequest, ReferenceRecord,
     REQUIRED_ROLES, ResolutionRecord, parse_external_evidence_response, raw_sha256,
 )
 from .schemas import (
@@ -408,44 +408,25 @@ def is_validator_issued(value: object) -> bool:
     return type(value) is ValidatedExecutionInputs and value in _ISSUED
 
 
-def validate_formal_eligibility(
-    *, purpose: RunKind, repository_root: str | Path, requested_config: BenchmarkConfig,
-    selected_reference_approval: str | None, runtime_evidence: RuntimeMetadata,
-    code_commit: str, dry_run_receipt: str | None = None,
-) -> ValidatedExecutionInputs:
-    """Only this entry can issue DRY_RUN or FORMAL execution capability."""
-    _require(type(purpose) is RunKind and purpose in {RunKind.DRY_RUN, RunKind.FORMAL}, "purpose_not_formal")
-    _require(type(requested_config) is BenchmarkConfig, "config_invalid")
-    authority = RepositoryAuthority(repository_root)
-    authority.verify_frozen_checksums()
-    authority.verify_commit("12391233daa2149ead4f451e920b2e0d8a1a6beb")
-    gate = authority.load_current_gate()
-    validate_current_gate(authority, gate)
-    _require(gate.dry_run_eligible if purpose == RunKind.DRY_RUN else gate.formal_execution_eligible,
-             "current_gate_conflict")
-    _require(selected_reference_approval is not None and gate.selected_reference_approval_identity == selected_reference_approval, "approval_not_selected")
-    approval = authority.load_typed(f"docs/experiments/reference_approval/{selected_reference_approval}.json", ReferenceApprovalRecord, selected_reference_approval)
-    _require(approval.approval_status == "approved", "approval_not_approved")
-    _require(approval.reference_method == "specification_anchored_with_limited_llm_evidence_audit", "approval_method_mismatch")
+def _validate_reference_package(authority: RepositoryAuthority, package: ReferenceApprovalRequest):
+    """Shared evidence checks; approval and execution stages add their own gates."""
     dataset, queries, draft = authority.load_frozen_inputs()
     query_hash = canonical_hash([x.to_record() for x in queries])
     draft_hash = canonical_hash([x.to_record() for x in draft])
-    _require(dataset.dataset_id == approval.dataset_id and dataset.version == approval.dataset_identity.version and dataset.dataset_hash == approval.dataset_identity.hash, "dataset_identity_mismatch")
-    _require(len({x.query_set_version for x in queries}) == 1 and queries[0].query_set_version == approval.query_set_identity.version and query_hash == approval.query_set_identity.hash, "query_identity_mismatch")
-    _require(len({x.ground_truth_version for x in draft}) == 1 and draft[0].ground_truth_version == approval.source_draft_identity.version and draft_hash == approval.source_draft_identity.hash, "source_draft_identity_mismatch")
-    _require(authority.methodology_identity() == approval.methodology_identity, "methodology_identity_mismatch")
-    _require(approval.engineering_identity.version == "v1" and authority.engineering_identity() == approval.engineering_identity.hash, "engineering_identity_mismatch")
-    reference = authority.load_reference_collection(approval.reference_artifact_path, approval.reference_identity.hash)
+    _require(dataset.dataset_id == package.dataset_id and dataset.version == package.dataset_identity.version and dataset.dataset_hash == package.dataset_identity.hash, "dataset_identity_mismatch")
+    _require(len({x.query_set_version for x in queries}) == 1 and queries[0].query_set_version == package.query_set_identity.version and query_hash == package.query_set_identity.hash, "query_identity_mismatch")
+    _require(len({x.ground_truth_version for x in draft}) == 1 and draft[0].ground_truth_version == package.source_draft_identity.version and draft_hash == package.source_draft_identity.hash, "source_draft_identity_mismatch")
+    _require(authority.methodology_identity() == package.methodology_identity, "methodology_identity_mismatch")
+    _require(package.engineering_identity.version == "v1" and authority.engineering_identity() == package.engineering_identity.hash, "engineering_identity_mismatch")
+    reference = authority.load_reference_collection(package.reference_artifact_path, package.reference_identity.hash)
     _require(len(reference) == 72 and {x.query_id for x in reference} == {x.query_id for x in queries}, "reference_population_mismatch")
     draft_by_query = {x.query_id: x for x in draft}
     for item in reference:
         source = draft_by_query[item.query_id]
         _require(item.source_draft_record_hash == canonical_hash(source.to_record()) and item.ground_truth_id == source.ground_truth_id and item.dataset_id == source.dataset_id and item.project_id == source.project_id and {canonical_hash(x.to_record()) for x in item.evidence} == {canonical_hash(x.to_record()) for x in source.evidence}, "reference_draft_derivation_mismatch")
-    _require(approval.reference_identity.version == reference[0].truth_version and all(x.truth_version == reference[0].truth_version for x in reference), "reference_version_mismatch")
-    prereqs = {x.role: x for x in approval.prerequisite_identities}
+    _require(package.reference_identity.version == reference[0].truth_version and all(x.truth_version == reference[0].truth_version for x in reference), "reference_version_mismatch")
+    prereqs = {x.role: x for x in package.prerequisite_identities}
     _require(REQUIRED_ROLES <= prereqs.keys(), "prerequisite_missing")
-    _require(all(x.identity != approval.identity_hash for x in approval.prerequisite_identities),
-             "approval_identity_cycle")
     completed_times = []
     _require(prereqs["preregistration"].identity == canonical_hash({"query_ids": list(PREREGISTERED_JAVA_IDS), "query_set_hash": query_hash, "addendum_d_sha256": authority.raw_checksum("docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md")}), "preregistration_mismatch")
     for role, item in prereqs.items():
@@ -472,12 +453,12 @@ def validate_formal_eligibility(
                     _require(audit.schema_version == "v2" and not audit.evidence_reviews,
                              "audit_response_failure_requires_resolution")
                     failure_audits.append((audit, prepared_record))
-                _require(audit.query_id == query_id and audit.ground_truth_id == query_by_id[query_id].ground_truth_id and audit.query_identity == canonical_hash(query_by_id[query_id].to_record()) and audit.dataset_identity == dataset.dataset_hash and audit.reference_identity == approval.reference_identity.hash and audit.preregistration_identity == prereqs["preregistration"].identity and audit.provenance_status == "valid" and audit.reply_complete, "audit_provenance_invalid")
+                _require(audit.query_id == query_id and audit.ground_truth_id == query_by_id[query_id].ground_truth_id and audit.query_identity == canonical_hash(query_by_id[query_id].to_record()) and audit.dataset_identity == dataset.dataset_hash and audit.reference_identity == package.reference_identity.hash and audit.preregistration_identity == prereqs["preregistration"].identity and audit.provenance_status == "valid" and audit.reply_complete, "audit_provenance_invalid")
                 accepted_audits.append(audit)
                 completed_times.append(_timestamp("audit ended_at", audit.ended_at))
             _validate_independent_sessions(tuple(accepted_audits))
             resolution_ids = set(audit_set.resolution_identities)
-            _require(resolution_ids == {item.hash for item in approval.resolution_identities},
+            _require(resolution_ids == {item.hash for item in package.resolution_identities},
                      "audit_resolution_mismatch")
             resolutions = {}
             for digest in resolution_ids:
@@ -497,25 +478,81 @@ def validate_formal_eligibility(
                 _validate_source_resolution(authority, audit, matching[0], prepared_record)
         elif role == "preregistration":
             _require(item.schema_version == "v1", "preregistration_schema_mismatch")
+            if item.artifact_path == "docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md":
+                authority.raw_bytes(item.artifact_path)
+            else:
+                authority.verify_artifact_checksum(item.artifact_path)
+                _require(canonical_hash(authority.json_record(item.artifact_path)) == item.identity,
+                         "preregistration_mismatch")
         else:
             prerequisite = authority.load_typed(item.artifact_path, ApprovalPrerequisiteRecord, item.identity)
             _require(prerequisite.role == role and prerequisite.status == "pass" and prerequisite.resolution_status == "closed", "prerequisite_not_passed")
             completed_times.append(_timestamp("prerequisite completed_at", prerequisite.completed_at))
             _require(authority.raw_checksum(prerequisite.output_artifact_path) == prerequisite.output_identity and authority.raw_checksum(prerequisite.provenance_artifact_path) == prerequisite.provenance_identity, "prerequisite_raw_hash_mismatch")
+            inputs = dict(prerequisite.input_identities)
+            _require(inputs.get("reference") == package.reference_identity.hash,
+                     "prerequisite_reference_mismatch")
+            if role == "chinese_coverage_audit":
+                _require(inputs.get("methodology_review") == prereqs["methodology_review"].identity,
+                         "chinese_methodology_binding_mismatch")
             if role == "final_data_qa":
-                inputs = dict(prerequisite.input_identities)
-                _require(inputs.get("reference") == approval.reference_identity.hash and inputs.get("java_evidence_audit_set") == prereqs["java_evidence_audit_set"].identity and inputs.get("chinese_coverage_audit") == prereqs["chinese_coverage_audit"].identity and inputs.get("methodology_review") == prereqs["methodology_review"].identity, "final_qa_inputs_mismatch")
-    _require(all(_timestamp("approved_at", approval.approved_at) >= finished for finished in completed_times),
-             "approval_precedes_prerequisite")
-    decision = authority.load_typed(approval.decision_artifact_path, ApprovalDecisionRecord, approval.decision_identity)
-    _require(decision.status == "approved" and decision.reference_identity == approval.reference_identity.hash and set(decision.prerequisite_identities) == {x.identity for x in approval.prerequisite_identities}, "approval_decision_mismatch")
-    if approval.resolution_identities:
-        _require("resolution_set" in prereqs and all(x.version == "v1" for x in approval.resolution_identities),
+                _require(inputs.get("reference") == package.reference_identity.hash and inputs.get("java_evidence_audit_set") == prereqs["java_evidence_audit_set"].identity and inputs.get("chinese_coverage_audit") == prereqs["chinese_coverage_audit"].identity and inputs.get("methodology_review") == prereqs["methodology_review"].identity, "final_qa_inputs_mismatch")
+    if package.resolution_identities:
+        _require("resolution_set" in prereqs and all(x.version == "v1" for x in package.resolution_identities),
                  "resolution_set_missing")
         resolution_set = authority.load_typed(prereqs["resolution_set"].artifact_path,
                                               ApprovalPrerequisiteRecord, prereqs["resolution_set"].identity)
         bound = {digest for role, digest in resolution_set.input_identities if role.startswith("resolution:")}
-        _require(bound == {x.hash for x in approval.resolution_identities}, "resolution_set_mismatch")
+        _require(bound == {x.hash for x in package.resolution_identities}, "resolution_set_mismatch")
+    return dataset, queries, draft, reference, completed_times
+
+
+def validate_reference_approval_readiness(
+    *, repository_root: str | Path, request: ReferenceApprovalRequest,
+) -> None:
+    """Validate an OPEN candidate package. Success grants no execution capability."""
+    _require(type(request) is ReferenceApprovalRequest, "readiness_request_invalid")
+    authority = RepositoryAuthority(repository_root)
+    authority.verify_frozen_checksums()
+    authority.verify_commit("12391233daa2149ead4f451e920b2e0d8a1a6beb")
+    gate = authority.load_current_gate()
+    validate_current_gate(authority, gate)
+    _require(gate.current_gate == "OPEN" and gate.selected_reference_approval_identity is None
+             and not gate.dry_run_eligible and not gate.formal_execution_eligible,
+             "readiness_gate_conflict")
+    _validate_reference_package(authority, request)
+
+
+def validate_formal_eligibility(
+    *, purpose: RunKind, repository_root: str | Path, requested_config: BenchmarkConfig,
+    selected_reference_approval: str | None, runtime_evidence: RuntimeMetadata,
+    code_commit: str, dry_run_receipt: str | None = None,
+) -> ValidatedExecutionInputs:
+    """Only this entry can issue DRY_RUN or FORMAL execution capability."""
+    _require(type(purpose) is RunKind and purpose in {RunKind.DRY_RUN, RunKind.FORMAL}, "purpose_not_formal")
+    _require(type(requested_config) is BenchmarkConfig, "config_invalid")
+    authority = RepositoryAuthority(repository_root)
+    authority.verify_frozen_checksums()
+    authority.verify_commit("12391233daa2149ead4f451e920b2e0d8a1a6beb")
+    gate = authority.load_current_gate()
+    validate_current_gate(authority, gate)
+    _require(gate.dry_run_eligible if purpose == RunKind.DRY_RUN else gate.formal_execution_eligible,
+             "current_gate_conflict")
+    _require(selected_reference_approval is not None and gate.selected_reference_approval_identity == selected_reference_approval, "approval_not_selected")
+    approval = authority.load_typed(f"docs/experiments/reference_approval/{selected_reference_approval}.json", ReferenceApprovalRecord, selected_reference_approval)
+    _require(approval.approval_status == "approved", "approval_not_approved")
+    _require(approval.reference_method == "specification_anchored_with_limited_llm_evidence_audit", "approval_method_mismatch")
+    dataset, queries, draft, reference, completed_times = _validate_reference_package(
+        authority, ReferenceApprovalRequest.from_approval(approval))
+    query_hash = canonical_hash([x.to_record() for x in queries])
+    draft_hash = canonical_hash([x.to_record() for x in draft])
+    prereqs = {x.role: x for x in approval.prerequisite_identities}
+    _require(all(x.identity != approval.identity_hash for x in approval.prerequisite_identities),
+             "approval_identity_cycle")
+    _require(all(_timestamp("approved_at", approval.approved_at) >= finished for finished in completed_times),
+             "approval_precedes_prerequisite")
+    decision = authority.load_typed(approval.decision_artifact_path, ApprovalDecisionRecord, approval.decision_identity)
+    _require(decision.status == "approved" and decision.reference_identity == approval.reference_identity.hash and set(decision.prerequisite_identities) == {x.identity for x in approval.prerequisite_identities}, "approval_decision_mismatch")
     closure = authority.load_typed("docs/experiments/reference_approval/phase62_closure.json", Phase62ClosureRecord)
     _require(closure.approved_reference_identity == approval.identity_hash and closure.final_data_qa_identity == prereqs["final_data_qa"].identity, "phase62_closure_mismatch")
     documentation_decision = authority.load_typed(closure.documentation_decision_artifact_path,

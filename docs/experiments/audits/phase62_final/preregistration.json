@@ -1,0 +1,18 @@
+{
+  "addendum_d_sha256": "2e276bbcc63a75ce12760d3728894860a9a7328bd040fd21c6ba2ce27c160375",
+  "query_ids": [
+    "et-bl-ja-01",
+    "et-bl-ja-02",
+    "et-cf-ja-01",
+    "et-cf-ja-02",
+    "et-dq-ja-01",
+    "et-dq-ja-02",
+    "et-fl-ja-01",
+    "et-fl-ja-02",
+    "et-mt-ja-01",
+    "et-mt-ja-02",
+    "et-sl-ja-01",
+    "et-sl-ja-02"
+  ],
+  "query_set_hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba"
+}

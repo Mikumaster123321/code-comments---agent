@@ -1,0 +1,8 @@
+{
+  "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+  "authority": "本任务用户明确授权，Codex 根据已归档审查和类型化审批执行阶段关闭",
+  "final_data_qa_identity": "e16d79a93c119a52d60437da97f5223bd8d7828f5e8cdba269f1187db7eff517",
+  "rationale": "Phase 6.2 参考证据及审批文档链已完成；四项 Low 的限定与两个 Resolution 保留。Phase 6.3 仅 ALLOWED BUT NOT STARTED；Formal RQ1–RQ4 NOT STARTED。执行仍须 committed authority、runtime/config/code 验证，正式 RQ 还须匹配 DryRunReceipt。",
+  "schema_version": "v1",
+  "status": "closed"
+}

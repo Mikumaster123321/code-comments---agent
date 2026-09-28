@@ -1,0 +1,33 @@
+{
+  "completed_at": "2026-09-28T06:11:25.918290+00:00",
+  "input_identities": [
+    [
+      "dataset",
+      "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7"
+    ],
+    [
+      "query_set",
+      "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba"
+    ],
+    [
+      "reference",
+      "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04"
+    ],
+    [
+      "review_package",
+      "ac86ceeeb9f4cac880689e7f3bd373be9d7a231c46e732c063f8116c25b05d58"
+    ],
+    [
+      "source_draft",
+      "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87"
+    ]
+  ],
+  "output_artifact_path": "docs/experiments/audits/phase62_final/methodology_review_output.md",
+  "output_identity": "89c352bed26b86558a2f26e9d1dc4be8ec7cd515f8a804433603fc5b2ca7272e",
+  "provenance_artifact_path": "docs/experiments/audits/phase62_final/methodology_review_provenance.json",
+  "provenance_identity": "b2c57316249e4b9fc4cde864ecbf59b1209956aa8ac9f6f77865996dcc89df21",
+  "resolution_status": "closed",
+  "role": "methodology_review",
+  "schema_version": "v1",
+  "status": "pass"
+}

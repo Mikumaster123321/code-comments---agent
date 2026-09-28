@@ -1,0 +1,9 @@
+{
+  "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+  "documentation_decision_artifact_path": "docs/experiments/audits/phase62_final/documentation_decision.json",
+  "documentation_decision_identity": "bca0d6ffc7eb895d8956d48d9954a6aad94f213876b2a02b5ca02596700141e1",
+  "final_data_qa_identity": "e16d79a93c119a52d60437da97f5223bd8d7828f5e8cdba269f1187db7eff517",
+  "repository_commit": "61cbc0db166e1577068101ffbe92b3b58e38e152",
+  "schema_version": "v1",
+  "status": "closed"
+}

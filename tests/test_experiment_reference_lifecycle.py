@@ -20,10 +20,10 @@ from experiments import (
     EvidenceAuditRecord, EvidenceAuditSet, EvidenceRecord, EvidenceReview, FormalGateEvidence,
     GroundTruthRecord, IdentityRef, Phase62ClosureRecord, Phase62DocumentationDecisionRecord,
     Population, PrerequisiteReference,
-    RawCapture, ReferenceApprovalRecord, ReferenceRecord, RepositoryAuthority, ResolutionRecord,
+    RawCapture, ReferenceApprovalRecord, ReferenceApprovalRequest, ReferenceRecord, RepositoryAuthority, ResolutionRecord,
     RetrievalUnit, RunKind, RuntimeMetadata, Strategy, VisiblePart, canonical_hash, canonical_json,
     derive_reference, load_ground_truth, load_queries, raw_sha256,
-    validate_formal_eligibility, write_lifecycle_artifact,
+    validate_formal_eligibility, validate_reference_approval_readiness, write_lifecycle_artifact,
 )
 from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
 from experiments.eligibility import _validate_source_resolution, validate_current_gate
@@ -285,9 +285,14 @@ def test_current_gate_navigation_strict_record_and_legacy_compatibility():
     assert current.schema_version == "v1"
     assert CurrentGateIndex.from_record(current.to_record()) == current
     assert validate_current_gate(authority, current) is None
-    assert current.current_gate == "OPEN"
-    assert current.selected_reference_approval_identity is None
-    assert current.dry_run_eligible is False
+    assert current.current_gate == "CLOSED"
+    approval_id = current.selected_reference_approval_identity
+    assert approval_id is not None
+    approval = authority.load_typed(f"docs/experiments/reference_approval/{approval_id}.json", ReferenceApprovalRecord, approval_id)
+    closure = authority.load_typed("docs/experiments/reference_approval/phase62_closure.json", Phase62ClosureRecord)
+    assert approval.approval_status == "approved"
+    assert closure.approved_reference_identity == approval.identity_hash
+    assert current.dry_run_eligible is True
     assert current.formal_execution_eligible is False
     legacy = CurrentGateIndex.from_record({**record, "current_phase": "6.2B.1",
                                            "phase_status": "IMPLEMENTED / QA PENDING"})
@@ -428,11 +433,13 @@ def synthetic_authority(tmp_path):
                                          "docs/experiments/Experiment_Protocol_Addendum_D_V3_1_0.md"),
                    PrerequisiteReference("java_evidence_audit_set", audit_set.identity_hash, "v1", True, audit_set_path)]
     other_identities = {}
-    for role in ("chinese_coverage_audit", "methodology_review", "final_data_qa"):
+    for role in ("methodology_review", "chinese_coverage_audit", "final_data_qa"):
         base = "docs/experiments/audits/synthetic-" + role
         output = _capture(root, base + "-output.txt", ("synthetic output " + role).encode())
         provenance = _capture(root, base + "-provenance.txt", ("synthetic provenance " + role).encode())
         inputs = (("reference", reference_hash),)
+        if role == "chinese_coverage_audit":
+            inputs += (("methodology_review", other_identities["methodology_review"]),)
         if role == "final_data_qa":
             inputs = (("reference", reference_hash), ("java_evidence_audit_set", audit_set.identity_hash),
                       ("chinese_coverage_audit", other_identities["chinese_coverage_audit"]),
@@ -520,6 +527,96 @@ def test_synthetic_dry_run_eligibility_uses_dev_population_without_receipt(synth
     assert validated.purpose is RunKind.DRY_RUN
     assert validated.config_identity == config.identity_hash
     assert validated.dry_run_receipt_path is None
+
+
+def _open_readiness_fixture(fixture):
+    root, _, approval_id, receipt, _, _ = fixture
+    authority = RepositoryAuthority(root)
+    approval = authority.load_typed(f"docs/experiments/reference_approval/{approval_id}.json", ReferenceApprovalRecord)
+    request = ReferenceApprovalRequest.from_approval(approval)
+    closure = authority.load_typed("docs/experiments/reference_approval/phase62_closure.json", Phase62ClosureRecord)
+    shutil.rmtree(root / "docs/experiments/reference_approval")
+    for path in (approval.decision_artifact_path, closure.documentation_decision_artifact_path, receipt):
+        (root / path).unlink()
+    _json(root, "docs/experiments/current_gate.json", _navigation_gate().to_record())
+    _git(root, "add", "-A", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic pre-approval stage")
+    return root, request
+
+
+def test_readiness_passes_without_approval_closure_or_execution_authority(synthetic_authority):
+    from experiments.eligibility import is_validator_issued
+    root, request = _open_readiness_fixture(synthetic_authority)
+    assert ReferenceApprovalRequest.from_record(request.to_record()) == request
+    assert not (root / "docs/experiments/reference_approval").exists()
+    result = validate_reference_approval_readiness(repository_root=root, request=request)
+    assert result is None
+    assert not is_validator_issued(result)
+    assert not is_validator_issued(request)
+    with pytest.raises(EligibilityError, match="current_gate_conflict"):
+        _validate_fixture(synthetic_authority)
+
+
+@pytest.mark.parametrize("role", ("methodology_review", "chinese_coverage_audit", "final_data_qa"))
+def test_readiness_missing_required_role_or_artifact_fails(synthetic_authority, role):
+    root, request = _open_readiness_fixture(synthetic_authority)
+    missing = replace(request, prerequisite_identities=tuple(x for x in request.prerequisite_identities if x.role != role))
+    with pytest.raises(EligibilityError, match="prerequisite_missing"):
+        validate_reference_approval_readiness(repository_root=root, request=missing)
+    path = next(x.artifact_path for x in request.prerequisite_identities if x.role == role)
+    _commit_change(root, path, remove=True)
+    with pytest.raises(EligibilityError, match="artifact_missing"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
+
+
+@pytest.mark.parametrize("field", ("dataset_identity", "query_set_identity", "source_draft_identity", "reference_identity"))
+def test_readiness_rejects_wrong_candidate_identity(synthetic_authority, field):
+    root, request = _open_readiness_fixture(synthetic_authority)
+    request = replace(request, **{field: replace(getattr(request, field), hash="0" * 64)})
+    with pytest.raises(EligibilityError, match="identity_mismatch"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
+
+
+def test_readiness_requires_explicit_closed_resolution_bindings(synthetic_authority):
+    root, request = _open_readiness_fixture(synthetic_authority)
+    authority = RepositoryAuthority(root)
+    audit_ref = next(x for x in request.prerequisite_identities if x.role == "java_evidence_audit_set")
+    audit_set = authority.load_typed(audit_ref.artifact_path, EvidenceAuditSet)
+    resolution = ResolutionRecord("v1", audit_set.accepted_attempt_identities[0][1], "source_verification", D,
+                                  "open", "synthetic required finding")
+    audit_set = replace(audit_set, resolution_identities=(resolution.identity_hash,))
+    _json(root, audit_ref.artifact_path, audit_set.to_record())
+    _json(root, f"docs/experiments/audits/resolutions/{resolution.identity_hash}.json", resolution.to_record())
+    qa_ref = next(x for x in request.prerequisite_identities if x.role == "final_data_qa")
+    qa = authority.load_typed(qa_ref.artifact_path, ApprovalPrerequisiteRecord)
+    qa = replace(qa, input_identities=tuple(
+        (role, audit_set.identity_hash if role == "java_evidence_audit_set" else digest)
+        for role, digest in qa.input_identities))
+    _json(root, qa_ref.artifact_path, qa.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic required resolution")
+    request = replace(request, prerequisite_identities=tuple(
+        replace(x, identity=audit_set.identity_hash) if x.role == audit_ref.role else
+        replace(x, identity=qa.identity_hash) if x.role == qa_ref.role else x
+        for x in request.prerequisite_identities))
+    with pytest.raises(EligibilityError, match="audit_resolution_mismatch"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
+    request = replace(request, resolution_identities=(IdentityRef("v1", resolution.identity_hash),))
+    with pytest.raises(EligibilityError, match="resolution_not_closed"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
+
+
+def test_readiness_rejects_closed_stage_and_uncommitted_review(synthetic_authority):
+    root, _, approval_id, _, _, _ = synthetic_authority
+    approval = RepositoryAuthority(root).load_typed(
+        f"docs/experiments/reference_approval/{approval_id}.json", ReferenceApprovalRecord)
+    with pytest.raises(EligibilityError, match="readiness_gate_conflict"):
+        validate_reference_approval_readiness(repository_root=root, request=ReferenceApprovalRequest.from_approval(approval))
+    root, request = _open_readiness_fixture(synthetic_authority)
+    path = next(x.artifact_path for x in request.prerequisite_identities if x.role == "methodology_review")
+    (root / path).write_bytes((root / path).read_bytes() + b" ")
+    with pytest.raises(EligibilityError, match="artifact_worktree_mismatch"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
 
 
 def test_missing_approval_or_receipt_fails_closed(synthetic_authority):
@@ -839,7 +936,46 @@ def test_frozen_data_and_prepared_packages_remain_historical():
     prepared = json.loads((ROOT / "docs/experiments/evidence_audit/prepared/manifest.json").read_text())
     assert len(prepared["entries"]) == 12
     assert all(json.loads((ROOT / "docs/experiments/evidence_audit/prepared/records" / (x["query_id"] + ".json")).read_text())["execution_status"] == "NOT_EXECUTED" for x in prepared["entries"])
-    assert not (ROOT / "docs/experiments/reference_approval").exists()
+    authority = RepositoryAuthority(ROOT)
+    closure = authority.load_typed("docs/experiments/reference_approval/phase62_closure.json", Phase62ClosureRecord)
+    approval = authority.load_typed(f"docs/experiments/reference_approval/{closure.approved_reference_identity}.json", ReferenceApprovalRecord, closure.approved_reference_identity)
+    assert approval.source_draft_identity.hash == canonical_hash([x.to_record() for x in sorted(drafts, key=lambda x: x.query_id)])
+    assert {x.hash for x in approval.resolution_identities} == {
+        "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37",
+        "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d",
+    }
+    assert not authority.load_current_gate().formal_execution_eligible
+
+
+def test_chinese_review_must_bind_methodology_review(synthetic_authority):
+    root, request = _open_readiness_fixture(synthetic_authority)
+    ref = next(x for x in request.prerequisite_identities if x.role == "chinese_coverage_audit")
+    review = RepositoryAuthority(root).load_typed(ref.artifact_path, ApprovalPrerequisiteRecord)
+    review = replace(review, input_identities=tuple(
+        (role, "0" * 64 if role == "methodology_review" else digest)
+        for role, digest in review.input_identities))
+    _json(root, ref.artifact_path, review.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic wrong methodology binding")
+    request = replace(request, prerequisite_identities=tuple(
+        replace(x, identity=review.identity_hash) if x.role == ref.role else x
+        for x in request.prerequisite_identities))
+    with pytest.raises(EligibilityError, match="chinese_methodology_binding_mismatch"):
+        validate_reference_approval_readiness(repository_root=root, request=request)
+
+
+@pytest.mark.parametrize("target", ("approval", "decision", "closure", "documentation"))
+def test_final_eligibility_still_requires_every_downstream_artifact(synthetic_authority, target):
+    root, _, identity, _, _, _ = synthetic_authority
+    paths = {
+        "approval": f"docs/experiments/reference_approval/{identity}.json",
+        "decision": "docs/experiments/audits/synthetic-decision.json",
+        "closure": "docs/experiments/reference_approval/phase62_closure.json",
+        "documentation": "docs/experiments/audits/synthetic-documentation-decision.json",
+    }
+    _commit_change(root, paths[target], remove=True)
+    with pytest.raises(EligibilityError, match="artifact_missing"):
+        _validate_fixture(synthetic_authority)
 
 
 def test_java_evidence_batch_reloads_from_disk_without_changing_draft_truth():

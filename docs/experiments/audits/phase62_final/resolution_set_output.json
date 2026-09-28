@@ -1,0 +1,11 @@
+{
+  "execution_outcome_retained": "CANNOT_ASSESS",
+  "gt_or_grade_changed": false,
+  "model_verdict_retained": "unavailable",
+  "resolution_identities": [
+    "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37",
+    "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d"
+  ],
+  "schema_version": "v1",
+  "status": "closed"
+}

@@ -6,6 +6,8 @@
 
 ## Current State
 
+- 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。全量回归 **813 passed**。本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure 及 `current_gate.json` 为当前权威索引。
+
 - Current Version: `3.0.1`
 - Current branch: `v3.1.0-dev`
 - V3.1.0: `DEVELOPMENT STARTED`
@@ -1110,13 +1112,15 @@
 - Java Evidence **12/12 EXECUTED**；合法结构化审查 **10/12**，模型 `SUPPORTS=10`、`QUESTIONS=0`；执行级 `CANNOT_ASSESS=2`，原因均 `response_contract_failure`，模型 verdict 均 unavailable，无伪造 `EvidenceReview`。这两条尚需 Addendum D §6 的独立源码核查，Reference Approval 不会将其误判为 SUPPORTS。
 - Query **72**、GT **72/72 drafted**、Evidence **134**；冻结 Query/GT/Grade/rationale/span/prepared input 未变。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**，Phase 6.3 **BLOCKED / NOT STARTED**。下一步仅为 **Phase 6.2 Final Closure**，一并处理中文覆盖、方法论审查、独立 Data QA、Reference Approval 和 Closure。
 
-### V3.1.0 Phase 6.2 — Final Closure 准备与外部方法论审查门禁
+### V3.1.0 Phase 6.2 — Final Approval Sequencing Fix + Closure
 
-- 两条 execution-level `CANNOT_ASSESS` 依据 Addendum D §6、Amendment 2 和工程规范 §4，以冻结源码、JavaAdapter、prepared evidence、现有 GT Grade/rationale 完成独立于非法模型回复的 `source_verification/closed`；逐项结论均为 `SUPPORTED_BY_FROZEN_SOURCE`。正式模型 verdict 仍 unavailable，执行 outcome 仍 `CANNOT_ASSESS`；Query/GT/Grade/准备输入未改。见 [Final Closure 准备报告](docs/development/Development_Report_V3_1_0_Phase_6_2_Final_Closure.md)。
-- 中文覆盖机械检查 **PASS**：12 条 Python Query，六类任务各 2 条，19 项证据，身份、配额、span/来源与泄漏合同测试通过；Addendum D §8 要求的**独立非机械直译语义核查 PENDING**，不能由机械检查替代。
-- Final Dataset QA 机械预审 **PASS**：Query 72、English test/dev/Chinese 48/12/12、GT 72/72 drafted、Evidence 134；冻结 dataset/query/draft/reference hash、checksum、12 条 Java audit artifact 验证通过。最终**独立** Data QA 尚未签发。
-- `experiments/eligibility.py` 已补足 v2 格式失败的合法 `source_verification` 入口：要求关闭的类型化决议、对应原始核验证据和冻结源码/Span/Grade 绑定；没有决议或证据不匹配仍拒绝。未将 v2 计入模型 `SUPPORTS`。测试覆盖两条真实核验证据及篡改拒绝。
-- [只读方法论审查包](docs/experiments/Methodology_Review_Package_V3_1_0_Phase_6_2_v1.md) 已准备；Addendum D §10.1 要求的外部独立方法论审查尚未发生，故 **EXTERNAL METHODOLOGY REVIEW REQUIRED BEFORE APPROVAL**。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。全量回归 `798 passed`，专项 `222 passed`，prepared verifier PASS。下一步先归档真实外部方法论审查，再完成中文独立语义核查与最终独立 Data QA，随后才可尝试正式审批和关闭。
+- Phase 6.2：**CLOSED**；Reference Approval / Approval Decision / Phase62 Closure / Documentation Decision 已按正式 schema 物化、重载并通过完整 authority 链验证。Phase 6.3 English Dev Dry Run：**ALLOWED BUT NOT STARTED**。Formal RQ1–RQ4：**NOT STARTED**，formal execution gate 仍为 false，DryRunReceipt 未创建。此前 OPEN/PENDING 条目均为历史阶段状态。
+- 根因 **LIFECYCLE STAGING / VALIDATOR ORDERING BUG** 已修复：`validate_reference_approval_readiness` 在 OPEN 阶段校验独立 `ReferenceApprovalRequest`，成功返回 None，不签发执行能力；现有 `validate_formal_eligibility` 仍只在 Approval、Decision、Closure、Documentation Decision、closed Gate 及运行配置/代码/环境成立后签发 Dry Run 能力，FORMAL 仍另需 receipt。全部 evidence 检查共用同一实现，未放松 committed authority。
+- 完整 Grok **4.7** 2026-09-28 外部审查原文已找回并归档，**PASS WITH NON-BLOCKING NOTES**，Critical / validity-blocking Medium / non-blocking Medium / Low = **0/0/0/4**，Reference recommendation **ELIGIBLE TO PROCEED**。12 条中文逐项原文机械归档，natural/alignment 全 PASS、translation risk 全 LOW；中文 artifact 绑定 methodology identity。既有独立 Data QA 完整 Final Answer 原字节归档，**PASS WITH NON-BLOCKING NOTES / ELIGIBLE**；其后续身份绑定明确记录为本轮物化，不伪称 reviewer 已签署未来 hash。
+- 两条 Java execution-level `CANNOT_ASSESS` 的既有源码 Resolution 明确绑定；仍 empty reviews / unavailable model verdict / response_contract_failure，没有转成 SUPPORTS。GT 仍 **72/72 drafted**、`reviewed_at=null`，未完成 delayed blind review。四项 Low 的限制与处置全部保留，不阻断审批。Query **72**、Evidence **134**、Grade2/Grade1 **72/62**；Java **12 executed / 10 structured SUPPORTS / 2 execution CANNOT_ASSESS**。
+- 真实 OPEN candidate readiness **PASS**；post-closure `validate_formal_eligibility(purpose=DRY_RUN)` **PASS**，实际 CPython 3.12.14 / torch 2.8.0 / transformers 4.56.2 离线环境；FORMAL 请求按预期拒绝。仅验证资格，未调用 BenchmarkRunner/Retriever/E5 或执行 Query。为保留提交态证据规则，提交前验证在仓库外临时 Git 副本完成；主仓库只做一次原子提交。
+- 验证：初始基线 **798 passed**；prepared verifier **PASS**；专项含离线 LLM smoke **243 passed**；全量候选回归 **813 passed**。新增 15 项安全/生命周期测试；没有 skip/xfail/删测试/放宽断言。详见 [Final Closure report](docs/development/Development_Report_V3_1_0_Phase_6_2_Final_Closure.md)，全部正式 identities 与源文 provenance 均在 `docs/experiments/audits/phase62_final/`。
+- 冻结 Protocol/Addenda/Specification、Query/GT/Grade/rationale/span、准备输入与 raw replies 不变；未重做 Java Audit、外部审查或独立 Data QA；`docs/thesis/` 未触碰。下一动作仅 **Phase 6.3 English Dev Dry Run**，本轮不执行，Formal RQ 与 V3.2 未开始。
 
 ## Planned Version Roadmap
 
