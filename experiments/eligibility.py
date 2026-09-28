@@ -21,7 +21,7 @@ from .schemas import (
     DatasetManifest, GroundTruthRecord, QueryRecord, dataset_manifest_from_record,
     RuntimeMetadata, ground_truth_from_record, query_from_record, SchemaValidationError, _exact, _timestamp,
 )
-from .serialization import canonical_hash, normalize_relative_path
+from .serialization import canonical_hash, normalize_lf, normalize_relative_path
 
 
 class EligibilityError(ValueError):
@@ -330,6 +330,41 @@ def _validate_independent_sessions(audits: tuple[EvidenceAuditRecord, ...]) -> N
     _require(len(platform_ids) == len(set(platform_ids)), "audit_platform_session_reused")
 
 
+def _validate_source_resolution(authority: RepositoryAuthority, audit: EvidenceAuditRecord,
+                                resolution: ResolutionRecord, prepared_record: Mapping[str, Any]) -> None:
+    _require(resolution.status == "closed" and resolution.disposition == "source_verification" and
+             resolution.target_identity == audit.identity_hash, "audit_response_failure_requires_resolution")
+    path = f"docs/experiments/audits/source_resolution/{audit.query_id}.json"
+    authority.verify_artifact_checksum(path)
+    _require(authority.raw_checksum(path) == resolution.evidence_identity, "audit_resolution_evidence_mismatch")
+    evidence = authority.json_record(path)
+    _require(evidence.get("query_id") == audit.query_id and
+             evidence.get("target_execution_identity") == audit.identity_hash and
+             evidence.get("prepared_input_sha256") == audit.prepared_input_hash and
+             evidence.get("overall_resolution") == "SUPPORTED_BY_FROZEN_SOURCE" and
+             evidence.get("gt_or_grade_changed") is False, "audit_resolution_evidence_mismatch")
+    checks = evidence.get("checks")
+    expected = {item["evidence_id"]: item["original_identity"]
+                for item in prepared_record["evidence_reviews"]}
+    _require(type(checks) is list and len(checks) == len(expected) and
+             {item.get("evidence_id") for item in checks if type(item) is dict} == set(expected),
+             "audit_resolution_evidence_mismatch")
+    for check in checks:
+        original = expected[check["evidence_id"]]
+        _require(check.get("verdict") == "SUPPORTED_BY_FROZEN_SOURCE" and
+                 check.get("relative_path") == original["relative_path"] and
+                 check.get("symbol_id") == original["symbol_id"] and
+                 check.get("span") == original["span"] and
+                 check.get("grade") == original["grade"], "audit_resolution_evidence_mismatch")
+        source_path = "docs/experiments/datasets/v1/fixtures/desk-queue/" + original["relative_path"]
+        _require(authority.raw_checksum(source_path) == check.get("source_sha256"),
+                 "audit_resolution_source_mismatch")
+        source = normalize_lf(authority.raw_bytes(source_path).decode("utf-8"))
+        span = original["span"]
+        _require(source[span["start_offset"]:span["end_offset"]] == check.get("source_excerpt"),
+                 "audit_resolution_source_mismatch")
+
+
 _ISSUED: weakref.WeakSet[ValidatedExecutionInputs] = weakref.WeakSet()
 
 
@@ -421,27 +456,45 @@ def validate_formal_eligibility(
             prepared_by_id = {x["query_id"]: x for x in prepared["entries"]}
             query_by_id = {x.query_id: x for x in queries}
             accepted_audits: list[EvidenceAuditRecord] = []
+            failure_audits: list[tuple[EvidenceAuditRecord, Mapping[str, Any]]] = []
             paths = dict(audit_set.accepted_attempt_paths)
             for query_id, identity in audit_set.accepted_attempt_identities:
                 audit = authority.load_audit(paths[query_id], identity, prepared_by_id[query_id])
+                prepared_record = authority.json_record("docs/experiments/evidence_audit/prepared/records/" + query_id + ".json")
                 expected_reviews = {
                     item["evidence_id"]: canonical_hash({"query_id": query_id, "original_identity": item["original_identity"]})
-                    for item in authority.json_record("docs/experiments/evidence_audit/prepared/records/" + query_id + ".json")["evidence_reviews"]
+                    for item in prepared_record["evidence_reviews"]
                 }
-                _require(audit.schema_version == "v1", "audit_response_failure_requires_resolution")
-                _require({x.evidence_id: x.evidence_identity for x in audit.evidence_reviews} == expected_reviews, "audit_evidence_binding_mismatch")
+                if audit.schema_version == "v1":
+                    _require({x.evidence_id: x.evidence_identity for x in audit.evidence_reviews} == expected_reviews,
+                             "audit_evidence_binding_mismatch")
+                else:
+                    _require(audit.schema_version == "v2" and not audit.evidence_reviews,
+                             "audit_response_failure_requires_resolution")
+                    failure_audits.append((audit, prepared_record))
                 _require(audit.query_id == query_id and audit.ground_truth_id == query_by_id[query_id].ground_truth_id and audit.query_identity == canonical_hash(query_by_id[query_id].to_record()) and audit.dataset_identity == dataset.dataset_hash and audit.reference_identity == approval.reference_identity.hash and audit.preregistration_identity == prereqs["preregistration"].identity and audit.provenance_status == "valid" and audit.reply_complete, "audit_provenance_invalid")
                 accepted_audits.append(audit)
                 completed_times.append(_timestamp("audit ended_at", audit.ended_at))
             _validate_independent_sessions(tuple(accepted_audits))
             resolution_ids = set(audit_set.resolution_identities)
-            _require(resolution_ids == {item.hash for item in approval.resolution_identities} and
-                     resolution_ids == {digest for audit in accepted_audits for digest in audit.resolution_identities},
+            _require(resolution_ids == {item.hash for item in approval.resolution_identities},
                      "audit_resolution_mismatch")
+            resolutions = {}
             for digest in resolution_ids:
                 resolution = authority.load_typed(f"docs/experiments/audits/resolutions/{digest}.json",
                                                   ResolutionRecord, digest)
                 _require(resolution.status == "closed", "resolution_not_closed")
+                resolutions[digest] = resolution
+            inherited = {digest for audit in accepted_audits for digest in audit.resolution_identities}
+            failure_resolutions = {digest for digest, resolution in resolutions.items()
+                                   if any(resolution.target_identity == audit.identity_hash
+                                          for audit, _ in failure_audits)}
+            _require(resolution_ids == inherited | failure_resolutions, "audit_resolution_mismatch")
+            for audit, prepared_record in failure_audits:
+                matching = [resolution for resolution in resolutions.values()
+                            if resolution.target_identity == audit.identity_hash]
+                _require(len(matching) == 1, "audit_response_failure_requires_resolution")
+                _validate_source_resolution(authority, audit, matching[0], prepared_record)
         elif role == "preregistration":
             _require(item.schema_version == "v1", "preregistration_schema_mismatch")
         else:

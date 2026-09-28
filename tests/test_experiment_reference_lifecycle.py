@@ -26,11 +26,59 @@ from experiments import (
     validate_formal_eligibility, write_lifecycle_artifact,
 )
 from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
-from experiments.eligibility import validate_current_gate
+from experiments.eligibility import _validate_source_resolution, validate_current_gate
 from experiments.serialization import canonical_jsonl
 
 ROOT = Path(__file__).parents[1]
 D = "a" * 64
+
+
+@pytest.mark.parametrize("query_id", ("et-bl-ja-01", "et-fl-ja-02"))
+def test_closed_execution_failure_resolution_checks_frozen_source(tmp_path, query_id):
+    source_root = ROOT / "docs/experiments"
+    root = tmp_path / "resolution-repository"
+    root.mkdir()
+    audit_path = None
+    for candidate in (source_root / "evidence_audit/executions").glob("*/record.json"):
+        if json.loads(candidate.read_text())["query_id"] == query_id:
+            audit_path = candidate
+            break
+    assert audit_path is not None
+    audit = EvidenceAuditRecord.from_record(json.loads(audit_path.read_text()))
+    resolution_path = next(path for path in (source_root / "audits/resolutions").glob("*.json")
+                           if json.loads(path.read_text())["target_identity"] == audit.identity_hash)
+    resolution = ResolutionRecord.from_record(json.loads(resolution_path.read_text()))
+    evidence_path = source_root / "audits/source_resolution" / f"{query_id}.json"
+    prepared_path = source_root / "evidence_audit/prepared/records" / f"{query_id}.json"
+    for path in (resolution_path, resolution_path.with_name(resolution_path.name + ".sha256"),
+                 evidence_path, evidence_path.with_name(evidence_path.name + ".sha256"),
+                 prepared_path):
+        _write(root, path.relative_to(ROOT).as_posix(), path.read_bytes())
+    evidence = json.loads(evidence_path.read_text())
+    for check in evidence["checks"]:
+        path = source_root / "datasets/v1/fixtures/desk-queue" / check["relative_path"]
+        _write(root, path.relative_to(ROOT).as_posix(), path.read_bytes())
+    _git(root, "init", "-q")
+    _git(root, "config", "user.name", "Synthetic Test")
+    _git(root, "config", "user.email", "synthetic@example.invalid")
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "frozen source resolution fixture")
+    authority = RepositoryAuthority(root)
+    prepared = json.loads(prepared_path.read_text())
+    assert authority.load_typed(resolution_path.relative_to(ROOT).as_posix(),
+                                ResolutionRecord, resolution.identity_hash) == resolution
+    _validate_source_resolution(authority, audit, resolution, prepared)
+    with pytest.raises(EligibilityError, match="audit_response_failure_requires_resolution"):
+        _validate_source_resolution(authority, audit, replace(resolution, target_identity="0" * 64), prepared)
+    evidence["checks"][0]["source_excerpt"] = "incorrect source"
+    new_raw = (json.dumps(evidence, ensure_ascii=False, indent=2) + "\n").encode()
+    new_hash = _write(root, evidence_path.relative_to(ROOT).as_posix(), new_raw)
+    _write(root, evidence_path.relative_to(ROOT).as_posix() + ".sha256", (new_hash + "\n").encode())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "tampered source resolution")
+    with pytest.raises(EligibilityError, match="audit_resolution_source_mismatch"):
+        _validate_source_resolution(RepositoryAuthority(root), audit,
+                                    replace(resolution, evidence_identity=new_hash), prepared)
 
 
 def _git(root, *args):

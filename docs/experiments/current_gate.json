@@ -7,14 +7,17 @@
   "dry_run_eligible": false,
   "formal_execution_eligible": false,
   "blockers": [
-    "Java Evidence Audit: 12/12 executions; 10 structured-valid SUPPORTS, 2 execution-level CANNOT_ASSESS requiring independent source resolution",
+    "Java Evidence Audit: 12/12 executions; 10 structured-valid SUPPORTS, 2 execution-level CANNOT_ASSESS with source_verification resolutions closed; execution outcomes unchanged",
+    "External independent methodology review: REQUIRED / NOT YET ARCHIVED",
+    "Chinese non-mechanical-translation independent semantic review: PENDING",
+    "Final independent Data QA: PENDING; mechanical preflight PASS",
     "Reference Approval: NOT CREATED / NOT APPROVED",
     "Phase 6.2 approval gate: OPEN",
     "Phase 6.3: BLOCKED / NOT STARTED",
     "Formal RQ1–RQ4: NOT ELIGIBLE / NOT STARTED",
     "V3.2: NOT STARTED"
   ],
-  "next_allowed_action": "Phase 6.2 Final Closure: independent source resolution, Chinese coverage, methodology review, final Data QA, Reference Approval and closure; no Phase 6.3 execution",
+  "next_allowed_action": "Obtain and archive external methodology review of the versioned read-only package; then complete Chinese independent semantic audit and final independent Data QA before attempting Reference Approval; no Phase 6.3 execution",
   "authoritative_documents": [
     "docs/experiments/Experiment_Protocol_V3_1_0.md",
     "docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md",
@@ -24,7 +27,9 @@
     "docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md",
     "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",
     "docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_2_V3_1_0.md",
+    "docs/experiments/Methodology_Review_Package_V3_1_0_Phase_6_2_v1.md",
+    "docs/development/Development_Report_V3_1_0_Phase_6_2_Final_Closure.md",
     "docs/qa/QA_Report_V3_1_0_Phase_6_2B_1.md"
   ],
-  "updated_by_commit": "585e54c282e057440a417bdf41cc25c775110b2b"
+  "updated_by_commit": "95de94caa5f26793804248585c55ffee24d4dd06"
 }

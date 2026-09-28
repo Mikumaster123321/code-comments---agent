@@ -1110,6 +1110,14 @@
 - Java Evidence **12/12 EXECUTED**；合法结构化审查 **10/12**，模型 `SUPPORTS=10`、`QUESTIONS=0`；执行级 `CANNOT_ASSESS=2`，原因均 `response_contract_failure`，模型 verdict 均 unavailable，无伪造 `EvidenceReview`。这两条尚需 Addendum D §6 的独立源码核查，Reference Approval 不会将其误判为 SUPPORTS。
 - Query **72**、GT **72/72 drafted**、Evidence **134**；冻结 Query/GT/Grade/rationale/span/prepared input 未变。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**，Phase 6.3 **BLOCKED / NOT STARTED**。下一步仅为 **Phase 6.2 Final Closure**，一并处理中文覆盖、方法论审查、独立 Data QA、Reference Approval 和 Closure。
 
+### V3.1.0 Phase 6.2 — Final Closure 准备与外部方法论审查门禁
+
+- 两条 execution-level `CANNOT_ASSESS` 依据 Addendum D §6、Amendment 2 和工程规范 §4，以冻结源码、JavaAdapter、prepared evidence、现有 GT Grade/rationale 完成独立于非法模型回复的 `source_verification/closed`；逐项结论均为 `SUPPORTED_BY_FROZEN_SOURCE`。正式模型 verdict 仍 unavailable，执行 outcome 仍 `CANNOT_ASSESS`；Query/GT/Grade/准备输入未改。见 [Final Closure 准备报告](docs/development/Development_Report_V3_1_0_Phase_6_2_Final_Closure.md)。
+- 中文覆盖机械检查 **PASS**：12 条 Python Query，六类任务各 2 条，19 项证据，身份、配额、span/来源与泄漏合同测试通过；Addendum D §8 要求的**独立非机械直译语义核查 PENDING**，不能由机械检查替代。
+- Final Dataset QA 机械预审 **PASS**：Query 72、English test/dev/Chinese 48/12/12、GT 72/72 drafted、Evidence 134；冻结 dataset/query/draft/reference hash、checksum、12 条 Java audit artifact 验证通过。最终**独立** Data QA 尚未签发。
+- `experiments/eligibility.py` 已补足 v2 格式失败的合法 `source_verification` 入口：要求关闭的类型化决议、对应原始核验证据和冻结源码/Span/Grade 绑定；没有决议或证据不匹配仍拒绝。未将 v2 计入模型 `SUPPORTS`。测试覆盖两条真实核验证据及篡改拒绝。
+- [只读方法论审查包](docs/experiments/Methodology_Review_Package_V3_1_0_Phase_6_2_v1.md) 已准备；Addendum D §10.1 要求的外部独立方法论审查尚未发生，故 **EXTERNAL METHODOLOGY REVIEW REQUIRED BEFORE APPROVAL**。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。全量回归 `798 passed`，专项 `222 passed`，prepared verifier PASS。下一步先归档真实外部方法论审查，再完成中文独立语义核查与最终独立 Data QA，随后才可尝试正式审批和关闭。
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released
