@@ -552,6 +552,54 @@ def test_audit_raw_bytes_and_prepared_separation(synthetic_authority):
         RepositoryAuthority(root).load_audit(path, audit.identity_hash)
 
 
+def test_response_contract_failure_is_execution_outcome_not_model_review(synthetic_authority):
+    root = synthetic_authority[0]
+    path = "docs/experiments/evidence_audit/executions/synthetic-et-bl-ja-01/record.json"
+    original = RepositoryAuthority(root).load_typed(path, EvidenceAuditRecord)
+    valid_raw = RepositoryAuthority(root).raw_bytes(original.raw_reply.artifact_path)
+    raw = b'{"query_id":"et-bl-ja-01","evidence_reviews":['
+    reply = _capture(root, original.raw_reply.artifact_path, raw)
+    transcription = _capture(root, original.transcription_capture.artifact_path,
+                             canonical_json({"model_verdict": "unavailable",
+                                             "execution_outcome": "CANNOT_ASSESS",
+                                             "failure_reason": "response_contract_failure"}).encode())
+    failure = replace(original, schema_version="v2", raw_reply=reply,
+                      visible_final=VisiblePart(original.visible_final.availability, reply),
+                      evidence_reviews=(), transcription_hash=transcription.raw_sha256,
+                      transcription_capture=transcription, overall_verdict="CANNOT_ASSESS",
+                      model_verdict="unavailable", execution_outcome="CANNOT_ASSESS",
+                      failure_reason="response_contract_failure")
+    assert failure.evidence_reviews == ()
+    assert EvidenceAuditRecord.from_record(failure.to_record()) == failure
+    assert original.to_record().get("model_verdict") is None
+    assert EvidenceAuditRecord.from_record(original.to_record()).identity_hash == original.identity_hash
+    for changes in ({"model_verdict": "SUPPORTS"}, {"evidence_reviews": original.evidence_reviews},
+                    {"execution_outcome": "SUPPORTS"}, {"failure_reason": None}):
+        with pytest.raises(ValueError, match="v2 response failure"):
+            replace(failure, **changes)
+    _json(root, path, failure.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic response failure")
+    authority = RepositoryAuthority(root)
+    assert authority.load_audit(path, failure.identity_hash).identity_hash == failure.identity_hash
+    assert authority.raw_checksum(reply.artifact_path) == raw_sha256(raw)
+    _write(root, reply.artifact_path, canonical_json({"query_id": "et-bl-ja-01"}).encode())
+    with pytest.raises(EligibilityError, match="artifact_worktree_mismatch"):
+        RepositoryAuthority(root).load_audit(path, failure.identity_hash)
+    valid_reply = original.raw_reply
+    _write(root, valid_reply.artifact_path, valid_raw)
+    parseable = replace(failure, raw_reply=RawCapture(valid_reply.artifact_path,
+                                                      raw_sha256((root / valid_reply.artifact_path).read_bytes())),
+                        visible_final=VisiblePart(failure.visible_final.availability,
+                                                  RawCapture(valid_reply.artifact_path,
+                                                             raw_sha256((root / valid_reply.artifact_path).read_bytes()))))
+    _json(root, path, parseable.to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic parseable failure claim")
+    with pytest.raises(EligibilityError, match="audit_failure_response_is_valid"):
+        RepositoryAuthority(root).load_audit(path, parseable.identity_hash)
+
+
 def test_audit_contract_rejects_overall_alias_and_retry_errors(synthetic_authority):
     root = synthetic_authority[0]
     authority = RepositoryAuthority(root)
@@ -755,12 +803,18 @@ def test_java_evidence_batch_reloads_from_disk_without_changing_draft_truth():
     assert len(references) == 72
     reference_identity = canonical_hash([item.identity_record() for item in references])
     expected_ids = {
-        "et-bl-ja-02", "et-cf-ja-01", "et-cf-ja-02", "et-dq-ja-01", "et-dq-ja-02",
-        "et-fl-ja-01", "et-mt-ja-01", "et-mt-ja-02", "et-sl-ja-01", "et-sl-ja-02",
+        "et-bl-ja-01", "et-bl-ja-02", "et-cf-ja-01", "et-cf-ja-02", "et-dq-ja-01", "et-dq-ja-02",
+        "et-fl-ja-01", "et-fl-ja-02", "et-mt-ja-01", "et-mt-ja-02", "et-sl-ja-01", "et-sl-ja-02",
     }
     directories = sorted(path for path in execution_root.iterdir() if path.is_dir())
-    assert len(directories) == len(expected_ids) == 10
+    assert len(directories) == len(expected_ids) == 12
     seen = set()
+    structured_count = 0
+    failure_count = 0
+    failure_hashes = {
+        "et-bl-ja-01": "c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56",
+        "et-fl-ja-02": "e48cbf81c06e418e24ded5f344cb8937e7afce08fc5ece1daa47e466b1730e01",
+    }
     for directory in directories:
         checksums = {}
         for line in (directory / "checksums.sha256").read_text().splitlines():
@@ -774,21 +828,40 @@ def test_java_evidence_batch_reloads_from_disk_without_changing_draft_truth():
         assert audit.query_id in expected_ids - seen
         seen.add(audit.query_id)
         assert audit.reference_identity == reference_identity
-        assert audit.attempt_number in {1, 2, 3}
+        assert audit.attempt_number in {1, 2, 3, 4}
         assert audit.supersedes_attempt == (audit.attempt_number - 1 if audit.attempt_number > 1 else None)
         assert audit.raw_reply.raw_sha256 == raw_sha256((directory / "raw-reply.txt").read_bytes())
         assert audit.visible_final.capture == audit.raw_reply
         assert audit.visible_thinking.availability.status == "unavailable"
         prepared = json.loads((ROOT / "docs/experiments/evidence_audit/prepared/records" / (audit.query_id + ".json")).read_bytes())
         assert audit.prepared_input_hash == raw_sha256((directory / "sent-input.txt").read_bytes()) == prepared["input_sha256"]
-        parsed, normalized = parse_external_evidence_response((directory / "raw-reply.txt").read_bytes(), audit.query_id, prepared["evidence_reviews"])
-        assert parsed == json.loads((directory / "external-parsed-response.json").read_bytes())
-        assert [item.to_record() for item in normalized] == json.loads((directory / "normalized-reviews.json").read_bytes())
-        assert audit.evidence_reviews == normalized
-        assert audit.overall_verdict == parsed["overall_status"]
+        if audit.schema_version == "v2":
+            failure_count += 1
+            assert audit.query_id in {"et-bl-ja-01", "et-fl-ja-02"}
+            assert audit.model_verdict == "unavailable"
+            assert audit.execution_outcome == audit.overall_verdict == "CANNOT_ASSESS"
+            assert audit.failure_reason == "response_contract_failure"
+            assert audit.evidence_reviews == ()
+            assert audit.raw_reply.raw_sha256 == failure_hashes[audit.query_id]
+            with pytest.raises(ValueError):
+                parse_external_evidence_response((directory / "raw-reply.txt").read_bytes(), audit.query_id, prepared["evidence_reviews"])
+        else:
+            structured_count += 1
+            parsed, normalized = parse_external_evidence_response((directory / "raw-reply.txt").read_bytes(), audit.query_id, prepared["evidence_reviews"])
+            assert parsed == json.loads((directory / "external-parsed-response.json").read_bytes())
+            assert [item.to_record() for item in normalized] == json.loads((directory / "normalized-reviews.json").read_bytes())
+            assert audit.evidence_reviews == normalized
+            assert audit.overall_verdict == parsed["overall_status"] == "SUPPORTS"
         assert audit.transcription_hash == raw_sha256((directory / "transcription.json").read_bytes())
         history = json.loads((directory / "failed-attempts.json").read_bytes())
-        assert history["accepted_attempt_number"] == audit.attempt_number
-        assert {item["attempt_number"] for item in history["other_capture_attempts"]} >= set(range(1, audit.attempt_number))
-        assert all(item["formal_audit_created"] is False for item in history["other_capture_attempts"])
+        if audit.schema_version == "v2":
+            assert history["materialized_attempt_number"] == 4
+            previous = history["prior_capture_attempts"]
+        else:
+            assert history["accepted_attempt_number"] == audit.attempt_number
+            previous = history["other_capture_attempts"]
+        assert {item["attempt_number"] for item in previous} >= set(range(1, audit.attempt_number))
+        assert all(item["formal_audit_created"] is False for item in previous)
     assert seen == expected_ids
+    assert structured_count == 10
+    assert failure_count == 2

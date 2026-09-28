@@ -233,22 +233,37 @@ class RepositoryAuthority:
             _require(audit.visible_final.capture.raw_sha256 == audit.raw_reply.raw_sha256,
                      "audit_final_raw_reply_mismatch")
             prepared_record = self.json_record("docs/experiments/evidence_audit/prepared/records/" + audit.query_id + ".json")
-            try:
-                _, normalized = parse_external_evidence_response(
-                    self.raw_bytes(audit.raw_reply.artifact_path), audit.query_id,
-                    prepared_record["evidence_reviews"])
-            except (ValueError, TypeError, KeyError):
-                raise EligibilityError("audit_external_response_invalid") from None
-            _require(audit.overall_verdict == ("QUESTIONS" if any(x.verdict == "QUESTIONS" for x in normalized)
-                                               else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in normalized)
-                                               else "SUPPORTS"), "audit_final_completeness_mismatch")
-            _require(tuple(audit.evidence_reviews) == normalized, "audit_reply_reviews_mismatch")
+            raw_reply = self.raw_bytes(audit.raw_reply.artifact_path)
+            if audit.schema_version == "v2":
+                try:
+                    parse_external_evidence_response(raw_reply, audit.query_id,
+                                                     prepared_record["evidence_reviews"])
+                except (ValueError, TypeError, KeyError):
+                    pass
+                else:
+                    raise EligibilityError("audit_failure_response_is_valid")
+            else:
+                try:
+                    _, normalized = parse_external_evidence_response(
+                        raw_reply, audit.query_id, prepared_record["evidence_reviews"])
+                except (ValueError, TypeError, KeyError):
+                    raise EligibilityError("audit_external_response_invalid") from None
+                _require(audit.overall_verdict == ("QUESTIONS" if any(x.verdict == "QUESTIONS" for x in normalized)
+                                                   else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in normalized)
+                                                   else "SUPPORTS"), "audit_final_completeness_mismatch")
+                _require(tuple(audit.evidence_reviews) == normalized, "audit_reply_reviews_mismatch")
             try:
                 transcription = json.loads(self.raw_bytes(audit.transcription_capture.artifact_path))
             except (UnicodeError, json.JSONDecodeError):
                 raise EligibilityError("audit_transcription_invalid") from None
-            _require(transcription == [item.to_record() for item in audit.evidence_reviews],
-                     "audit_transcription_mismatch")
+            if audit.schema_version == "v2":
+                _require(transcription == {"model_verdict": "unavailable",
+                                           "execution_outcome": "CANNOT_ASSESS",
+                                           "failure_reason": "response_contract_failure"},
+                         "audit_transcription_mismatch")
+            else:
+                _require(transcription == [item.to_record() for item in audit.evidence_reviews],
+                         "audit_transcription_mismatch")
         return audit
 
     def methodology_identity(self) -> str:
@@ -413,6 +428,7 @@ def validate_formal_eligibility(
                     item["evidence_id"]: canonical_hash({"query_id": query_id, "original_identity": item["original_identity"]})
                     for item in authority.json_record("docs/experiments/evidence_audit/prepared/records/" + query_id + ".json")["evidence_reviews"]
                 }
+                _require(audit.schema_version == "v1", "audit_response_failure_requires_resolution")
                 _require({x.evidence_id: x.evidence_identity for x in audit.evidence_reviews} == expected_reviews, "audit_evidence_binding_mismatch")
                 _require(audit.query_id == query_id and audit.ground_truth_id == query_by_id[query_id].ground_truth_id and audit.query_identity == canonical_hash(query_by_id[query_id].to_record()) and audit.dataset_identity == dataset.dataset_hash and audit.reference_identity == approval.reference_identity.hash and audit.preregistration_identity == prereqs["preregistration"].identity and audit.provenance_status == "valid" and audit.reply_complete, "audit_provenance_invalid")
                 accepted_audits.append(audit)

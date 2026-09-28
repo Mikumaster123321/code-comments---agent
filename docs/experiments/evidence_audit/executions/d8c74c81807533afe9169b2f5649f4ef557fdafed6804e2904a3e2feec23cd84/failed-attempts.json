@@ -1,0 +1,35 @@
+{
+  "materialized_attempt_number": 4,
+  "prior_capture_attempts": [
+    {
+      "attempt_number": 1,
+      "classification": "historical failed capture",
+      "external_file_name": "et-fl-ja-02-native-copy-all-retry.txt",
+      "formal_audit_created": false,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "402599f67fc7ccd5a455a82f58a4b9e9223f77f63a92a88e425604c0b8349a3f"
+    },
+    {
+      "attempt_number": 2,
+      "classification": "RECAPTURE_REQUIRED",
+      "external_file_name": "et-fl-ja-02-attempt2-native-copy-all.txt",
+      "formal_audit_created": false,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "9b9d0a4da5cc9f4bc69352b36a3d3d75e38a40339febec4668fce1668543ec1c",
+      "reason": "Complete Final Answer visibly has prose outside JSON, so whole-final parse fails; code block alone cannot be accepted."
+    },
+    {
+      "attempt_number": 3,
+      "classification": "BLOCKED",
+      "external_file_name": "et-fl-ja-02-attempt3-native-copy-all.txt",
+      "formal_audit_created": false,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "2ecc21e2398404e58ffb5caff0bc80565e67babca7c5241afcee8d5e58506e81",
+      "reason": "Second fresh recapture again has prose before JSON; whole Final Answer fails frozen JSON contract. Two-attempt cap exhausted."
+    }
+  ],
+  "query_id": "et-fl-ja-02",
+  "source_capture_manifest_sha256": "78371914cce86de46b368586a4d43736897b8930bfde9b221f603fdbfc22141e",
+  "source_progress_sha256": "7c7157a8671823fc6e3fe1e67ae10d28bc1e3b7d65d6d82cd29c050d757a9c43",
+  "source_stage1_sha256": "ea5f82101bebdc7a2be24df41675aa13b1e537bcf72edb9c959e4d0b7b995d88"
+}

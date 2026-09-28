@@ -66,3 +66,18 @@ Formal Java Evidence Audit **0/12**；Reference Approval、Phase 6.2 Closure、D
 写盘重载对 10 条逐一检查 schema、identity、各 blob hash、raw bytes、external→internal normalization、Query/E cross-reference、transcription 与 append-only 目录，**10/10 PASS**；候选提交态下的 `RepositoryAuthority.load_audit()` 与仓库外原始 raw bytes 对照也是 **10/10 PASS**。prepared verifier **PASS：12 inputs / 23 evidence / 12 blank records**。相关专项 **172 passed**；候选提交态全量 `python -m pytest -p no:debugging` **795 passed**（初始基线 794）。Query **72**、Draft GT **72/72**、Evidence **134**；原 Query/GT/Grade/rationale/span/prepared input 均未修改。
 
 Formal Java Evidence Audit **10/12**；`et-bl-ja-01`、`et-fl-ja-02` 保持 **BLOCKED / NO FORMAL AUDIT**。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**。
+
+## Final Two Java Evidence Audits Closure（2026-09-28）
+
+初始 HEAD `585e54c282e057440a417bdf41cc25c775110b2b`。Addendum D §§5–6 已将格式错误规定为保守 `CANNOT_ASSESS`；原工程 v1 记录只允许从合法逐项 `EvidenceReview` 推导 overall，不能把模型未解析的正文伪装为逐项 verdict。因此 [Engineering Amendment 2](../experiments/Reference_Lifecycle_Engineering_Specification_Amendment_2_V3_1_0.md)（`v3.1-phase62b-response-contract-failure-a2`，v1，raw-byte SHA-256 `611a6226337f11cba6d1d59dc8f89497d168eb5dcff02efb2f8ffb8375e051a5`）仅增补 v2 执行失败表达，未改变研究方法、旧 v1 序列化或既有 10 条。
+
+仓库外 `capture_manifest.json`、`recapture/partial_progress.json`、`recapture/stage1_review.json` 与原始第 4 次 Final Answer 逐条核对；actual sent bytes 与冻结 prepared input 完全一致。完整 Final Answer 是 native Copy All 中唯一精确后缀，未截取代码块、修复 JSON 或改写 bytes。原始响应、sent input、结构化的**执行结果**转录、provenance、旧采集历史索引及每个 blob checksum 以 append-only artifact 保存。前 1–3 次采集没有被补造为正式仓库 attempt；其分类、外部文件名/hash 与来源 manifest hash 保留在 `failed-attempts.json`。第 4 次真实 attempt 为 `attempt_number=4`、`supersedes_attempt=3`。Thinking 在 UI 可见但完整独立导出不可得，按 Amendment 1 记 `unavailable`；模型精确 revision、token usage、finish reason 与平台 session ID 亦如实记不可得。文件捕获时间不是精确模型完成时刻。
+
+| Query | v2 EvidenceAudit identity | 原始 Final Answer | 执行结果 |
+| --- | --- | --- | --- |
+| `et-bl-ja-01` | `76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323` | 4472 bytes；SHA-256 `c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56` | 完整 Final 含 JSON 外正文/code fence，严格全体解析失败；`response_contract_failure` |
+| `et-fl-ja-02` | `d8c74c81807533afe9169b2f5649f4ef557fdafed6804e2904a3e2feec23cd84` | 2242 bytes；SHA-256 `e48cbf81c06e418e24ded5f344cb8937e7afce08fc5ece1daa47e466b1730e01` | JSON 引号未转义且结尾不完整，严格全体解析失败；`response_contract_failure` |
+
+两条均为 `model_verdict=unavailable`、无 `EvidenceReview`、`execution_outcome=CANNOT_ASSESS`。这不是模型合法 JSON 中的 `CANNOT_ASSESS`，也不是 `SUPPORTS`。正式 Java **执行 12/12**；合法结构化审查 **10/12**，其中 `SUPPORTS=10`、`QUESTIONS=0`；执行级 `CANNOT_ASSESS=2`。Reference Approval 对两条保持 fail closed，须在 Phase 6.2 Final Closure 中按冻结源码独立处理，不能把执行完成数当成通过数。Reference Approval、Phase 6.2 Closure 均 **NOT CREATED**；Phase 6.2 **OPEN**，Phase 6.3 **BLOCKED / NOT STARTED**。
+
+验证：prepared verifier **PASS**（12 inputs / 23 evidence / 12 blank records）；离线测试覆盖两条 raw SHA、v1/v2 语义隔离、非法回复及可解析回复的反向边界、append-only 记录、旧 10 条 SUPPORTS 保持和权限拒绝。全量回归在本地提交后复跑；执行前基线为 **795 passed**。Query **72**、GT **72/72 drafted**、Evidence **134**；冻结 Query/GT/Grade/rationale/span/prepared input 未改。

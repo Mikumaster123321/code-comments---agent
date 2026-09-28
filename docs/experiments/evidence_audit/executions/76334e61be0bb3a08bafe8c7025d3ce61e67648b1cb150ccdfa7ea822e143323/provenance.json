@@ -1,0 +1,46 @@
+{
+  "attempt_number": 4,
+  "execution_failure": "response_contract_failure",
+  "final_answer_boundary_verified": "exact suffix occurring once in native Copy All",
+  "final_capture": {
+    "attempt_number": 4,
+    "effective_model": "DeepSeek V4.1 Flash",
+    "final_answer": {
+      "bytes": 4472,
+      "path": "recapture/et-bl-ja-01-attempt4-final-answer.txt",
+      "sha256": "c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56"
+    },
+    "final_answer_boundary": "Exact byte slice of native Copy All beginning at first Final Answer byte; no content within Final Answer stripped or repaired.",
+    "fresh_independent_session_observed": true,
+    "native_copy_all": {
+      "bytes": 15136,
+      "path": "recapture/et-bl-ja-01-attempt4-native-copy-all.txt",
+      "sha256": "acbf50815c2f797f4cce0d88159a796387695eb3e464ddc829cd03228b47f8a9"
+    },
+    "observed_model_display": "DeepSeek-V4.1-Flash",
+    "only_one_user_message_submitted": true,
+    "platform_task_or_session_id": "unavailable in UI",
+    "prepared_input": {
+      "bytes": 6320,
+      "path": "recapture/et-bl-ja-01-attempt4-sent-input.txt",
+      "sha256": "79e88f043ec2a5d3720e8b8d9a6449fd47687393d36e8f259fc87d95820ad10d"
+    },
+    "reason": "Final Answer includes prose and a JSON code fence; direct whole-answer JSON parse fails. Even the supplemental Copy Code JSON uses an unrecognized evidence item field layout under the strict parser.",
+    "regenerate_or_followup": false,
+    "submitted_local_minute": "2026-09-28 12:15 Asia/Shanghai",
+    "task_group": "phase62-java-evidence-capture-20260924",
+    "task_title_visible": "PREPARED / NOT EXECU…",
+    "thinking_observation": "visible-but-unavailable: Thinking visible in UI and included in Copy All, but no complete standalone Thinking export verified; Amendment 1 applied.",
+    "zero_prior_messages_observed": true
+  },
+  "full_copy_sha256": "acbf50815c2f797f4cce0d88159a796387695eb3e464ddc829cd03228b47f8a9",
+  "model_display_note": "UI display only; exact backend revision unavailable",
+  "observed_model_display": "DeepSeek-V4.1-Flash",
+  "query_id": "et-bl-ja-01",
+  "raw_final_sha256": "c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56",
+  "schema": "phase62-java-response-failure-provenance-v1",
+  "source_capture_manifest_sha256": "78371914cce86de46b368586a4d43736897b8930bfde9b221f603fdbfc22141e",
+  "source_progress_sha256": "7c7157a8671823fc6e3fe1e67ae10d28bc1e3b7d65d6d82cd29c050d757a9c43",
+  "source_stage1_sha256": "ea5f82101bebdc7a2be24df41675aa13b1e537bcf72edb9c959e4d0b7b995d88",
+  "thinking_status": "visible in UI; complete standalone export unavailable under Amendment 1"
+}

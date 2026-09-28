@@ -434,9 +434,12 @@ class EvidenceAuditRecord:
     provenance_status: str
     resolution_identities: tuple[str, ...]
     timing_limitations: str | None = None
+    model_verdict: str | None = None
+    execution_outcome: str | None = None
+    failure_reason: str | None = None
 
     def __post_init__(self) -> None:
-        if self.schema_version != "v1":
+        if self.schema_version not in {"v1", "v2"}:
             raise SchemaValidationError("audit schema is unsupported")
         for name in ("query_id", "ground_truth_id", "ui_mode", "observed_ui_name", "timing_source", "timing_precision"):
             _safe_text(name, getattr(self, name))
@@ -473,13 +476,22 @@ class EvidenceAuditRecord:
             raise SchemaValidationError("audit timing is reversed")
         if self.timing_limitations is not None:
             _safe_text("timing_limitations", self.timing_limitations)
-        _tuple_of("evidence_reviews", self.evidence_reviews, EvidenceReview)
+        _tuple_of("evidence_reviews", self.evidence_reviews, EvidenceReview,
+                  nonempty=self.schema_version == "v1")
         ordered = _sorted_unique(self.evidence_reviews, lambda x: x.evidence_id, "audit evidence")
         object.__setattr__(self, "evidence_reviews", ordered)
         _choice("overall_verdict", self.overall_verdict, VERDICTS)
-        computed = "QUESTIONS" if any(x.verdict == "QUESTIONS" for x in ordered) else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in ordered) else "SUPPORTS"
-        if self.overall_verdict != computed or (not self.reply_complete and self.overall_verdict == "SUPPORTS"):
-            raise SchemaValidationError("overall verdict contradicts evidence or completeness")
+        if self.schema_version == "v1":
+            if any(value is not None for value in (self.model_verdict, self.execution_outcome, self.failure_reason)):
+                raise SchemaValidationError("v1 audit cannot carry execution failure fields")
+            computed = "QUESTIONS" if any(x.verdict == "QUESTIONS" for x in ordered) else "CANNOT_ASSESS" if any(x.verdict == "CANNOT_ASSESS" for x in ordered) else "SUPPORTS"
+            if self.overall_verdict != computed or (not self.reply_complete and self.overall_verdict == "SUPPORTS"):
+                raise SchemaValidationError("overall verdict contradicts evidence or completeness")
+        elif (ordered or self.model_verdict != "unavailable" or
+              self.execution_outcome != "CANNOT_ASSESS" or
+              self.failure_reason != "response_contract_failure" or
+              self.overall_verdict != "CANNOT_ASSESS" or not self.reply_complete):
+            raise SchemaValidationError("v2 response failure must not invent model reviews")
         _choice("provenance_status", self.provenance_status, {"valid", "invalid", "incomplete"})
         if self.provenance_status == "valid" and not self.reply_complete:
             raise SchemaValidationError("valid provenance needs complete independent session")
@@ -491,7 +503,7 @@ class EvidenceAuditRecord:
         canonical_json(self.to_record())
 
     def identity_record(self) -> dict:
-        return {"schema_version": self.schema_version, "query_id": self.query_id,
+        result = {"schema_version": self.schema_version, "query_id": self.query_id,
                 "ground_truth_id": self.ground_truth_id, "attempt_number": self.attempt_number,
                 "supersedes_attempt": self.supersedes_attempt,
                 "dataset_identity": self.dataset_identity, "query_identity": self.query_identity,
@@ -510,6 +522,10 @@ class EvidenceAuditRecord:
                 "evidence_reviews": [x.to_record() for x in self.evidence_reviews],
                 "transcription_hash": self.transcription_hash, "overall_verdict": self.overall_verdict,
                 "provenance_status": self.provenance_status, "resolution_identities": list(self.resolution_identities)}
+        if self.schema_version == "v2":
+            result.update(model_verdict=self.model_verdict, execution_outcome=self.execution_outcome,
+                          failure_reason=self.failure_reason)
+        return result
 
     @property
     def identity_hash(self) -> str:
@@ -521,11 +537,17 @@ class EvidenceAuditRecord:
             result[name] = getattr(self, name).to_record()
         result["evidence_reviews"] = [x.to_record() for x in self.evidence_reviews]
         result["resolution_identities"] = list(self.resolution_identities)
+        if self.schema_version == "v1":
+            for name in ("model_verdict", "execution_outcome", "failure_reason"):
+                del result[name]
         return result
 
     @classmethod
     def from_record(cls, value: Mapping[str, Any]) -> EvidenceAuditRecord:
-        _exact(value, set(cls.__dataclass_fields__), "EvidenceAuditRecord")
+        fields = set(cls.__dataclass_fields__)
+        if value.get("schema_version") == "v1":
+            fields -= {"model_verdict", "execution_outcome", "failure_reason"}
+        _exact(value, fields, "EvidenceAuditRecord")
         result = dict(value)
         for name in ("sent_input", "raw_reply", "independent_session_evidence", "context_boundary_evidence", "model_metadata_evidence", "transcription_capture"):
             result[name] = RawCapture.from_record(value[name])

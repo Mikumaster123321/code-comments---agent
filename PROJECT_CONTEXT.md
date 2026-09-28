@@ -1103,6 +1103,13 @@
 - prepared verifier **PASS**；10/10 磁盘重载及提交态 authority reload **PASS**；相关专项 **172 passed**、全量回归 **795 passed**（初始基线 794）。
 - Formal Java Evidence Audit **10/12**；`et-bl-ja-01`、`et-fl-ja-02` 仍 **BLOCKED / NO FORMAL AUDIT**。Query 72、GT 72/72 drafted、Evidence 134，冻结原件和 prepared inputs 未改。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**。详见 [Java Evidence 执行报告](docs/development/Development_Report_V3_1_0_Phase_6_2_Java_Evidence_Response_Mapping.md)。
 
+### V3.1.0 Phase 6.2 — Final Two Java Evidence Audits Closure
+
+- 合同裁决：**MINIMAL CLARIFICATION IMPLEMENTED**。Addendum D §§5–6 已将格式错误归入保守 `CANNOT_ASSESS`；工程 v1 缺少与模型 verdict 分离的执行失败表示。[Engineering Amendment 2](docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_2_V3_1_0.md) ID `v3.1-phase62b-response-contract-failure-a2`、v1、raw-byte SHA-256 `611a6226337f11cba6d1d59dc8f89497d168eb5dcff02efb2f8ffb8375e051a5` 澄清了 v2 记录，不修改 Addendum D 或既有 v1 artifacts。
+- `et-bl-ja-01` 第 4 次真实采集：完整 Final SHA-256 `c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56`，EvidenceAudit identity `76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323`；`et-fl-ja-02` 第 4 次真实采集：`e48cbf81c06e418e24ded5f344cb8937e7afce08fc5ece1daa47e466b1730e01`，identity `d8c74c81807533afe9169b2f5649f4ef557fdafed6804e2904a3e2feec23cd84`。两条 raw bytes 原样 append-only 保存；旧采集历史只按仓库外 manifest 记录，未补造旧正式 attempt。
+- Java Evidence **12/12 EXECUTED**；合法结构化审查 **10/12**，模型 `SUPPORTS=10`、`QUESTIONS=0`；执行级 `CANNOT_ASSESS=2`，原因均 `response_contract_failure`，模型 verdict 均 unavailable，无伪造 `EvidenceReview`。这两条尚需 Addendum D §6 的独立源码核查，Reference Approval 不会将其误判为 SUPPORTS。
+- Query **72**、GT **72/72 drafted**、Evidence **134**；冻结 Query/GT/Grade/rationale/span/prepared input 未变。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**，Phase 6.3 **BLOCKED / NOT STARTED**。下一步仅为 **Phase 6.2 Final Closure**，一并处理中文覆盖、方法论审查、独立 Data QA、Reference Approval 和 Closure。
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released
