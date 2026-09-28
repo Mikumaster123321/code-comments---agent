@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from code_maintenance import SymbolId
-from project_intelligence import BM25Config, tokenize
+from project_intelligence import BM25Config
+from project_intelligence.lexical import BM25TextScorer
 
 from .config import ChunkExperimentConfig, FileExperimentConfig, RetrievalUnit
 from .reference import ReferenceRecord
@@ -151,7 +151,7 @@ class BaselineHit:
 
 
 class ExperimentalBM25Index:
-    """Experiment-only BM25 over frozen File or Chunk text representations."""
+    """Frozen File/Chunk identity adapter over the production BM25 scorer."""
 
     def __init__(
         self,
@@ -169,23 +169,7 @@ class ExperimentalBM25Index:
         identities = [item.identity for item in self._documents]
         if len(identities) != len(set(identities)):
             raise BaselineValidationError("baseline document identities must be unique")
-        self._config = config
-        counts: list[dict[str, int]] = []
-        lengths: list[int] = []
-        frequencies: dict[str, int] = {}
-        for document in self._documents:
-            tokens = tokenize(document.text)
-            current: dict[str, int] = {}
-            for token in tokens:
-                current[token] = current.get(token, 0) + 1
-            counts.append(current)
-            lengths.append(len(tokens))
-            for token in current:
-                frequencies[token] = frequencies.get(token, 0) + 1
-        self._counts = tuple(counts)
-        self._lengths = tuple(lengths)
-        self._frequencies = frequencies
-        self._average_length = sum(lengths) / len(lengths) if lengths else 0.0
+        self._scorer = BM25TextScorer(tuple(item.text for item in self._documents), config)
 
     @property
     def documents(self) -> tuple[BaselineDocument, ...]:
@@ -200,39 +184,10 @@ class ExperimentalBM25Index:
             raise BaselineValidationError("query must be a string")
         if type(top_k) is not int or top_k <= 0:
             raise BaselineValidationError("top_k must be a positive integer")
-        if not query.strip() or not self._documents or self._average_length == 0:
-            return ()
-        terms = tuple(dict.fromkeys(tokenize(query)))
-        known = tuple(term for term in terms if term in self._frequencies)
-        if not known:
-            return ()
-        scored: list[tuple[float, BaselineDocument]] = []
-        total = len(self._documents)
-        for index, document in enumerate(self._documents):
-            score = 0.0
-            for term in known:
-                frequency = self._counts[index].get(term, 0)
-                if not frequency:
-                    continue
-                document_frequency = self._frequencies[term]
-                inverse = math.log1p(
-                    (total - document_frequency + 0.5) / (document_frequency + 0.5)
-                )
-                normalization = 1 - self._config.b + (
-                    self._config.b * self._lengths[index] / self._average_length
-                )
-                denominator = frequency + self._config.k1 * normalization
-                score += inverse * (
-                    frequency * (self._config.k1 + 1) / denominator
-                )
-            if score > 0 and math.isfinite(score):
-                scored.append((score, document))
-        scored.sort(
-            key=lambda item: (-item[0], serialize_candidate_identity(item[1].identity))
-        )
         return tuple(
-            BaselineHit(document.identity, document.relative_path, rank, score)
-            for rank, (score, document) in enumerate(scored[:top_k], start=1)
+            BaselineHit(self._documents[index].identity, self._documents[index].relative_path,
+                        rank, score)
+            for rank, (index, score) in enumerate(self._scorer.search(query, top_k), start=1)
         )
 
 

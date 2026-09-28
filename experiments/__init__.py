@@ -71,6 +71,10 @@ from .schemas import (
     load_queries,
 )
 from .serialization import SerializationError, canonical_hash, canonical_json
+from .execution import (
+    ExecutionWiringError, FrozenBenchmarkExecution, ProductionBenchmarkStrategy,
+    bind_frozen_dataset, executable_config, prepare_frozen_execution,
+)
 
 __all__ = [
     "AggregateResult",
@@ -99,12 +103,14 @@ __all__ = [
     "EvidenceAuditSet",
     "EvidenceRecord",
     "EvidenceReview",
+    "ExecutionWiringError",
     "ExperimentalBM25Index",
     "FileExperimentConfig",
     "FileIdentity",
     "FileSource",
     "FormalRunGuardError",
     "FormalGateEvidence",
+    "FrozenBenchmarkExecution",
     "GraphExperimentConfig",
     "GraphProvenanceRecord",
     "GroundTruthRecord",
@@ -116,6 +122,7 @@ __all__ = [
     "MetricValues",
     "PerformanceMetadata",
     "Population",
+    "ProductionBenchmarkStrategy",
     "PrerequisiteReference",
     "Phase62ClosureRecord",
     "Phase62DocumentationDecisionRecord",
@@ -145,14 +152,17 @@ __all__ = [
     "CurrentGateIndex",
     "build_chunk_documents",
     "build_file_documents",
+    "bind_frozen_dataset",
     "canonical_hash",
     "canonical_json",
     "compute_metrics",
     "derive_reference",
+    "executable_config",
     "load_dataset_manifest",
     "load_ground_truth",
     "load_queries",
     "raw_sha256",
+    "prepare_frozen_execution",
     "serialize_candidate_identity",
     "write_run_artifacts",
     "validate_run_result",

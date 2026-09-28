@@ -188,6 +188,7 @@ def expand_graph(
     config: GraphExpansionConfig | None = None,
     *,
     expected_graph: ProjectGraph | None = None,
+    allowed_signals: tuple[tuple[GraphRelationKind, GraphTraversalDirection], ...] | None = None,
 ) -> GraphExpansionResult:
     """Expand valid retrieval seeds with bounded, deterministic graph traversal.
 
@@ -210,6 +211,18 @@ def expand_graph(
     cfg = config if config is not None else GraphExpansionConfig()
     if not isinstance(cfg, GraphExpansionConfig):
         raise GraphExpansionError("config must be a GraphExpansionConfig")
+    if allowed_signals is not None and (
+        type(allowed_signals) is not tuple
+        or not allowed_signals
+        or any(
+            type(pair) is not tuple or len(pair) != 2
+            or not isinstance(pair[0], GraphRelationKind)
+            or not isinstance(pair[1], GraphTraversalDirection)
+            for pair in allowed_signals
+        )
+        or len(set(allowed_signals)) != len(allowed_signals)
+    ):
+        raise GraphExpansionError("allowed_signals must contain unique supported pairs")
 
     node_by_ref: dict[tuple, GraphNode] = {}
     nodes_by_identity: dict[tuple, list[GraphNode]] = {}
@@ -218,15 +231,20 @@ def expand_graph(
         nodes_by_identity.setdefault(_identity_key(node.identity), []).append(node)
     adjacency: dict[tuple, list[tuple[GraphRelationKind, GraphTraversalDirection, GraphNode]]] = {}
     allowed = set(cfg.relations)
+    selected_signals = None if allowed_signals is None else set(allowed_signals)
     for edge in sorted(graph.edges, key=_edge_key):
         if edge.relation not in allowed:
             continue
-        adjacency.setdefault(_node_ref_key(edge.source), []).append(
-            (edge.relation, GraphTraversalDirection.FORWARD, edge.target)
-        )
-        adjacency.setdefault(_node_ref_key(edge.target), []).append(
-            (edge.relation, GraphTraversalDirection.REVERSE, edge.source)
-        )
+        forward = (edge.relation, GraphTraversalDirection.FORWARD)
+        reverse = (edge.relation, GraphTraversalDirection.REVERSE)
+        if selected_signals is None or forward in selected_signals:
+            adjacency.setdefault(_node_ref_key(edge.source), []).append(
+                (edge.relation, GraphTraversalDirection.FORWARD, edge.target)
+            )
+        if selected_signals is None or reverse in selected_signals:
+            adjacency.setdefault(_node_ref_key(edge.target), []).append(
+                (edge.relation, GraphTraversalDirection.REVERSE, edge.source)
+            )
     for key in adjacency:
         adjacency[key].sort(
             key=lambda pair: (pair[0].value, pair[1].value, _node_key(pair[2]))

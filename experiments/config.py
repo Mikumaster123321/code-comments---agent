@@ -56,6 +56,16 @@ class Population(str, Enum):
     CHINESE_COVERAGE = "chinese_coverage"
 
 
+# Executable IDs are the expanded names already frozen by BenchmarkConfig.
+FROZEN_MATRIX_IDS = (
+    "RQ1-FILE", "RQ1-SYMBOL", "RQ1-CHUNK", "RQ2-BM25", "RQ2-E5",
+    "RQ3-GRAPH-OFF", "RQ3-GRAPH-ON", "RQ3-CONTAINS-FORWARD",
+    "RQ3-CONTAINS-REVERSE", "RQ3-IMPORTS-FORWARD", "RQ3-IMPORTS-REVERSE",
+    "RQ4-LEXICAL", "RQ4-EMBEDDING", "RQ4-HYBRID-NO-GRAPH",
+    "RQ4-HYBRID-GRAPH", "RRF-HYBRID-NO-GRAPH", "RRF-HYBRID-GRAPH",
+)
+
+
 _UNSTABLE_IDENTITY = re.compile(
     r"(?:<[^>]+ object at 0x[0-9a-fA-F]+>|\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-"
     r"[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\b)"
@@ -413,6 +423,8 @@ class BenchmarkConfig:
             "RRF-HYBRID-GRAPH": (Strategy.RRF, RetrievalUnit.SYMBOL, True, SemanticMode.REAL_E5, all_signals),
         }
         expected = bindings.get(self.matrix_run_id)
+        if tuple(bindings) != FROZEN_MATRIX_IDS:
+            raise ConfigValidationError("frozen matrix catalog changed")
         actual = (
             self.strategy, self.retrieval_unit, self.graph.enabled, self.semantic_mode,
             self.graph.signals if self.graph.enabled else None,

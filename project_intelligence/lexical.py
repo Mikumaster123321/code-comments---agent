@@ -165,67 +165,32 @@ def _symbol_id_key(
     )
 
 
-class BM25Index:
-    """An in-memory immutable BM25 index over Phase 1 ``RetrievalDocument`` values."""
+class BM25TextScorer:
+    """Production BM25 scoring over caller-ordered text units."""
 
-    def __init__(
-        self,
-        documents: Sequence[RetrievalDocument] = (),
-        config: BM25Config | None = None,
-    ) -> None:
-        if config is not None and not isinstance(config, BM25Config):
+    def __init__(self, texts: Sequence[str], config: BM25Config = BM25Config()) -> None:
+        if not isinstance(config, BM25Config):
             raise InvalidBM25ConfigError("config must be a BM25Config")
-        self._config = config if config is not None else BM25Config()
-        if not isinstance(documents, (tuple, list)):
-            try:
-                documents = tuple(documents)
-            except TypeError as error:
-                raise TypeError("documents must be an iterable of RetrievalDocument") from error
-        corpus = tuple(documents)
-        for document in corpus:
-            if not isinstance(document, RetrievalDocument):
-                raise TypeError("documents must contain RetrievalDocument values")
-        canonical = tuple(sorted(corpus, key=lambda d: _symbol_id_key(d.symbol_id)))
-        seen: set[SymbolId] = set()
-        for document in canonical:
-            if document.symbol_id in seen:
-                raise DuplicateLexicalDocumentError(document.symbol_id)
-            seen.add(document.symbol_id)
-
-        self._documents = canonical
+        if not all(isinstance(text, str) for text in texts):
+            raise TypeError("texts must contain strings")
+        self._config = config
+        self._count = len(texts)
         token_counts: list[Mapping[str, int]] = []
         lengths: list[int] = []
         frequencies: dict[str, int] = {}
-        for document in canonical:
-            # Qualified name is intentionally injected once as identity context;
-            # signature is omitted because it is generally present in source_text.
-            document_tokens = tokenize(document.qualified_name + "\n" + document.source_text)
+        for text in texts:
             counts: dict[str, int] = {}
-            for token in document_tokens:
+            tokens = tokenize(text)
+            for token in tokens:
                 counts[token] = counts.get(token, 0) + 1
             token_counts.append(MappingProxyType(counts))
-            lengths.append(len(document_tokens))
+            lengths.append(len(tokens))
             for token in counts:
                 frequencies[token] = frequencies.get(token, 0) + 1
         self._token_counts = tuple(token_counts)
         self._document_lengths = tuple(lengths)
         self._document_frequencies = MappingProxyType(dict(frequencies))
-        self._average_document_length = (
-            sum(lengths) / len(lengths) if lengths else 0.0
-        )
-
-    @property
-    def config(self) -> BM25Config:
-        """Return the read-only authoritative ranking configuration."""
-        return self._config
-
-    @property
-    def documents(self) -> tuple[RetrievalDocument, ...]:
-        return self._documents
-
-    @property
-    def document_count(self) -> int:
-        return len(self._documents)
+        self._average_document_length = sum(lengths) / len(lengths) if lengths else 0.0
 
     @property
     def average_document_length(self) -> float:
@@ -239,27 +204,19 @@ class BM25Index:
     def document_lengths(self) -> tuple[int, ...]:
         return self._document_lengths
 
-    def search(self, query: str, top_k: int = 10) -> tuple[LexicalHit, ...]:
+    def search(self, query: str, top_k: int = 10) -> tuple[tuple[int, float], ...]:
         if not isinstance(query, str):
             raise InvalidLexicalQueryError("query must be a string")
         if type(top_k) is not int or top_k <= 0:
             raise InvalidLexicalQueryError("top_k must be an integer greater than zero")
-        if not query.strip() or not self._documents or self._average_document_length == 0:
+        if not query.strip() or not self._count or self._average_document_length == 0:
             return ()
-
-        # Deduplicate terms while preserving tokenizer order.  BM25 has no query
-        # term-frequency factor, and this prevents repeated query words from
-        # accidentally becoming an undocumented weight.
         terms = tuple(dict.fromkeys(tokenize(query)))
-        if not terms:
-            return ()
         known_terms = tuple(term for term in terms if term in self._document_frequencies)
         if not known_terms:
             return ()
-
-        scored: list[tuple[float, RetrievalDocument]] = []
-        n_documents = len(self._documents)
-        for index, document in enumerate(self._documents):
+        scored: list[tuple[float, int]] = []
+        for index in range(self._count):
             length = self._document_lengths[index]
             counts = self._token_counts[index]
             score = 0.0
@@ -268,19 +225,74 @@ class BM25Index:
                 if not tf:
                     continue
                 df = self._document_frequencies[term]
-                idf = math.log1p((n_documents - df + 0.5) / (df + 0.5))
+                idf = math.log1p((self._count - df + 0.5) / (df + 0.5))
                 normalization = 1.0 - self._config.b
                 if self._average_document_length:
                     normalization += self._config.b * length / self._average_document_length
                 denominator = tf + self._config.k1 * normalization
                 score += idf * (tf * (self._config.k1 + 1.0)) / denominator
             if score > 0.0 and math.isfinite(score):
-                scored.append((score, document))
+                scored.append((score, index))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return tuple((index, score) for score, index in scored[:top_k])
 
-        scored.sort(key=lambda item: (-item[0], _symbol_id_key(item[1].symbol_id)))
+
+class BM25Index:
+    """An in-memory immutable BM25 index over Phase 1 ``RetrievalDocument`` values."""
+
+    def __init__(self, documents: Sequence[RetrievalDocument] = (),
+                 config: BM25Config | None = None) -> None:
+        if config is not None and not isinstance(config, BM25Config):
+            raise InvalidBM25ConfigError("config must be a BM25Config")
+        self._config = config if config is not None else BM25Config()
+        if not isinstance(documents, (tuple, list)):
+            try:
+                documents = tuple(documents)
+            except TypeError as error:
+                raise TypeError("documents must be an iterable of RetrievalDocument") from error
+        corpus = tuple(documents)
+        if not all(isinstance(document, RetrievalDocument) for document in corpus):
+            raise TypeError("documents must contain RetrievalDocument values")
+        canonical = tuple(sorted(corpus, key=lambda d: _symbol_id_key(d.symbol_id)))
+        seen: set[SymbolId] = set()
+        for document in canonical:
+            if document.symbol_id in seen:
+                raise DuplicateLexicalDocumentError(document.symbol_id)
+            seen.add(document.symbol_id)
+        self._documents = canonical
+        self._scorer = BM25TextScorer(
+            tuple(document.qualified_name + "\n" + document.source_text for document in canonical),
+            self._config,
+        )
+
+    @property
+    def config(self) -> BM25Config:
+        return self._config
+
+    @property
+    def documents(self) -> tuple[RetrievalDocument, ...]:
+        return self._documents
+
+    @property
+    def document_count(self) -> int:
+        return len(self._documents)
+
+    @property
+    def average_document_length(self) -> float:
+        return self._scorer.average_document_length
+
+    @property
+    def document_frequencies(self) -> Mapping[str, int]:
+        return self._scorer.document_frequencies
+
+    @property
+    def document_lengths(self) -> tuple[int, ...]:
+        return self._scorer.document_lengths
+
+    def search(self, query: str, top_k: int = 10) -> tuple[LexicalHit, ...]:
         return tuple(
-            LexicalHit(document=document, score=score, rank=rank)
-            for rank, (score, document) in enumerate(scored[:top_k], start=1)
+            LexicalHit(self._documents[index], score, rank)
+            for rank, (index, score) in enumerate(self._scorer.search(query, top_k), start=1)
         )
 
 

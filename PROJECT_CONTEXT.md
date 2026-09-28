@@ -6,7 +6,7 @@
 
 ## Current State
 
-- 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。全量回归 **813 passed**。本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure 及 `current_gate.json` 为当前权威索引。
+- 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。Phase 6.3 前置接线真实 E5 与生产 benchmark 最小烟测 **PASS**，全量回归 **825 passed**；本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure、前置接线记录及 `current_gate.json` 为当前权威索引。
 
 - Current Version: `3.0.1`
 - Current branch: `v3.1.0-dev`
@@ -1121,6 +1121,12 @@
 - 真实 OPEN candidate readiness **PASS**；post-closure `validate_formal_eligibility(purpose=DRY_RUN)` **PASS**，实际 CPython 3.12.14 / torch 2.8.0 / transformers 4.56.2 离线环境；FORMAL 请求按预期拒绝。仅验证资格，未调用 BenchmarkRunner/Retriever/E5 或执行 Query。为保留提交态证据规则，提交前验证在仓库外临时 Git 副本完成；主仓库只做一次原子提交。
 - 验证：初始基线 **798 passed**；prepared verifier **PASS**；专项含离线 LLM smoke **243 passed**；全量候选回归 **813 passed**。新增 15 项安全/生命周期测试；没有 skip/xfail/删测试/放宽断言。详见 [Final Closure report](docs/development/Development_Report_V3_1_0_Phase_6_2_Final_Closure.md)，全部正式 identities 与源文 provenance 均在 `docs/experiments/audits/phase62_final/`。
 - 冻结 Protocol/Addenda/Specification、Query/GT/Grade/rationale/span、准备输入与 raw replies 不变；未重做 Java Audit、外部审查或独立 Data QA；`docs/thesis/` 未触碰。下一动作仅 **Phase 6.3 English Dev Dry Run**，本轮不执行，Formal RQ 与 V3.2 未开始。
+
+### V3.1.0 Phase 6.3 Prerequisite — Frozen Benchmark Execution Wiring
+
+- 已确认先前 `0/12` English Dev、`0/17` matrix execution 的工程缺口：`BenchmarkRunner` 仅接受注入的策略，尚无冻结 Dataset/Query/Reference 到生产检索组件的适配入口。新增 `experiments/execution.py`，从 manifest 校验的冻结源码重建 Snapshot/Corpus 与 File/Symbol/Chunk 候选，按既有 17 项 matrix 绑定调用生产 BM25、E5 adapter、Graph Expansion、Weighted/RRF 和 ContextBuilder，再交回原 Runner/metrics。File/Chunk 原有 BM25 基线改为复用生产计分核心；生产模块仍不导入 `experiments`。
+- 冻结 17 项均能解析为可执行配置；合成样例已完成 File/Symbol/Chunk、Graph ON/OFF 与方向 pair、Weighted/RRF、稳定排序及 Runner→metrics 最小集成验证。上一轮相关定向测试 **362 passed**；本轮接线、embedding、runner/experiment 定向测试 **177 passed**，全量回归 **825 passed**。冻结 E5 同 commit `d128750597153bb5987e10b1c3493a34e5a4502a` 以 `EXACT_REVISION_DOWNLOAD` 恢复至仓库外 `/private/tmp/v31-e5-recovered-cache/`；snapshot **23 files / 0 dangling symlink**。既有 CPython 3.12.14、torch 2.8.0、transformers 4.56.2 环境在补足进程库路径后离线加载真实 `LocalE5EmbeddingProvider`，CPU float32 query/passage 均为 finite 的 768 维 L2 单位向量；合成查询经真实 E5、生产 `RetrievalIndex`、`ProductionBenchmarkStrategy`、`BenchmarkRunner` 和既有 metrics，`success`、`Recall@5=1.0`。离线 stub 测试只证明调用接线，不作为上述真实语义 smoke 的替代证据。
+- 本前置工程未执行正式 English Dev Dry Run、English Test 或 Formal RQ；正式 matrix execution 仍 `0/17`，English Dev `0/12`，English Test `0`，`DryRunReceipt` **NOT CREATED**。Phase 6.2 继续 `CLOSED`；Phase 6.3 仍 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 仍 **NOT STARTED**。本轮前置接线验证已通过；下一动作才是另行执行 English Dev Dry Run。详见 [接线报告](docs/development/Development_Report_V3_1_0_Phase_6_3_Benchmark_Execution_Wiring.md)。
 
 ## Planned Version Roadmap
 
