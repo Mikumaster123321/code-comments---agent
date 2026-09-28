@@ -6,6 +6,8 @@
 
 ## Current State
 
+- Phase 6.3 前置 Credential Scanner False-Positive Fix：`metric_inputs` 中合法 `RuntimeCredential` symbol identity 误判已修复；结构化 credential 字段和真实 secret 值继续 fail closed。遗留的单项 RQ1-FILE 未提交局部产物已记录 identity/字节 SHA-256 并清理，不计作完整 Dry Run。序列化/runner/生产执行/lifecycle 定向 `206 passed`，全量回归 `877 passed`。正式 English Dev `0/12`、Matrix `0/17`、DryRunReceiptV2 `NOT CREATED`、Formal RQ1–RQ4 `NOT STARTED`；Phase 6.3 仍为 `ALLOWED BUT NOT STARTED`。详见 `docs/development/Development_Report_V3_1_0_Phase_6_3_Credential_Scanner_Fix.md`。
+
 - Phase 6.3 Corpus / Execution Revision Identity Contract Fix：已确认此前 blocker 是将冻结 self-repository corpus revision 与 benchmark execution revision 混用。Amendment 4 将新 run manifest、artifact set 和 DryRunReceiptV2 分别绑定两种 revision；receipt 的归档提交从已提交 Git 历史派生。合同修复与安全测试已完成，全量回归 `850 passed`。正式 Dry Run 仍为 English Dev `0/12`、Matrix `0/17`、Query-config `0/204`，DryRunReceiptV2 未创建，Formal RQ1–RQ4 `NOT STARTED`。
 
 - Phase 6.3 Dry Run Lifecycle + Receipt Contract Fix：合同与实现已完成；生命周期专项 `104 passed`，全量回归 `839 passed`（原基线 `825 passed`）。正式 Dry Run 尚未执行，English Dev `0/12`、Matrix `0/17`、English Test `0`、Chinese `0`，正式 `DryRunReceipt` 未创建，Formal RQ1–RQ4 `NOT STARTED`。修正合同见 `docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_3_V3_1_0.md`。未来正式执行按 artifact/receipt 提交、从新 HEAD 验证 FORMAL、验证通过后更新 gate 的顺序进行。

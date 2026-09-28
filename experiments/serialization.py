@@ -18,13 +18,20 @@ class SerializationError(ValueError):
 
 
 _CREDENTIAL_KEY = re.compile(
-    r"(?:credential|password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token)",
+    r"(?:credential|password|passwd|secret|api[_-]?key|access[_-]?token|"
+    r"auth[_-]?token|authorization|private[_-]?key)",
     re.IGNORECASE,
 )
 _CREDENTIAL_VALUE = re.compile(
     r"(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|Bearer\s+[A-Za-z0-9._~+/=-]{12,}|"
     r"AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|"
     r"SECRET_MARKER|SOURCE_MARKER)",
+    re.IGNORECASE,
+)
+_SECRET_ASSIGNMENT = re.compile(
+    r"\b(?:credential|password|passwd|secret|api[_-]?key|access[_-]?token|"
+    r"auth[_-]?token|authorization|private[_-]?key)\b\s*[\"']?\s*[:=]\s*"
+    r"[\"']?[^\s\"',;}]+",
     re.IGNORECASE,
 )
 
@@ -70,17 +77,37 @@ def _plain(value: Any) -> Any:
 def _validate_private_data(value: Any, path: tuple[str, ...] = ()) -> None:
     if isinstance(value, dict):
         for key, item in value.items():
-            if _CREDENTIAL_KEY.search(str(key)):
+            key_text = str(key)
+            # metric_inputs maps candidate identities to relevance grades. Its keys
+            # are data, unlike the surrounding artifact's schema field names.
+            candidate_identity = (
+                path[-1:] == ("metric_inputs",)
+                and key_text.startswith(("file:", "chunk:", "symbol:"))
+                and type(item) is int and item in (0, 1, 2)
+            )
+            if _CREDENTIAL_VALUE.search(key_text) or _SECRET_ASSIGNMENT.search(key_text):
+                raise SerializationError("credential-like artifact value is forbidden")
+            if not candidate_identity and _CREDENTIAL_KEY.search(key_text):
                 raise SerializationError(
-                    f"credential-bearing field is forbidden: {'.'.join((*path, str(key)))}"
+                    f"credential-bearing field is forbidden: {'.'.join((*path, key_text))}"
                 )
-            _validate_private_data(item, (*path, str(key)))
+            if candidate_identity and key_text.startswith("symbol:"):
+                try:
+                    symbol_record = json.loads(key_text[len("symbol:"):])
+                except (TypeError, ValueError) as error:
+                    raise SerializationError("invalid symbol candidate identity") from error
+                if not isinstance(symbol_record, dict):
+                    raise SerializationError("invalid symbol candidate identity")
+                _validate_private_data(symbol_record, (*path, "<candidate_identity>"))
+            _validate_private_data(item, (*path, key_text))
         return
     if isinstance(value, list):
         for index, item in enumerate(value):
             _validate_private_data(item, (*path, str(index)))
         return
-    if isinstance(value, str) and _CREDENTIAL_VALUE.search(value):
+    if isinstance(value, str) and (
+        _CREDENTIAL_VALUE.search(value) or _SECRET_ASSIGNMENT.search(value)
+    ):
         raise SerializationError("credential-like artifact value is forbidden")
 
 
