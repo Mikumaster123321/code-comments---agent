@@ -6,6 +6,8 @@
 
 ## Current State
 
+- Phase 6.3 Corpus / Execution Revision Identity Contract Fix：已确认此前 blocker 是将冻结 self-repository corpus revision 与 benchmark execution revision 混用。Amendment 4 将新 run manifest、artifact set 和 DryRunReceiptV2 分别绑定两种 revision；receipt 的归档提交从已提交 Git 历史派生。合同修复与安全测试已完成，全量回归 `850 passed`。正式 Dry Run 仍为 English Dev `0/12`、Matrix `0/17`、Query-config `0/204`，DryRunReceiptV2 未创建，Formal RQ1–RQ4 `NOT STARTED`。
+
 - Phase 6.3 Dry Run Lifecycle + Receipt Contract Fix：合同与实现已完成；生命周期专项 `104 passed`，全量回归 `839 passed`（原基线 `825 passed`）。正式 Dry Run 尚未执行，English Dev `0/12`、Matrix `0/17`、English Test `0`、Chinese `0`，正式 `DryRunReceipt` 未创建，Formal RQ1–RQ4 `NOT STARTED`。修正合同见 `docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_3_V3_1_0.md`。未来正式执行按 artifact/receipt 提交、从新 HEAD 验证 FORMAL、验证通过后更新 gate 的顺序进行。
 
 - 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。Phase 6.3 前置接线真实 E5 与生产 benchmark 最小烟测 **PASS**，全量回归 **825 passed**；本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure、前置接线记录及 `current_gate.json` 为当前权威索引。

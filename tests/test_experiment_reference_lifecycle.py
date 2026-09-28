@@ -29,6 +29,7 @@ from experiments import (
 from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
 from experiments.eligibility import _validate_source_resolution, validate_current_gate
 from experiments.serialization import canonical_jsonl
+from experiments.schemas import read_run_revisions
 from experiments.config import FROZEN_MATRIX_IDS
 from experiments.execution import executable_config
 from project_intelligence import LocalE5EmbeddingProvider
@@ -126,6 +127,7 @@ def _runtime():
 
 def _synthetic_matrix_receipt(root, config, queries, approval, dataset_hash, query_hash,
                               reference_hash, runtime, code_commit):
+    corpus_revision = "12391233daa2149ead4f451e920b2e0d8a1a6beb"
     runtime_hash = canonical_hash(runtime.to_record())
     template = replace(config, run_kind=RunKind.DRY_RUN, population=Population.ENGLISH_DEV,
                        embedding_fingerprint=LocalE5EmbeddingProvider(local_files_only=True).fingerprint)
@@ -163,8 +165,10 @@ def _synthetic_matrix_receipt(root, config, queries, approval, dataset_hash, que
         manifest_path = base + "run_manifest.json"
         manifest = {"run_id": run_id,
                     "protocol": {"version": config.protocol_version},
-                    "runner_code_commit": code_commit,
-                    "self_repository_commit": code_commit,
+                    "revision_schema_version": "v2",
+                    "corpus_revision": corpus_revision,
+                    "execution_revision": code_commit,
+                    "mode": "dry_run", "split": "english_dev",
                     "dirty_state": False, "environment": runtime.to_record(),
                     "approved_reference_identity": approval, "reference_hash": reference_hash,
                     "config_hashes": [item.identity_hash],
@@ -175,9 +179,9 @@ def _synthetic_matrix_receipt(root, config, queries, approval, dataset_hash, que
         runs.append(DryRunArtifactRef(item.matrix_run_id, run_id, item.identity_hash,
                                       manifest_path, manifest_hash, aggregate_path,
                                       aggregate_hash, raw_path, raw_hash))
-    artifact_set = DryRunArtifactSet("v1", approval, dataset_hash, query_hash,
+    artifact_set = DryRunArtifactSet("v2", approval, dataset_hash, query_hash,
                                      reference_hash, matrix.identity_hash, runtime_hash,
-                                     code_commit, "dry_run", "english_dev", query_ids,
+                                     corpus_revision, code_commit, "dry_run", "english_dev", query_ids,
                                      tuple(runs), 204, 0, 0)
     set_path = "docs/experiments/audits/synthetic-dry-run-artifact-set.json"
     _json(root, set_path, artifact_set.to_record())
@@ -194,10 +198,11 @@ def _synthetic_matrix_receipt(root, config, queries, approval, dataset_hash, que
             evidence.update(comparison_scope="all_17_configurations",
                             compared_query_count=204, observed_rank_mismatches=0)
         evidence_hashes[kind] = (path, _json(root, path, evidence))
-    receipt = DryRunReceiptV2("v2", "pass", approval, dataset_hash, query_hash,
+    receipt = DryRunReceiptV2("v2.1", "pass", approval, dataset_hash, query_hash,
                               reference_hash, matrix.identity_hash,
                               artifact_set.identity_hash, set_path, runtime_hash,
-                              code_commit, config.protocol_version, "english_dev", 204,
+                              corpus_revision, code_commit, config.protocol_version,
+                              "dry_run", "english_dev", 204,
                               *evidence_hashes["determinism"], *evidence_hashes["leakage"])
     directory = write_lifecycle_artifact(
         root / "docs/experiments/audits/dry_run_receipts", receipt)
@@ -606,7 +611,37 @@ def test_matrix_receipt_reloads_from_committed_head_with_false_navigation_flag(s
                                         receipt.artifact_set_identity)
     assert len(artifact_set.runs) == 17
     assert artifact_set.coverage_count == 204
-    assert _validate_fixture(synthetic_authority).purpose is RunKind.FORMAL
+    assert artifact_set.corpus_revision == "12391233daa2149ead4f451e920b2e0d8a1a6beb"
+    assert artifact_set.execution_revision == synthetic_authority[5]
+    assert artifact_set.corpus_revision != artifact_set.execution_revision
+    validated = _validate_fixture(synthetic_authority)
+    assert validated.purpose is RunKind.FORMAL
+    assert validated.receipt_archive_commit == _git(root, "rev-parse", "HEAD")
+    assert validated.receipt_archive_commit != artifact_set.execution_revision
+
+
+def test_legacy_run_revision_read_is_corpus_only():
+    legacy = {"self_repository_commit": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+              "runner_code_commit": "a" * 40}
+    assert read_run_revisions(legacy) == (legacy["self_repository_commit"], None)
+    with pytest.raises(ValueError, match="schema is incomplete"):
+        read_run_revisions({**legacy, "execution_revision": "a" * 40})
+    with pytest.raises(ValueError, match="schema is invalid"):
+        read_run_revisions({**legacy, "revision_schema_version": "v2",
+                            "corpus_revision": legacy["self_repository_commit"],
+                            "execution_revision": "a" * 40})
+
+
+def test_old_receipt_shape_cannot_claim_new_provenance(synthetic_authority):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    old = receipt.to_record()
+    old["schema_version"] = "v2"
+    old["code_commit"] = old.pop("execution_revision")
+    old.pop("corpus_revision")
+    old.pop("mode")
+    with pytest.raises(ValueError):
+        DryRunReceiptV2.from_record(old)
 
 
 def test_uncommitted_receipt_cannot_be_authority(synthetic_authority):
@@ -701,6 +736,91 @@ def _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record):
     _git(root, "add", "docs/experiments")
     _git(root, "commit", "-qm", "synthetic dry-run artifact mutation")
     return new_path
+
+
+def _mutate_manifest_revision(fixture, mutate):
+    root, _, _, receipt_path, _, _ = fixture
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    artifact_set_record = json.loads((root / receipt.artifact_set_path).read_text())
+    run = artifact_set_record["runs"][0]
+    manifest = json.loads((root / run["manifest_path"]).read_text())
+    mutate(manifest)
+    run["manifest_sha256"] = _json(root, run["manifest_path"], manifest)
+    return _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record)
+
+
+@pytest.mark.parametrize("field", ("corpus_revision", "execution_revision"))
+def test_formal_gate_rejects_mixed_run_revisions(synthetic_authority, field):
+    new_path = _mutate_manifest_revision(
+        synthetic_authority, lambda manifest: manifest.__setitem__(field, "0" * 40))
+    with pytest.raises(EligibilityError, match="dry_run_result_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
+def test_legacy_manifest_cannot_claim_complete_formal_provenance(synthetic_authority):
+    def legacy(manifest):
+        manifest["self_repository_commit"] = manifest.pop("corpus_revision")
+        manifest["runner_code_commit"] = manifest.pop("execution_revision")
+        manifest.pop("revision_schema_version")
+
+    new_path = _mutate_manifest_revision(synthetic_authority, legacy)
+    with pytest.raises(EligibilityError, match="dry_run_revision_schema_invalid"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
+@pytest.mark.parametrize("field", ("corpus_revision", "execution_revision"))
+def test_formal_gate_rejects_wrong_artifact_set_revision(synthetic_authority, field):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    artifact_set_record = json.loads((root / receipt.artifact_set_path).read_text())
+    artifact_set_record[field] = "0" * 40
+    new_path = _rebind_synthetic_artifacts(root, receipt_path, artifact_set_record)
+    with pytest.raises(EligibilityError, match="dry_run_artifact_set_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
+
+
+def test_formal_gate_rejects_swapped_receipt_revisions(synthetic_authority):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    receipt = RepositoryAuthority(root).load_typed(receipt_path, DryRunReceiptV2)
+    swapped = replace(receipt, corpus_revision=receipt.execution_revision,
+                      execution_revision=receipt.corpus_revision)
+    directory = write_lifecycle_artifact(root / "docs/experiments/audits/dry_run_receipts", swapped)
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic swapped revision receipt")
+    path = (directory / "record.json").relative_to(root).as_posix()
+    with pytest.raises(EligibilityError, match="dry_run_receipt_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], path, *synthetic_authority[4:]))
+
+
+def test_receipt_archive_cannot_precede_claimed_execution(synthetic_authority):
+    root = synthetic_authority[0]
+    _git(root, "commit", "--allow-empty", "-qm", "synthetic later code revision")
+    later = _git(root, "rev-parse", "HEAD")
+    with pytest.raises(EligibilityError, match="dry_run_archive_precedes_execution"):
+        _validate_fixture((*synthetic_authority[:5], later))
+
+
+def test_post_execution_retrieval_code_change_invalidates_provenance(synthetic_authority):
+    root = synthetic_authority[0]
+    _write(root, "project_intelligence/synthetic_change.py", b"changed = True\n")
+    _git(root, "add", "project_intelligence/synthetic_change.py")
+    _git(root, "commit", "-qm", "synthetic retrieval code change")
+    with pytest.raises(EligibilityError, match="execution_code_mismatch"):
+        _validate_fixture(synthetic_authority)
+
+
+def test_navigation_flag_cannot_bypass_run_revision_check(synthetic_authority):
+    root = synthetic_authority[0]
+    new_path = _mutate_manifest_revision(
+        synthetic_authority,
+        lambda manifest: manifest.__setitem__("execution_revision", "0" * 40))
+    gate_path = "docs/experiments/current_gate.json"
+    gate = RepositoryAuthority(root).load_current_gate()
+    _json(root, gate_path, replace(gate, formal_execution_eligible=True).to_record())
+    _git(root, "add", "docs/experiments")
+    _git(root, "commit", "-qm", "synthetic navigation flag")
+    with pytest.raises(EligibilityError, match="dry_run_result_mismatch"):
+        _validate_fixture((*synthetic_authority[:3], new_path, *synthetic_authority[4:]))
 
 
 @pytest.mark.parametrize("change", ("missing", "english_test", "chinese"))

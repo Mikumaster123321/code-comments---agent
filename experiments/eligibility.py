@@ -21,6 +21,7 @@ from .reference import (
 from .schemas import (
     DatasetManifest, GroundTruthRecord, QueryRecord, dataset_manifest_from_record,
     RuntimeMetadata, ground_truth_from_record, query_from_record, SchemaValidationError, _exact, _timestamp,
+    frozen_corpus_revision, read_run_revisions,
 )
 from .serialization import canonical_hash, normalize_lf, normalize_relative_path
 
@@ -166,17 +167,35 @@ class RepositoryAuthority:
         _require(result.returncode == 0, "frozen_commit_unavailable")
 
     def verify_execution_code(self, commit: str) -> None:
-        """A declared code commit must match the tracked experiments code in use."""
+        """A declared execution revision must still match benchmark code at HEAD."""
         self.verify_commit(commit)
-        for args in (("diff", "--quiet", "HEAD", "--", "experiments"),
-                     ("diff", "--quiet", commit, "HEAD", "--", "experiments")):
+        ancestor = subprocess.run(["git", "-C", str(self.root), "merge-base", "--is-ancestor", commit, "HEAD"],
+                                  capture_output=True, check=False)
+        _require(ancestor.returncode == 0, "execution_code_mismatch")
+        code_paths = ("experiments", "project_intelligence", "code_maintenance")
+        for args in (("diff", "--quiet", "HEAD", "--", *code_paths),
+                     ("diff", "--quiet", commit, "HEAD", "--", *code_paths)):
             result = subprocess.run(["git", "-C", str(self.root), *args],
                                     capture_output=True, check=False)
             _require(result.returncode == 0, "execution_code_mismatch")
         untracked = subprocess.run(["git", "-C", str(self.root), "ls-files", "--others",
-                                    "--exclude-standard", "--", "experiments"],
+                                    "--exclude-standard", "--", *code_paths],
                                    capture_output=True, check=False)
         _require(untracked.returncode == 0 and not untracked.stdout, "execution_code_mismatch")
+
+    def artifact_archive_commit(self, relative_path: str) -> str:
+        content = self.raw_bytes(relative_path)
+        history = subprocess.run(["git", "-C", str(self.root), "log", "--diff-filter=A",
+                                  "--format=%H", "HEAD", "--", relative_path],
+                                 capture_output=True, check=False)
+        _require(history.returncode == 0 and bool(history.stdout.strip()), "artifact_archive_commit_missing")
+        commit = history.stdout.decode("ascii").splitlines()[0]
+        self.verify_commit(commit)
+        archived = subprocess.run(["git", "-C", str(self.root), "show", f"{commit}:{relative_path}"],
+                                  capture_output=True, check=False)
+        _require(archived.returncode == 0 and archived.stdout == content,
+                 "artifact_archive_content_mismatch")
+        return commit
 
     def json_record(self, relative_path: str) -> Mapping[str, Any]:
         try:
@@ -385,6 +404,7 @@ class ValidatedExecutionInputs:
     runtime_identity: str
     runtime_evidence: RuntimeMetadata
     dry_run_receipt_path: str | None
+    receipt_archive_commit: str | None
     dataset: DatasetManifest
     queries: tuple[QueryRecord, ...]
     reference: tuple[ReferenceRecord, ...]
@@ -572,13 +592,19 @@ def validate_formal_eligibility(
              "runtime_contract_mismatch")
     runtime_identity = canonical_hash(runtime_evidence.to_record())
     authority.verify_execution_code(code_commit)
+    receipt_archive_commit = None
     if purpose == RunKind.FORMAL:
         _require(dry_run_receipt is not None, "dry_run_receipt_missing")
         receipt = authority.load_typed(dry_run_receipt, DryRunReceiptV2)
         _require(dry_run_receipt ==
                  f"docs/experiments/audits/dry_run_receipts/{receipt.identity_hash}/record.json",
                  "dry_run_receipt_identity_mismatch")
-        _validate_dry_run_receipt(authority, receipt, requested_config, queries,
+        receipt_archive_commit = authority.artifact_archive_commit(dry_run_receipt)
+        archived_after_execution = subprocess.run(
+            ["git", "-C", str(authority.root), "merge-base", "--is-ancestor",
+             code_commit, receipt_archive_commit], capture_output=True, check=False)
+        _require(archived_after_execution.returncode == 0, "dry_run_archive_precedes_execution")
+        _validate_dry_run_receipt(authority, receipt, requested_config, dataset, queries,
                                   approval.identity_hash, dataset.dataset_hash, query_hash,
                                   approval.reference_identity.hash, runtime_identity,
                                   runtime_evidence.to_record(), code_commit)
@@ -590,12 +616,13 @@ def validate_formal_eligibility(
                   config_identity=requested_config.identity_hash, code_commit=code_commit,
                   runtime_identity=runtime_identity, runtime_evidence=runtime_evidence,
                   dry_run_receipt_path=dry_run_receipt,
+                  receipt_archive_commit=receipt_archive_commit,
                   dataset=dataset, queries=queries, reference=reference)
 
 
 def _validate_dry_run_receipt(
     authority: RepositoryAuthority, receipt: DryRunReceiptV2, formal_config: BenchmarkConfig,
-    queries: tuple[QueryRecord, ...], approval_identity: str, dataset_identity: str,
+    dataset: DatasetManifest, queries: tuple[QueryRecord, ...], approval_identity: str, dataset_identity: str,
     query_identity: str, reference_identity: str, runtime_identity: str,
     runtime_record: dict, code_commit: str,
 ) -> None:
@@ -603,11 +630,13 @@ def _validate_dry_run_receipt(
     from .execution import executable_config
     from project_intelligence import LocalE5EmbeddingProvider
 
+    corpus_revision = frozen_corpus_revision(dataset)
     expected = (approval_identity, dataset_identity, query_identity, reference_identity,
-                runtime_identity, code_commit)
+                runtime_identity, corpus_revision, code_commit)
     _require((receipt.approved_reference_identity, receipt.dataset_identity,
               receipt.query_set_identity, receipt.reference_identity,
-              receipt.runtime_identity, receipt.code_commit) == expected,
+              receipt.runtime_identity, receipt.corpus_revision,
+              receipt.execution_revision) == expected,
              "dry_run_receipt_mismatch")
     _require(receipt.protocol_version == formal_config.protocol_version,
              "dry_run_protocol_mismatch")
@@ -628,7 +657,8 @@ def _validate_dry_run_receipt(
              "dry_run_query_scope_mismatch")
     _require((artifact_set.approved_reference_identity, artifact_set.dataset_identity,
               artifact_set.query_set_identity, artifact_set.reference_identity,
-              artifact_set.runtime_identity, artifact_set.code_commit) == expected and
+              artifact_set.runtime_identity, artifact_set.corpus_revision,
+              artifact_set.execution_revision) == expected and
              artifact_set.configuration_set_identity == matrix.identity_hash and
              artifact_set.coverage_count == receipt.coverage_count,
              "dry_run_artifact_set_mismatch")
@@ -647,6 +677,11 @@ def _validate_dry_run_receipt(
             _require(authority.raw_checksum(path) == digest, "dry_run_artifact_hash_mismatch")
         manifest = authority.json_record(run.manifest_path)
         aggregate = authority.json_record(run.aggregate_path)
+        try:
+            run_corpus_revision, run_execution_revision = read_run_revisions(manifest)
+        except SchemaValidationError:
+            raise EligibilityError("dry_run_revision_schema_invalid") from None
+        _require(run_execution_revision is not None, "dry_run_revision_schema_invalid")
         _require(all(type(manifest.get(name)) is dict for name in
                      ("protocol", "query_set", "dataset", "output_checksums")) and
                  all(type(aggregate.get(name)) is dict for name in
@@ -654,8 +689,10 @@ def _validate_dry_run_receipt(
                  "dry_run_result_mismatch")
         _require(manifest.get("run_id") == run.run_id and
                  manifest.get("protocol", {}).get("version") == formal_config.protocol_version and
-                 manifest.get("runner_code_commit") == code_commit and
-                 manifest.get("self_repository_commit") == code_commit and
+                 run_corpus_revision == corpus_revision and
+                 run_execution_revision == code_commit and
+                 manifest.get("mode") == "dry_run" and
+                 manifest.get("split") == "english_dev" and
                  manifest.get("approved_reference_identity") == approval_identity and
                  manifest.get("reference_hash") == reference_identity and
                  manifest.get("environment") == runtime_record and

@@ -972,7 +972,8 @@ class DryRunArtifactSet:
     reference_identity: str
     configuration_set_identity: str
     runtime_identity: str
-    code_commit: str
+    corpus_revision: str
+    execution_revision: str
     mode: str
     split: str
     query_ids: tuple[str, ...]
@@ -983,11 +984,14 @@ class DryRunArtifactSet:
 
     def __post_init__(self) -> None:
         from .config import FROZEN_MATRIX_IDS
-        if self.schema_version != "v1" or self.mode != "dry_run" or self.split != "english_dev":
+        if self.schema_version != "v2" or self.mode != "dry_run" or self.split != "english_dev":
             raise SchemaValidationError("dry-run artifact set scope is invalid")
         for name in ("approved_reference_identity", "dataset_identity", "query_set_identity", "reference_identity", "configuration_set_identity", "runtime_identity"):
             _sha256(name, getattr(self, name))
-        _safe_text("code_commit", self.code_commit)
+        for name in ("corpus_revision", "execution_revision"):
+            revision = getattr(self, name)
+            if type(revision) is not str or len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
+                raise SchemaValidationError(f"{name} must be a Git SHA-1")
         if type(self.query_ids) is not tuple or len(self.query_ids) != 12 or tuple(sorted(set(self.query_ids))) != self.query_ids:
             raise SchemaValidationError("dry-run query set must contain twelve sorted unique IDs")
         if any(type(query_id) is not str or not query_id for query_id in self.query_ids):
@@ -1030,8 +1034,10 @@ class DryRunReceiptV2:
     artifact_set_identity: str
     artifact_set_path: str
     runtime_identity: str
-    code_commit: str
+    corpus_revision: str
+    execution_revision: str
     protocol_version: str
+    mode: str
     population: str
     coverage_count: int
     determinism_evidence_path: str
@@ -1040,13 +1046,16 @@ class DryRunReceiptV2:
     leakage_evidence_sha256: str
 
     def __post_init__(self) -> None:
-        if self.schema_version != "v2" or self.status != "pass" or self.population != "english_dev" or type(self.coverage_count) is not int or self.coverage_count != 204:
+        if self.schema_version != "v2.1" or self.status != "pass" or self.mode != "dry_run" or self.population != "english_dev" or type(self.coverage_count) is not int or self.coverage_count != 204:
             raise SchemaValidationError("matrix receipt status or scope is invalid")
         for name in ("approved_reference_identity", "dataset_identity", "query_set_identity", "reference_identity", "configuration_set_identity", "artifact_set_identity", "runtime_identity", "determinism_evidence_sha256", "leakage_evidence_sha256"):
             _sha256(name, getattr(self, name))
         for name in ("artifact_set_path", "determinism_evidence_path", "leakage_evidence_path"):
             _path(name, getattr(self, name))
-        _safe_text("code_commit", self.code_commit)
+        for name in ("corpus_revision", "execution_revision"):
+            revision = getattr(self, name)
+            if type(revision) is not str or len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
+                raise SchemaValidationError(f"{name} must be a Git SHA-1")
         _safe_text("protocol_version", self.protocol_version)
 
     def to_record(self) -> dict:

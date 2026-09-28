@@ -16,6 +16,28 @@ class SchemaValidationError(ValueError):
     pass
 
 
+def _git_revision(name: str, value: object) -> str:
+    text = _non_empty(name, value)
+    if len(text) != 40 or any(character not in "0123456789abcdef" for character in text):
+        raise SchemaValidationError(f"{name} must be a Git SHA-1")
+    return text
+
+
+def read_run_revisions(record: Mapping[str, Any]) -> tuple[str, str | None]:
+    """Legacy manifests identify only the source corpus; v2 identifies both revisions."""
+    if type(record) is not dict:
+        raise SchemaValidationError("run manifest must be an object")
+    version = record.get("revision_schema_version")
+    if version is None:
+        if "corpus_revision" in record or "execution_revision" in record:
+            raise SchemaValidationError("run revision schema is incomplete")
+        return _git_revision("legacy corpus revision", record.get("self_repository_commit")), None
+    if version != "v2" or "self_repository_commit" in record or "runner_code_commit" in record:
+        raise SchemaValidationError("run revision schema is invalid")
+    return (_git_revision("corpus revision", record.get("corpus_revision")),
+            _git_revision("execution revision", record.get("execution_revision")))
+
+
 _SPLITS = {"english_dev", "english_test", "chinese_coverage"}
 _LANGUAGES = {"python", "java"}
 _TASK_TYPES = {
@@ -247,6 +269,16 @@ class DatasetManifest:
             for project in self.projects
             for item in project.files
         ])
+
+
+def frozen_corpus_revision(dataset: DatasetManifest) -> str:
+    if type(dataset) is not DatasetManifest:
+        raise SchemaValidationError("frozen dataset is required")
+    revisions = [project.source_revision for project in dataset.projects
+                 if project.source_kind == "self_repository"]
+    if len(revisions) != 1:
+        raise SchemaValidationError("frozen dataset must identify one self-repository revision")
+    return _git_revision("frozen corpus revision", revisions[0])
 
 
 @dataclass(frozen=True)
@@ -678,6 +710,8 @@ class PerformanceMetadata:
 @dataclass(frozen=True)
 class RunMetadata:
     run_id: str
+    mode: str
+    split: str
     protocol_id: str
     protocol_version: str
     protocol_hash: str
@@ -690,8 +724,8 @@ class RunMetadata:
     ground_truth_version: str
     ground_truth_hash: str
     config_hashes: tuple[str, ...]
-    self_repository_commit: str
-    runner_code_commit: str
+    corpus_revision: str
+    execution_revision: str
     dirty_state: bool
     embedding_fingerprint: Mapping[str, Any] | None
     model_cache_verified: bool | None
@@ -712,11 +746,15 @@ class RunMetadata:
     def __post_init__(self) -> None:
         for name in (
             "run_id", "protocol_id", "protocol_version", "dataset_id", "dataset_version",
-            "query_set_version", "ground_truth_version", "self_repository_commit",
-            "runner_code_commit", "index_identity", "python_hash_seed", "operator_id",
+            "query_set_version", "ground_truth_version", "index_identity", "python_hash_seed", "operator_id",
             "independent_audit_status",
         ):
             _non_empty(name, getattr(self, name))
+        if (type(self.mode) is not str or self.mode not in {"synthetic", "dry_run", "formal"}
+                or type(self.split) is not str or self.split not in _SPLITS):
+            raise SchemaValidationError("run mode or split is invalid")
+        _git_revision("corpus revision", self.corpus_revision)
+        _git_revision("execution revision", self.execution_revision)
         for name in (
             "protocol_hash", "dataset_hash", "path_manifest_hash", "query_set_hash",
             "ground_truth_hash",
@@ -765,13 +803,16 @@ class RunMetadata:
 
     def deterministic_record(self) -> dict:
         record = {
+            "mode": self.mode,
+            "split": self.split,
             "protocol": {"id": self.protocol_id, "version": self.protocol_version, "hash": self.protocol_hash},
             "dataset": {"id": self.dataset_id, "version": self.dataset_version, "hash": self.dataset_hash, "path_manifest_hash": self.path_manifest_hash},
             "query_set": {"version": self.query_set_version, "hash": self.query_set_hash},
             "ground_truth": {"version": self.ground_truth_version, "hash": self.ground_truth_hash},
             "config_hashes": list(self.config_hashes),
-            "self_repository_commit": self.self_repository_commit,
-            "runner_code_commit": self.runner_code_commit,
+            "revision_schema_version": "v2",
+            "corpus_revision": self.corpus_revision,
+            "execution_revision": self.execution_revision,
             "dirty_state": self.dirty_state,
             "embedding_fingerprint": self.embedding_fingerprint,
             "model_cache_verified": self.model_cache_verified,

@@ -26,6 +26,7 @@ from .schemas import (
     QueryRecord,
     RunMetadata,
     SchemaValidationError,
+    frozen_corpus_revision,
     symbol_id_to_record,
 )
 from .reference import ReferenceRecord
@@ -587,7 +588,8 @@ class BenchmarkRunner:
                 truth_values != renewed.reference or
                 metadata.approved_reference_identity != renewed.approval_identity or
                 metadata.reference_hash != renewed.reference_identity or
-                metadata.runner_code_commit != renewed.code_commit or
+                metadata.execution_revision != renewed.code_commit or
+                metadata.corpus_revision != frozen_corpus_revision(renewed.dataset) or
                 canonical_hash(metadata.runtime.to_record()) != renewed.runtime_identity):
                 raise FormalRunGuardError("execution inputs differ from validated authority")
         elif validated_inputs is not None:
@@ -694,7 +696,7 @@ class BenchmarkRunner:
             ground_truth_version=config.ground_truth_version,
             ground_truth_hash=config.ground_truth_hash,
             config_hash=config.identity_hash,
-            code_commit=metadata.runner_code_commit,
+            code_commit=metadata.execution_revision,
             embedding_fingerprint=_fingerprint_record(strategy.embedding_fingerprint),
             index_identity=strategy.index_identity,
             population_filters={
@@ -827,7 +829,9 @@ class BenchmarkRunner:
         if metadata.config_hashes != (config.identity_hash,):
             raise BenchmarkRunnerError("run metadata does not identify the exact config")
         if (
-            metadata.dataset_id != dataset.dataset_id
+            metadata.mode != config.run_kind.value
+            or metadata.split != config.population.value
+            or metadata.dataset_id != dataset.dataset_id
             or metadata.dataset_version != dataset.version
             or metadata.dataset_hash != dataset.dataset_hash
             or metadata.path_manifest_hash != dataset.path_manifest_hash
@@ -841,8 +845,8 @@ class BenchmarkRunner:
             gate = metadata.formal_gate
             dependencies = dict(metadata.runtime.dependencies)
             if (
-                (gate is not None and gate.runner_code_commit != metadata.runner_code_commit)
-                or metadata.self_repository_commit != "12391233daa2149ead4f451e920b2e0d8a1a6beb"
+                (gate is not None and gate.runner_code_commit != metadata.execution_revision)
+                or metadata.corpus_revision != frozen_corpus_revision(dataset)
                 or metadata.dirty_state
                 or metadata.runtime.python_version != "3.12.14"
                 or metadata.runtime.python_implementation != "CPython"

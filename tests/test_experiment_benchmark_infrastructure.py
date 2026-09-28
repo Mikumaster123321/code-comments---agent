@@ -59,6 +59,7 @@ from experiments import (
     load_queries,
     write_run_artifacts,
 )
+from experiments.schemas import read_run_revisions
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "experiments"
@@ -221,6 +222,8 @@ def metadata_for(config, *, index_identity="index-v1", run_id="synthetic-run-1")
     }
     return RunMetadata(
         run_id=run_id,
+        mode=config.run_kind.value,
+        split=config.population.value,
         protocol_id="phase6",
         protocol_version=config.protocol_version,
         protocol_hash="c" * 64,
@@ -233,8 +236,8 @@ def metadata_for(config, *, index_identity="index-v1", run_id="synthetic-run-1")
         ground_truth_version=config.ground_truth_version,
         ground_truth_hash=config.ground_truth_hash,
         config_hashes=(config.identity_hash,),
-        self_repository_commit="12391233daa2149ead4f451e920b2e0d8a1a6beb",
-        runner_code_commit="7a224c456f7615e4f4dbc79b1065755df3c8033f",
+        corpus_revision="12391233daa2149ead4f451e920b2e0d8a1a6beb",
+        execution_revision="7a224c456f7615e4f4dbc79b1065755df3c8033f",
         dirty_state=True,
         embedding_fingerprint=fingerprint_record,
         model_cache_verified=None,
@@ -779,6 +782,11 @@ def test_append_only_artifacts_checksums_and_collision(tmp_path):
         "aggregate_results.json", "checksums.sha256", "raw_results.jsonl", "run_manifest.json"
     ]
     assert result.aggregate.raw_results_sha256 in (run_path / "aggregate_results.json").read_text()
+    manifest = json.loads((run_path / "run_manifest.json").read_text())
+    assert manifest["revision_schema_version"] == "v2"
+    assert read_run_revisions(manifest) == (metadata.corpus_revision, metadata.execution_revision)
+    assert "self_repository_commit" not in manifest and "runner_code_commit" not in manifest
+    assert (manifest["mode"], manifest["split"]) == ("synthetic", "english_dev")
     with pytest.raises(ArtifactCollisionError):
         write_run_artifacts(tmp_path, result, metadata)
 
