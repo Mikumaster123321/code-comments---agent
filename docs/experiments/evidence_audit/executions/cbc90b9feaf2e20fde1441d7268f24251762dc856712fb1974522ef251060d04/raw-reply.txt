@@ -1,0 +1,47 @@
+{
+  "query_id": "et-cf-ja-02",
+  "overall_status": "SUPPORTS",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "verdict": "SUPPORTS",
+      "source_identity": {
+        "relative_path": "src/com/desk/model/DeskClock.java",
+        "qualified_name": "DeskClock.minutesUntil",
+        "semantic_disambiguator": "minutesUntil(int)",
+        "span": { "start_line": 6, "end_line": 6, "start_offset": 75, "end_offset": 143 }
+      },
+      "observed_behavior": "第 6 行内容为 `public int minutesUntil(int deadline) { return deadline - now; }`，返回 deadline 与 now 的整数差，即基于时钟的剩余分钟计算。span [75,143) 恰好覆盖该行（该行起于 offset 75、长 68 字符），与文件声明 bytes=146 的布局一致，身份未混淆。",
+      "grade_assessment": "Grade 1（契约/调用路径/预期行为）成立：该方法正是 E02 中 minutesLate 调用 clock.minutesUntil(deadline) 的被调目标，提供时钟差值语义。理由中“为队列的迟到值提供时钟计算”由本 span 加 E02 的调用点共同支持，无夸大。",
+      "span_grade_concern": false
+    },
+    {
+      "evidence_id": "E02",
+      "verdict": "SUPPORTS",
+      "source_identity": {
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "qualified_name": "DeskQueue.minutesLate",
+        "semantic_disambiguator": "minutesLate(String,int)",
+        "span": { "start_line": 40, "end_line": 44, "start_offset": 1127, "end_offset": 1315 }
+      },
+      "observed_behavior": "L40-L44 为 `minutesLate(String id, int deadline)`：先 `Ticket ticket = folder.find(id);`，若为 null 则 `return 0;`，否则 `return -clock.minutesUntil(deadline);`（取负得到迟到分钟数）。span [1127,1315) 长度 188，与 L40-L44 逐字符长度完全吻合，边界精确。",
+      "grade_assessment": "Grade 2（直接定位实现/身份）成立：此 span 即“查找票据 → 赋予时钟迟到值”这一查询行为的直接实现，理由描述与源码逐句对应，无遗漏或添加。",
+      "span_grade_concern": false
+    },
+    {
+      "evidence_id": "E03",
+      "verdict": "SUPPORTS",
+      "source_identity": {
+        "relative_path": "src/com/desk/store/TicketFolder.java",
+        "qualified_name": "TicketFolder.find",
+        "semantic_disambiguator": "find(String)",
+        "span": { "start_line": 21, "end_line": 31, "start_offset": 563, "end_offset": 933 }
+      },
+      "observed_behavior": "L21-L31 为 `find(String id)`：遍历 entries，按 `stored.id().equals(id)` 命中后 `new Ticket(stored.id(), stored.title())` 新建副本，复制 `note`，若原票非 open 则 `copy.markClosed()`，返回该副本；未命中返回 null。span [563,933) 长度 370，与 L21-L31 逐字符长度完全吻合。",
+      "grade_assessment": "Grade 2（直接定位实现/身份）成立：find 正是“stored ticket 如何被找到”的直接实现。理由中“返回副本、不返回数组原对象”的描述与源码一致，属对实现的关键行为刻画，无失实。",
+      "span_grade_concern": false
+    }
+  ],
+  "scope_statement": "未判断未展示项目范围内是否还有其他相关 Symbol；本审计仅就给定的三处源码片段与其 span 判定既有 Grade 与理由是否被支持，未检索、未使用、未请求也未调用任何被评估检索器的排名、得分或正式结果。",
+  "end_marker": "RESPONSE_END_ET_CF_JA_02"
+}

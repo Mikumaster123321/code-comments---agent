@@ -1,0 +1,32 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "f879ac16acee57ef3609b14d85922432358d0f96a91c7f2176df7c4f5eabc3b6",
+    "grade_observation": "{\"span_grade_note\":\"span [117,188) 精确覆盖第 8 行方法定义行本身，与 Grade 1 所述『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+    "reason": "{\"observed_behavior\":\"第 8 行即为方法体 public void recordOpen(Ticket ticket) { lastOpened = ticket.id(); }，将传入票据的 id 写入字段 lastOpened，即保存最近一次开单编号；未做其他操作。\",\"rationale_supported\":true,\"span_grade_note\":\"span [117,188) 精确覆盖第 8 行方法定义行本身，与 Grade 1 所述『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+    "source_locations": [
+      "src/com/desk/audit/DeskAudit.java:L8-L8 [117,188)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "d96bdfc6afee3767b4f405be9bbb96215c777a822727819f2aeaf4a925ef0f0b",
+    "grade_observation": "{\"span_grade_note\":\"span [407,600) 精确覆盖 L15-L20 方法边界，Grade 2『直接定位实现/身份』成立：该方法是无备注开单存储与记录的唯一直接实现。\",\"span_grade_suspected_mismatch\":false}",
+    "reason": "{\"observed_behavior\":\"L15-L20 恰为两参 openTicket(String id, String title)：构造 new Ticket(id, title)，调用 folder.put(ticket)，再调用 audit.recordOpen(ticket)，最后 return ticket；方法体未设置 note 字段。行为与理由描述完全一致。\",\"rationale_supported\":true,\"span_grade_note\":\"span [407,600) 精确覆盖 L15-L20 方法边界，Grade 2『直接定位实现/身份』成立：该方法是无备注开单存储与记录的唯一直接实现。\",\"span_grade_suspected_mismatch\":false}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L15-L20 [407,600)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E03",
+    "evidence_identity": "7e61a9492497de9ed8ddb7e7963742fd006442aae3b72002fdea3ef62cbdc837",
+    "grade_observation": "{\"span_grade_note\":\"span [130,561) 精确覆盖 L8-L19 方法边界，与 Grade 1『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+    "reason": "{\"observed_behavior\":\"L8-L19 为 put(Ticket)：循环比对 entries[i].id().equals(ticket.id())，同 id 则 entries[i] = ticket 并 return（原地替换）；未命中则新建长度 +1 的数组、arraycopy 后追加于末尾并回写 entries。行为与理由一致。\",\"rationale_supported\":true,\"span_grade_note\":\"span [130,561) 精确覆盖 L8-L19 方法边界，与 Grade 1『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+    "source_locations": [
+      "src/com/desk/store/TicketFolder.java:L8-L19 [130,561)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

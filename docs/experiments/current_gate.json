@@ -1,20 +1,20 @@
 {
   "schema_version": "v1",
-  "current_phase": "6.2B.2",
+  "current_phase": "6.2B.3",
   "current_gate": "OPEN",
-  "phase_status": "ALLOWED BUT NOT STARTED",
+  "phase_status": "IN PROGRESS",
   "selected_reference_approval_identity": null,
   "dry_run_eligible": false,
   "formal_execution_eligible": false,
   "blockers": [
-    "Formal Java Evidence Audit: 0/12 completed",
+    "Formal Java Evidence Audit: 10/12 completed; et-bl-ja-01 and et-fl-ja-02 remain BLOCKED",
     "Reference Approval: NOT CREATED / NOT APPROVED",
     "Phase 6.2 approval gate: OPEN",
     "Phase 6.3: BLOCKED / NOT STARTED",
     "Formal RQ1–RQ4: NOT ELIGIBLE / NOT STARTED",
     "V3.2: NOT STARTED"
   ],
-  "next_allowed_action": "Phase 6.2B.2 Evidence Capture Proof; not started",
+  "next_allowed_action": "Resolve the two blocked Java captures and complete their formal audits; no Phase 6.3 execution",
   "authoritative_documents": [
     "docs/experiments/Experiment_Protocol_V3_1_0.md",
     "docs/experiments/Experiment_Protocol_Addendum_A_V3_1_0.md",
@@ -25,5 +25,5 @@
     "docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md",
     "docs/qa/QA_Report_V3_1_0_Phase_6_2B_1.md"
   ],
-  "updated_by_commit": "16ad2ac3392289362c0003ef94737348bbe877f8"
+  "updated_by_commit": "a6cc001aad5f5c9588d46fa756b669bf06e6f075"
 }

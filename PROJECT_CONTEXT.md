@@ -1096,6 +1096,13 @@
 - prepared verifier **PASS**；新增 19 个离线外部响应测试，相关生命周期文件 **71 passed**，全量回归 **794 passed**（此前 775）。[窄 Development Report](docs/development/Development_Report_V3_1_0_Phase_6_2_Java_Evidence_Response_Mapping.md) 记录字段映射与方法边界。
 - Formal Java Evidence Audit **0/12**；Reference Approval、Phase 6.2 Closure、Dry Run Receipt **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**。下一动作：对现有 10 条 READY capture 重新执行 batch materialization；本轮不增加独立 QA。
 
+### V3.1.0 Phase 6.2 — Java Evidence Batch Materialization RETRY
+
+- 以 `a6cc001aad5f5c9588d46fa756b669bf06e6f075` 为初始 HEAD，现有 10 条 CAPTURE_READY 的 raw bytes/hash、prepared input、身份、strict external parser 和 deterministic normalization 重新验证均 PASS；未重新调用 DeepSeek，保留首份合格 capture 原 verdict（10 条均 `SUPPORTS`）。
+- 正式 `EvidenceAuditRecord` append-only materialize **10/10**；真实 capture attempt 编号 1/2/3，失败历史单独按 hash/原因存档，不创建失败 completed audit；raw、external parsed、internal normalized、transcription、provenance 与 visible Final 分开留存，Thinking export unavailable 明示。由 72 条 drafted GT 派生候选 Reference content identity `d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04`，不构成批准。
+- prepared verifier **PASS**；10/10 磁盘重载及提交态 authority reload **PASS**；相关专项 **172 passed**、全量回归 **795 passed**（初始基线 794）。
+- Formal Java Evidence Audit **10/12**；`et-bl-ja-01`、`et-fl-ja-02` 仍 **BLOCKED / NO FORMAL AUDIT**。Query 72、GT 72/72 drafted、Evidence 134，冻结原件和 prepared inputs 未改。Reference Approval、Phase 6.2 Closure **NOT CREATED**；Phase 6.2 **OPEN**；Phase 6.3 **BLOCKED / NOT STARTED**。详见 [Java Evidence 执行报告](docs/development/Development_Report_V3_1_0_Phase_6_2_Java_Evidence_Response_Mapping.md)。
+
 ## Planned Version Roadmap
 
 ### V3.0.0 — Released

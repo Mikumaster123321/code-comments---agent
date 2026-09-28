@@ -1,0 +1,12 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "c4542a19a208dcdb0a70936ca9b173f8ba5ec50f108aee0279e3f4044264f7ef",
+    "grade_observation": "{\"grade_support\":\"Consistent with the frozen task. The query asks which method currently returns only the two existing labels; statusLabel is that method, and its identity plus the two-label return expression is directly captured by the cited line. Grade 2 (directly locating the required implementation/identity) is supported by the shown source behavior.\",\"span_grade_correspondence_suspect\":false}",
+    "reason": "{\"grade_support\":\"Consistent with the frozen task. The query asks which method currently returns only the two existing labels; statusLabel is that method, and its identity plus the two-label return expression is directly captured by the cited line. Grade 2 (directly locating the required implementation/identity) is supported by the shown source behavior.\",\"notes\":\"Independent offset accounting places L18's start at offset 459, matching the declared start_offset; the declared span [459,531) covers essentially the whole L18 statement, including the signature and the two-label ternary return. Only a possible ±1-byte boundary ambiguity around the closing brace exists, which does not alter the behavior or the grade. Rationale's file hash prefix (b511160d...) matches fixture_hash in the header.\",\"source_behavior_verified\":\"L18 is `    public String statusLabel() { return isOpen() ? \\\"open\\\" : \\\"closed\\\"; }`. The method delegates to isOpen() (which returns status.equals(\\\"open\\\")) and yields exactly two possible labels: \\\"open\\\" when open, otherwise \\\"closed\\\". There is no third/waiting branch and no reference to a non-open, non-closed state.\",\"span_grade_correspondence_suspect\":false}",
+    "source_locations": [
+      "src/com/desk/model/Ticket.java:L18-L18 [459,531)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

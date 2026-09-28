@@ -1,4 +1,4 @@
-"""Offline synthetic lifecycle evidence; no formal repository artifact is created."""
+"""Offline lifecycle contracts and committed Java evidence artifacts."""
 from __future__ import annotations
 
 import json
@@ -743,5 +743,52 @@ def test_frozen_data_and_prepared_packages_remain_historical():
     prepared = json.loads((ROOT / "docs/experiments/evidence_audit/prepared/manifest.json").read_text())
     assert len(prepared["entries"]) == 12
     assert all(json.loads((ROOT / "docs/experiments/evidence_audit/prepared/records" / (x["query_id"] + ".json")).read_text())["execution_status"] == "NOT_EXECUTED" for x in prepared["entries"])
-    assert not (ROOT / "docs/experiments/evidence_audit/executions").exists()
     assert not (ROOT / "docs/experiments/reference_approval").exists()
+
+
+def test_java_evidence_batch_reloads_from_disk_without_changing_draft_truth():
+    execution_root = ROOT / "docs/experiments/evidence_audit/executions"
+    reference_path = ROOT / "docs/experiments/reference/v3.1-phase6-spec-anchor-reference-v1.jsonl"
+    reference_bytes = reference_path.read_bytes()
+    assert reference_path.with_name(reference_path.name + ".sha256").read_text().strip() == raw_sha256(reference_bytes)
+    references = [ReferenceRecord.from_record(json.loads(line)) for line in reference_bytes.splitlines()]
+    assert len(references) == 72
+    reference_identity = canonical_hash([item.identity_record() for item in references])
+    expected_ids = {
+        "et-bl-ja-02", "et-cf-ja-01", "et-cf-ja-02", "et-dq-ja-01", "et-dq-ja-02",
+        "et-fl-ja-01", "et-mt-ja-01", "et-mt-ja-02", "et-sl-ja-01", "et-sl-ja-02",
+    }
+    directories = sorted(path for path in execution_root.iterdir() if path.is_dir())
+    assert len(directories) == len(expected_ids) == 10
+    seen = set()
+    for directory in directories:
+        checksums = {}
+        for line in (directory / "checksums.sha256").read_text().splitlines():
+            digest, name = line.split("  ", 1)
+            checksums[name] = digest
+        assert checksums == {path.name: raw_sha256(path.read_bytes()) for path in directory.iterdir() if path.name != "checksums.sha256"}
+        record_bytes = (directory / "record.json").read_bytes()
+        assert (directory / "record.json.sha256").read_text().strip() == raw_sha256(record_bytes)
+        audit = EvidenceAuditRecord.from_record(json.loads(record_bytes))
+        assert directory.name == audit.identity_hash
+        assert audit.query_id in expected_ids - seen
+        seen.add(audit.query_id)
+        assert audit.reference_identity == reference_identity
+        assert audit.attempt_number in {1, 2, 3}
+        assert audit.supersedes_attempt == (audit.attempt_number - 1 if audit.attempt_number > 1 else None)
+        assert audit.raw_reply.raw_sha256 == raw_sha256((directory / "raw-reply.txt").read_bytes())
+        assert audit.visible_final.capture == audit.raw_reply
+        assert audit.visible_thinking.availability.status == "unavailable"
+        prepared = json.loads((ROOT / "docs/experiments/evidence_audit/prepared/records" / (audit.query_id + ".json")).read_bytes())
+        assert audit.prepared_input_hash == raw_sha256((directory / "sent-input.txt").read_bytes()) == prepared["input_sha256"]
+        parsed, normalized = parse_external_evidence_response((directory / "raw-reply.txt").read_bytes(), audit.query_id, prepared["evidence_reviews"])
+        assert parsed == json.loads((directory / "external-parsed-response.json").read_bytes())
+        assert [item.to_record() for item in normalized] == json.loads((directory / "normalized-reviews.json").read_bytes())
+        assert audit.evidence_reviews == normalized
+        assert audit.overall_verdict == parsed["overall_status"]
+        assert audit.transcription_hash == raw_sha256((directory / "transcription.json").read_bytes())
+        history = json.loads((directory / "failed-attempts.json").read_bytes())
+        assert history["accepted_attempt_number"] == audit.attempt_number
+        assert {item["attempt_number"] for item in history["other_capture_attempts"]} >= set(range(1, audit.attempt_number))
+        assert all(item["formal_audit_created"] is False for item in history["other_capture_attempts"])
+    assert seen == expected_ids

@@ -1,0 +1,120 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 1,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/provenance.json",
+    "raw_sha256": "033aed47962e7702f74d7cd23dc5cf54b2573a615ba663d11aa5db662e0ccacf"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-24T08:55:38.610550+00:00",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "evidence_identity": "fb5c9cd7919d5f0325f6ebbfa72318aea4cefec98065958fe88566d8aa9c5ec8",
+      "grade_observation": "{\"grade_span_mismatch_suspected\":false}",
+      "reason": "{\"grade_span_mismatch_suspected\":false,\"reason\":\"所引源码与 span 完全支持该理由描述的行为；该类即为问题“which type is stored”所指向的存储类型，属直接相关的核心契约来源，与 Grade 1 无内容层面的矛盾。输入的 grade 分层约定未明确定义，此处仅据 span 对齐、身份一致与内容相关性判断，未发现可判定的 span↔Grade 冲突。\",\"source_behavior_check\":\"span L3-L19 从 `public class Ticket {`（offset 25 与该行起始吻合）延伸至类闭合花括号（end_offset 533，文件共 534 字节，即不含末尾换行），完整覆盖 Ticket 类体，与 symbol_id(kind=class, qualified_name=Ticket) 身份一致。类内确含 key/heading/note、status 初值 \\\"open\\\"、构造器 (id,title)、id()/title()/isOpen()/markClosed()/statusLabel()，与理由所述“保存编号/标题/备注及初始 open 状态、提供状态检查与改为 closed 操作”逐条对应。\"}",
+      "source_locations": [
+        "src/com/desk/model/Ticket.java:L3-L19 [25,533)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "evidence_identity": "0c4f51bac46646b94c0381e8407c8b1d016bd00b6d25ab0594d1214fc17805af",
+      "grade_observation": "{\"grade_span_mismatch_suspected\":false}",
+      "reason": "{\"grade_span_mismatch_suspected\":false,\"reason\":\"所引源码与 span 完全支持理由所述“按相同 id 替换已有数组条目；新 id 则扩展数组并追加票据”，且 put(Ticket) 正是问题“which folder operation stores a ticket”所指向的文件夹存储操作，参数类型 Ticket 亦界定所存类型，属直接定位实现/身份的来源，与 Grade 2 无内容层面的矛盾；未发现可判定的 span↔Grade 冲突。\",\"source_behavior_check\":\"span L8-L19 从 `public void put(Ticket ticket) {` 起至方法闭合花括号止，与 symbol_id(kind=method, qualified_name=TicketFolder.put, disambiguator=put(Ticket)) 一致。方法体行为确为：先遍历 entries，若存在相同 id 的条目则原地替换并 return；否则新建长度 +1 的数组、arraycopy 后追加 ticket 并回填 entries。\"}",
+      "source_locations": [
+        "src/com/desk/store/TicketFolder.java:L8-L19 [130,561)"
+      ],
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "exact_revision": {
+    "reason": "exact backend revision not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "finish_reason": {
+    "reason": "finish reason not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-dq-ja-01",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/provenance.json",
+    "raw_sha256": "033aed47962e7702f74d7cd23dc5cf54b2573a615ba663d11aa5db662e0ccacf"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/provenance.json",
+    "raw_sha256": "033aed47962e7702f74d7cd23dc5cf54b2573a615ba663d11aa5db662e0ccacf"
+  },
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "SUPPORTS",
+  "platform_session_id": {
+    "reason": "unavailable: UI did not expose independent ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "4b3b40f196a2a188f75c5998a0c61ce9fae72133373956f63419740908e8504e",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-dq-ja-01",
+  "query_identity": "17897ef5704e3bb5468f5cb35798482f871d50ebfd4b12e34b8adb2332c6652f",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/raw-reply.txt",
+    "raw_sha256": "7e3da8851343628f7833f5da1c7cd48c4c1531a1cc116212f7bb8486293aaeac"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete exportable Final Answer only; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v1",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/sent-input.txt",
+    "raw_sha256": "4b3b40f196a2a188f75c5998a0c61ce9fae72133373956f63419740908e8504e"
+  },
+  "started_at": "2026-09-24T08:48:00+00:00",
+  "supersedes_attempt": null,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp, not precise model completion.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture provenance; capture file modification timestamp",
+  "token_usage": {
+    "reason": "token usage not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/transcription.json",
+    "raw_sha256": "b73095ab87bc7a7822f4132252bea081ca4b75e17397e9a4bd99ac019f3b5d51"
+  },
+  "transcription_hash": "b73095ab87bc7a7822f4132252bea081ca4b75e17397e9a4bd99ac019f3b5d51",
+  "ui_mode": "cloud",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete exportable Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/f39ce549a52d65c9f1c526e30bbd0a4b65e067c96ca818de0ecbf62d2f5d836d/raw-reply.txt",
+      "raw_sha256": "7e3da8851343628f7833f5da1c7cd48c4c1531a1cc116212f7bb8486293aaeac"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}

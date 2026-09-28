@@ -1,0 +1,56 @@
+{
+  "end_marker": "RESPONSE_END_ET_DQ_JA_02",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "grade_correspondence_suspect": false,
+      "identity": {
+        "relative_path": "src/com/desk/model/DeskClock.java",
+        "span": {
+          "end_line": 6,
+          "end_offset": 143,
+          "start_line": 6,
+          "start_offset": 75
+        },
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskClock.minutesUntil",
+          "relative_path": "src/com/desk/model/DeskClock.java",
+          "semantic_disambiguator": "minutesUntil(int)"
+        }
+      },
+      "rationale": "给定源码与 L6 [75,143) 的 span 恰好覆盖 minutesUntil(int) 的完整方法体，行为与理由“返回 deadline 减 now 的整数差、为队列迟到值提供时钟计算”一致；作为相关契约/被调用方的支持证据与既有 Grade 1 相称，未发现 span 与 Grade 对应关系问题。",
+      "source_behavior": "第6行方法 minutesUntil(int deadline) 为单表达式 `return deadline - now;`，即返回 deadline 与实例字段 now 的整数差。该行为为“还剩多少分钟”的时钟侧答案。",
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "grade_correspondence_suspect": false,
+      "identity": {
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "span": {
+          "end_line": 44,
+          "end_offset": 1315,
+          "start_line": 40,
+          "start_offset": 1127
+        },
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskQueue.minutesLate",
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "semantic_disambiguator": "minutesLate(String,int)"
+        }
+      },
+      "rationale": "给定源码与 L40-L44 [1127,1315) 的 span 恰覆盖 minutesLate 的完整实现，源码行为与理由“先查找票据、缺失返回零、否则调用 clock.minutesUntil 并取负数”完全一致；该证据直接定位到“向时钟发问的队列操作”这一查询目标，与既有 Grade 2 相称，未发现 span 与 Grade 对应关系问题。",
+      "source_behavior": "L40-L44 为 minutesLate(String id, int deadline)：先 folder.find(id) 取票据，若为 null 返回 0，否则返回 `-clock.minutesUntil(deadline)`，即向 clock 询问剩余分钟后取负作为迟到分钟数。",
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "overall_status": "SUPPORTS",
+  "query_id": "et-dq-ja-02",
+  "scope_statement": "本次仅审计上面已引用的两处源码及其给定 span 是否支持各自既有 Grade 与理由；未判断未展示项目范围内是否还有其他相关 Symbol，也未生成新的主标签、未使用任何被评估检索器的排名、得分或正式结果。注：E02 的 span 边界按 L40 行首至 L44 行尾内容计（不含行尾换行），与所给 [1127,1315) 内部自洽。"
+}

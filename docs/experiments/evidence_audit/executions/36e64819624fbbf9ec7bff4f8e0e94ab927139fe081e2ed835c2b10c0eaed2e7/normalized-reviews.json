@@ -1,0 +1,22 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "4dd944223a6765d738f9842d7c746a6a5f753871eba870365cf15d2cbedfd973",
+    "grade_observation": "{\"grade_correspondence_suspect\":false}",
+    "reason": "{\"grade_correspondence_suspect\":false,\"rationale\":\"给定源码与 L6 [75,143) 的 span 恰好覆盖 minutesUntil(int) 的完整方法体，行为与理由“返回 deadline 减 now 的整数差、为队列迟到值提供时钟计算”一致；作为相关契约/被调用方的支持证据与既有 Grade 1 相称，未发现 span 与 Grade 对应关系问题。\",\"source_behavior\":\"第6行方法 minutesUntil(int deadline) 为单表达式 `return deadline - now;`，即返回 deadline 与实例字段 now 的整数差。该行为为“还剩多少分钟”的时钟侧答案。\"}",
+    "source_locations": [
+      "src/com/desk/model/DeskClock.java:L6-L6 [75,143)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "c63bff721e26eed661392524fed7c1b31204700b80569c79aee4aa2eada6e34b",
+    "grade_observation": "{\"grade_correspondence_suspect\":false}",
+    "reason": "{\"grade_correspondence_suspect\":false,\"rationale\":\"给定源码与 L40-L44 [1127,1315) 的 span 恰覆盖 minutesLate 的完整实现，源码行为与理由“先查找票据、缺失返回零、否则调用 clock.minutesUntil 并取负数”完全一致；该证据直接定位到“向时钟发问的队列操作”这一查询目标，与既有 Grade 2 相称，未发现 span 与 Grade 对应关系问题。\",\"source_behavior\":\"L40-L44 为 minutesLate(String id, int deadline)：先 folder.find(id) 取票据，若为 null 返回 0，否则返回 `-clock.minutesUntil(deadline)`，即向 clock 询问剩余分钟后取负作为迟到分钟数。\"}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L40-L44 [1127,1315)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

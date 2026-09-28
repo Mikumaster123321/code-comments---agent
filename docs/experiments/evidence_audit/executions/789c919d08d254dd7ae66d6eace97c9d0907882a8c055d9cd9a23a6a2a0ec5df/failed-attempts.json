@@ -1,0 +1,22 @@
+{
+  "accepted_attempt_number": 2,
+  "other_capture_attempts": [
+    {
+      "attempt_number": 1,
+      "classification": "RECAPTURE_REQUIRED",
+      "external_file_name": "et-bl-ja-02-native-copy-all.txt",
+      "formal_audit_created": false,
+      "privacy_basic": false,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "07b4e73d6669f3c03cc007e6273c155a74de253eb5686f647517588d56070618",
+      "reasons": [
+        "Copy All includes content beyond isolated Final Answer; exact complete Final Answer boundary not established",
+        "full captured bytes fail formal whole-final json.loads validator",
+        "privacy scan failed on captured bytes"
+      ]
+    }
+  ],
+  "query_id": "et-bl-ja-02",
+  "source_progress_sha256": "258af85d1267b4a891a82a20b312c82e1f326fa2f4fabace356d1b39d5bb5607",
+  "source_stage1_sha256": "ea5f82101bebdc7a2be24df41675aa13b1e537bcf72edb9c959e4d0b7b995d88"
+}

@@ -1,0 +1,60 @@
+{
+  "query_id": "et-mt-ja-02",
+  "overall_status": "SUPPORTS",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "verdict": "SUPPORTS",
+      "preserved_identity": {
+        "relative_path": "src/com/desk/notify/DeskMail.java",
+        "symbol_id": {
+          "qualified_name": "DeskMail.render",
+          "kind": "method",
+          "language": "java",
+          "relative_path": "src/com/desk/notify/DeskMail.java",
+          "semantic_disambiguator": "render(String,String)",
+          "fallback_line": null
+        },
+        "span": {
+          "start_line": 4,
+          "end_line": 6,
+          "start_offset": 50,
+          "end_offset": 153
+        },
+        "claimed_grade": 1
+      },
+      "observed_source_behavior": "Lines 4-6 are the body of the single public method render(String id, String title); it unconditionally returns the concatenation \"Ticket \" + id + \": \" + title. No Ticket object, no status/closed flag, and no branch exist in this span, so the produced text is independent of ticket state. The declared span [50,153) is coherent with the file (bytes=156, class-closing brace on line 7): it opens at the start of the render signature line and closes on the method's closing brace.",
+      "supports_grade_and_rationale": true,
+      "span_grade_correspondence_doubt": false,
+      "notes": "Behavior described in the rationale (composes id+title into the owner message string, no status check) is exactly what the span shows. As a related contract/producer-of-text evidence item it is consistent with Grade 1."
+    },
+    {
+      "evidence_id": "E02",
+      "verdict": "SUPPORTS",
+      "preserved_identity": {
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "symbol_id": {
+          "qualified_name": "DeskQueue.notifyOwner",
+          "kind": "method",
+          "language": "java",
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "semantic_disambiguator": "notifyOwner(String)",
+          "fallback_line": null
+        },
+        "span": {
+          "start_line": 33,
+          "end_line": 36,
+          "start_offset": 918,
+          "end_offset": 1064
+        },
+        "claimed_grade": 2
+      },
+      "observed_source_behavior": "Lines 33-36 are the whole notifyOwner(String id) method: it resolves the ticket via folder.find(id) and immediately returns mail.render(ticket.id(), ticket.title()). There is no isClosed/open-status guard and no early return, so notifyOwner always produces rendered text, including for a closed ticket. The declared span correctly bounds the full method (line 32 blank, line 37 blank).",
+      "supports_grade_and_rationale": true,
+      "span_grade_correspondence_doubt": false,
+      "notes": "The rationale's claim that the ticket's status is irrelevant to this path is directly visible in the span (delegation to mail.render with no condition). Appropriate as Grade 2 direct implementation/identity localization for the queue method that 'always renders text today'. The span isolates notifyOwner, not closeTicket, so it does not itself implement the requested silence."
+    }
+  ],
+  "scope_statement": "Audit limited strictly to the already-cited source spans and SymbolIds above; no whole-project search was performed, and it was NOT assessed whether any other relevant Symbol exists within the unshown project scope. No retriever ranking, score, or formal result was used, requested, or consulted.",
+  "end_marker": "RESPONSE_END_ET_MT_JA_02"
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "5dccc95545e0202e6305672f61aa8926e5981fbe749d10c8af75e4acf76efde4",
+    "grade_observation": "{\"grade_rationale_check\":\"理由所述“取得 folder.find 的副本、非空时调用 markClosed、本方法没有 put 回写”在给定 span 内逐项可核实，未发现与源码矛盾之处。该 span 直接给出“closer”实现主体，与 Grade 2（直接定位冻结任务所需的实现或身份）相符。\",\"span_grade_doubt\":false,\"span_grade_doubt_note\":\"跨文件的“副本”语义由 E02 佐证；在 E01 自身文件内可确认的是 find 返回值被就地修改且无回写，无颠倒或越界定位。\"}",
+    "reason": "{\"grade_rationale_check\":\"理由所述“取得 folder.find 的副本、非空时调用 markClosed、本方法没有 put 回写”在给定 span 内逐项可核实，未发现与源码矛盾之处。该 span 直接给出“closer”实现主体，与 Grade 2（直接定位冻结任务所需的实现或身份）相符。\",\"observed_source_behavior\":\"L28-L31 即 closeTicket(String) 的完整方法体：L29 `Ticket ticket = folder.find(id);` 取得 find 的返回值；L30 `if (ticket != null) { ticket.markClosed(); }` 仅在非空时对返回值调用 markClosed；L28-L31 内不存在 folder.put 或任何回写存储的调用。被引用的行范围与该方法边界一致。\",\"span_grade_doubt\":false,\"span_grade_doubt_note\":\"跨文件的“副本”语义由 E02 佐证；在 E01 自身文件内可确认的是 find 返回值被就地修改且无回写，无颠倒或越界定位。\"}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L28-L31 [776,916)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "a7fa263efa3568a93a6b150a6af64ceb26a6cdceafd66ebf8c161352da04a81b",
+    "grade_observation": "{\"grade_rationale_check\":\"理由所述“按 id 找到条目后新建 Ticket、复制备注与关闭状态并返回副本、不返回数组中的原对象”均可逐行核实，未发现矛盾。该 span 构成“detached copy”来源的契约/调用路径证据，与 Grade 1（相关契约、调用路径或预期行为支持证据）相符。\",\"span_grade_doubt\":false,\"span_grade_doubt_note\":\"行范围精确覆盖 find，未与相邻 put 混淆；span 内不存在会改变“返回副本”结论的分支遗漏。\"}",
+    "reason": "{\"grade_rationale_check\":\"理由所述“按 id 找到条目后新建 Ticket、复制备注与关闭状态并返回副本、不返回数组中的原对象”均可逐行核实，未发现矛盾。该 span 构成“detached copy”来源的契约/调用路径证据，与 Grade 1（相关契约、调用路径或预期行为支持证据）相符。\",\"observed_source_behavior\":\"L21-L31 即 TicketFolder.find(String) 的完整方法体：L22-L23 按 id 线性比对 entries；命中后 L24 `Ticket copy = new Ticket(stored.id(), stored.title());` 新建副本，L25 复制 note，L26 `if (!stored.isOpen()) { copy.markClosed(); }` 复制关闭状态，L27 `return copy;` 返回副本；L30 `return null;` 未命中返回 null。全程未把数组中的原对象返回，也未写回 entries。被引用的行范围与该方法边界一致。\",\"span_grade_doubt\":false,\"span_grade_doubt_note\":\"行范围精确覆盖 find，未与相邻 put 混淆；span 内不存在会改变“返回副本”结论的分支遗漏。\"}",
+    "source_locations": [
+      "src/com/desk/store/TicketFolder.java:L21-L31 [563,933)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

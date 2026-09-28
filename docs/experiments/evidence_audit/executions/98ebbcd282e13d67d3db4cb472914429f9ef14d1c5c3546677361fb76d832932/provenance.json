@@ -1,0 +1,65 @@
+{
+  "accepted_attempt_number": 1,
+  "capture_manifest_entry": {
+    "capture": {
+      "bytes": 3491,
+      "export_scope": "single visible JSON code block via native Copy Code",
+      "path": "et-mt-ja-02-final-answer.txt",
+      "sha256": "9430c7bb360b668fdec0eef8ab551bd60ba570ce31a972ffe4e5159a4b4813d9"
+    },
+    "classification": "CAPTURE_READY",
+    "mechanical_checks": {
+      "email_pattern_absent": true,
+      "end_marker": true,
+      "end_marker_text_present": true,
+      "evidence_ids_exactly_once": true,
+      "existing_credential_privacy_scan": true,
+      "host_path_absent": true,
+      "item_statuses_allowed": true,
+      "json_object": true,
+      "overall_status_allowed": true,
+      "overall_status_consistent": true,
+      "query_id": true,
+      "query_id_text_present": true,
+      "scope_limitation_present": true,
+      "scope_statement_present": true,
+      "secret_value_pattern_absent": true,
+      "thesis_path_absent": true
+    },
+    "prepared_input": {
+      "bytes": 6051,
+      "evidence_ids": [
+        "E01",
+        "E02"
+      ],
+      "path": "inputs/et-mt-ja-02.txt",
+      "sha256": "fa1d6cce7f2ce172af4dc97af3fe7246ee4ab30f6142c00eb32f7608bcc1038e"
+    },
+    "publication_hygiene": "basic hygiene passed: no detected credential value, host path, or email; JSON scanner passed",
+    "query_id": "et-mt-ja-02",
+    "reason": null,
+    "scan_findings": [],
+    "sent_input_verification": {
+      "method": "pre-send Trae Work composer native copy into UTF-8 plain text; byte-for-byte comparison to frozen input",
+      "result": "MATCH",
+      "single_first_user_message_observed": true
+    },
+    "traework_observation": {
+      "duration_display": "38s",
+      "fresh_zero_prior_message": "new Work with TRAE page observed empty before first submission; no follow-up or regenerate",
+      "mode": "cloud",
+      "model_display": "DeepSeek-V4.1-Flash",
+      "platform_task_or_session_id": "unavailable: UI did not expose independent ID",
+      "task_group": "默认",
+      "task_locator": "group + visible title + submitted local minute",
+      "task_title_visible": "{ \"query_id\": \"et-mt-ja-02\", \"overall_status\":",
+      "thinking_observation": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "time_local_display": "2026-09-24 17:13 Asia/Shanghai"
+    }
+  },
+  "query_id": "et-mt-ja-02",
+  "schema": "phase62-java-capture-provenance-v1",
+  "selected_recapture_progress_entry": null,
+  "source_capture_manifest_sha256": "ec0f083a1174d5620efec757c0d3b887c1d2c262aa9a33cd28b2c2523d349b6d",
+  "timing_interpretation": "started_at is displayed submitted minute; ended_at is file capture timestamp, not model completion time"
+}

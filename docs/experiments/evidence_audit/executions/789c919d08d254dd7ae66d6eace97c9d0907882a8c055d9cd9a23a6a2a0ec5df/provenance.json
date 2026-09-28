@@ -1,0 +1,97 @@
+{
+  "accepted_attempt_number": 2,
+  "capture_manifest_entry": {
+    "accepted_capture_observed_model_display": "DeepSeek-V4.1-Flash",
+    "accepted_recapture_attempt_number": 2,
+    "capture": {
+      "bytes": 3766,
+      "export_scope": "single visible JSON code block via native Copy Code; UI shows no surrounding Final Answer prose",
+      "path": "recapture/et-bl-ja-02-attempt2-final-answer.txt",
+      "sha256": "62164b63f829b7a3195bb274eb2c070b02327851bedfe1d66a71948be4e2da8e"
+    },
+    "classification": "CAPTURE_READY",
+    "latest_recapture_attempt_number": 2,
+    "latest_recapture_input_identity_verified": true,
+    "mechanical_checks": {
+      "email_pattern_absent": true,
+      "end_marker": true,
+      "evidence_ids_exactly_once": true,
+      "host_path_absent": true,
+      "item_statuses_allowed": true,
+      "json_object": true,
+      "overall_status_allowed": true,
+      "overall_status_consistent": true,
+      "query_id": true,
+      "scope_limitation_present": true,
+      "scope_statement_present": true,
+      "secret_value_pattern_absent": true,
+      "thesis_path_absent": true
+    },
+    "prepared_input": {
+      "bytes": 6859,
+      "evidence_ids": [
+        "E01",
+        "E02"
+      ],
+      "path": "inputs/et-bl-ja-02.txt",
+      "sha256": "538a7aede8a69ab826220c614e6dfdce43421711f18e19c47be186c6763d5b54"
+    },
+    "publication_hygiene": "basic hygiene passed on isolated complete Final Answer",
+    "query_id": "et-bl-ja-02",
+    "reason": null,
+    "recapture_attempts_used": 1,
+    "recapture_observed_model_displays": [
+      "DeepSeek-V4.1-Flash"
+    ],
+    "scan_findings": [],
+    "sent_input_verification": {
+      "method": "pre-send Trae Work composer native copy into UTF-8 plain text; byte-for-byte comparison to frozen input",
+      "result": "MATCH",
+      "single_first_user_message_observed": true
+    },
+    "traework_observation": {
+      "duration_display": "1m 10s",
+      "fresh_zero_prior_message": "new Work with TRAE page observed empty before first submission; no follow-up or regenerate",
+      "mode": "local",
+      "model_display": "DeepSeek-V4-Flash",
+      "platform_task_or_session_id": "unavailable: UI did not expose independent ID",
+      "task_group": "phase62-java-evidence-capture-20260924",
+      "task_locator": "group + visible title + submitted local minute",
+      "task_title_visible": "PREPARED / NOT EXECU…",
+      "thinking_observation": "independent Thinking visibility not established; complete standalone Thinking export unavailable under Amendment 1",
+      "time_local_display": "2026-09-24 16:38 Asia/Shanghai"
+    }
+  },
+  "query_id": "et-bl-ja-02",
+  "schema": "phase62-java-capture-provenance-v1",
+  "selected_recapture_progress_entry": {
+    "attempt_number": 2,
+    "capture": {
+      "bytes": 3766,
+      "path": "et-bl-ja-02-attempt2-final-answer.txt",
+      "sha256": "62164b63f829b7a3195bb274eb2c070b02327851bedfe1d66a71948be4e2da8e"
+    },
+    "capture_scope": "single visible JSON code block via native Copy Code; no surrounding Final Answer prose observed",
+    "classification": "CAPTURE_READY",
+    "effective_routing_interpretation": "DeepSeek V4.1 Flash",
+    "fresh_independent_session_observed": true,
+    "observed_model_display": "DeepSeek-V4.1-Flash",
+    "query_id": "et-bl-ja-02",
+    "recapture_attempts_remaining": 1,
+    "sent_input": {
+      "bytes": 6859,
+      "path": "et-bl-ja-02-attempt2-sent-input.txt",
+      "sha256": "538a7aede8a69ab826220c614e6dfdce43421711f18e19c47be186c6763d5b54"
+    },
+    "sent_input_matches_frozen": true,
+    "task_locator": {
+      "group_visible": "默认",
+      "platform_id": "unavailable in UI",
+      "submitted_local": "2026-09-24 18:02 Asia/Shanghai"
+    },
+    "thinking_observation": "Thinking may be visible in Trae Work, but complete standalone Thinking export unavailable under Amendment 1; native Copy All includes it when present.",
+    "whole_final_json": true
+  },
+  "source_capture_manifest_sha256": "ec0f083a1174d5620efec757c0d3b887c1d2c262aa9a33cd28b2c2523d349b6d",
+  "timing_interpretation": "started_at is displayed submitted minute; ended_at is file capture timestamp, not model completion time"
+}

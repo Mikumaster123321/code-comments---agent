@@ -1,0 +1,22 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "fb5c9cd7919d5f0325f6ebbfa72318aea4cefec98065958fe88566d8aa9c5ec8",
+    "grade_observation": "{\"grade_span_mismatch_suspected\":false}",
+    "reason": "{\"grade_span_mismatch_suspected\":false,\"reason\":\"所引源码与 span 完全支持该理由描述的行为；该类即为问题“which type is stored”所指向的存储类型，属直接相关的核心契约来源，与 Grade 1 无内容层面的矛盾。输入的 grade 分层约定未明确定义，此处仅据 span 对齐、身份一致与内容相关性判断，未发现可判定的 span↔Grade 冲突。\",\"source_behavior_check\":\"span L3-L19 从 `public class Ticket {`（offset 25 与该行起始吻合）延伸至类闭合花括号（end_offset 533，文件共 534 字节，即不含末尾换行），完整覆盖 Ticket 类体，与 symbol_id(kind=class, qualified_name=Ticket) 身份一致。类内确含 key/heading/note、status 初值 \\\"open\\\"、构造器 (id,title)、id()/title()/isOpen()/markClosed()/statusLabel()，与理由所述“保存编号/标题/备注及初始 open 状态、提供状态检查与改为 closed 操作”逐条对应。\"}",
+    "source_locations": [
+      "src/com/desk/model/Ticket.java:L3-L19 [25,533)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "0c4f51bac46646b94c0381e8407c8b1d016bd00b6d25ab0594d1214fc17805af",
+    "grade_observation": "{\"grade_span_mismatch_suspected\":false}",
+    "reason": "{\"grade_span_mismatch_suspected\":false,\"reason\":\"所引源码与 span 完全支持理由所述“按相同 id 替换已有数组条目；新 id 则扩展数组并追加票据”，且 put(Ticket) 正是问题“which folder operation stores a ticket”所指向的文件夹存储操作，参数类型 Ticket 亦界定所存类型，属直接定位实现/身份的来源，与 Grade 2 无内容层面的矛盾；未发现可判定的 span↔Grade 冲突。\",\"source_behavior_check\":\"span L8-L19 从 `public void put(Ticket ticket) {` 起至方法闭合花括号止，与 symbol_id(kind=method, qualified_name=TicketFolder.put, disambiguator=put(Ticket)) 一致。方法体行为确为：先遍历 entries，若存在相同 id 的条目则原地替换并 return；否则新建长度 +1 的数组、arraycopy 后追加 ticket 并回填 entries。\"}",
+    "source_locations": [
+      "src/com/desk/store/TicketFolder.java:L8-L19 [130,561)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

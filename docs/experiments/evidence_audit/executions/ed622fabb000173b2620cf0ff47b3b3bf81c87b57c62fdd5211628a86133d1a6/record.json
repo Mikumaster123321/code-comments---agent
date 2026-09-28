@@ -1,0 +1,130 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 2,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/provenance.json",
+    "raw_sha256": "612c63829b4f84a8fe8f0d64c57a85cd5ab6306b21b4d8d3f0d3139166c60bf4"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-28T03:00:30.082591+00:00",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "evidence_identity": "f879ac16acee57ef3609b14d85922432358d0f96a91c7f2176df7c4f5eabc3b6",
+      "grade_observation": "{\"span_grade_note\":\"span [117,188) 精确覆盖第 8 行方法定义行本身，与 Grade 1 所述『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+      "reason": "{\"observed_behavior\":\"第 8 行即为方法体 public void recordOpen(Ticket ticket) { lastOpened = ticket.id(); }，将传入票据的 id 写入字段 lastOpened，即保存最近一次开单编号；未做其他操作。\",\"rationale_supported\":true,\"span_grade_note\":\"span [117,188) 精确覆盖第 8 行方法定义行本身，与 Grade 1 所述『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+      "source_locations": [
+        "src/com/desk/audit/DeskAudit.java:L8-L8 [117,188)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "evidence_identity": "d96bdfc6afee3767b4f405be9bbb96215c777a822727819f2aeaf4a925ef0f0b",
+      "grade_observation": "{\"span_grade_note\":\"span [407,600) 精确覆盖 L15-L20 方法边界，Grade 2『直接定位实现/身份』成立：该方法是无备注开单存储与记录的唯一直接实现。\",\"span_grade_suspected_mismatch\":false}",
+      "reason": "{\"observed_behavior\":\"L15-L20 恰为两参 openTicket(String id, String title)：构造 new Ticket(id, title)，调用 folder.put(ticket)，再调用 audit.recordOpen(ticket)，最后 return ticket；方法体未设置 note 字段。行为与理由描述完全一致。\",\"rationale_supported\":true,\"span_grade_note\":\"span [407,600) 精确覆盖 L15-L20 方法边界，Grade 2『直接定位实现/身份』成立：该方法是无备注开单存储与记录的唯一直接实现。\",\"span_grade_suspected_mismatch\":false}",
+      "source_locations": [
+        "src/com/desk/service/DeskQueue.java:L15-L20 [407,600)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E03",
+      "evidence_identity": "7e61a9492497de9ed8ddb7e7963742fd006442aae3b72002fdea3ef62cbdc837",
+      "grade_observation": "{\"span_grade_note\":\"span [130,561) 精确覆盖 L8-L19 方法边界，与 Grade 1『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+      "reason": "{\"observed_behavior\":\"L8-L19 为 put(Ticket)：循环比对 entries[i].id().equals(ticket.id())，同 id 则 entries[i] = ticket 并 return（原地替换）；未命中则新建长度 +1 的数组、arraycopy 后追加于末尾并回写 entries。行为与理由一致。\",\"rationale_supported\":true,\"span_grade_note\":\"span [130,561) 精确覆盖 L8-L19 方法边界，与 Grade 1『相关契约/调用路径/预期行为支持证据』一致。\",\"span_grade_suspected_mismatch\":false}",
+      "source_locations": [
+        "src/com/desk/store/TicketFolder.java:L8-L19 [130,561)"
+      ],
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "exact_revision": {
+    "reason": "exact backend revision not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "finish_reason": {
+    "reason": "finish reason not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-cf-ja-01",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/provenance.json",
+    "raw_sha256": "612c63829b4f84a8fe8f0d64c57a85cd5ab6306b21b4d8d3f0d3139166c60bf4"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/provenance.json",
+    "raw_sha256": "612c63829b4f84a8fe8f0d64c57a85cd5ab6306b21b4d8d3f0d3139166c60bf4"
+  },
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "SUPPORTS",
+  "platform_session_id": {
+    "reason": "unavailable: UI did not expose independent ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "37df7ba9dba7908e715a8863470878584035b34504299d788b6dafb33f60a249",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-cf-ja-01",
+  "query_identity": "ed2d1f9e184261eced6e3638d8bdd98b6362850613d3ca7e2780cd1bf221c7ff",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/raw-reply.txt",
+    "raw_sha256": "241ae35d06a9af3170413e5516b2abf5d8db64e4def338df1f9bc5d96ece436e"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete exportable Final Answer only; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v1",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/sent-input.txt",
+    "raw_sha256": "37df7ba9dba7908e715a8863470878584035b34504299d788b6dafb33f60a249"
+  },
+  "started_at": "2026-09-28T01:51:00+00:00",
+  "supersedes_attempt": 1,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp, not precise model completion.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture provenance; capture file modification timestamp",
+  "token_usage": {
+    "reason": "token usage not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/transcription.json",
+    "raw_sha256": "b06f09fe7099548e2f9ea5a2ce6a6291325aea2e238c393477c81616a9e1ff66"
+  },
+  "transcription_hash": "b06f09fe7099548e2f9ea5a2ce6a6291325aea2e238c393477c81616a9e1ff66",
+  "ui_mode": "cloud",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete exportable Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/ed622fabb000173b2620cf0ff47b3b3bf81c87b57c62fdd5211628a86133d1a6/raw-reply.txt",
+      "raw_sha256": "241ae35d06a9af3170413e5516b2abf5d8db64e4def338df1f9bc5d96ece436e"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}
