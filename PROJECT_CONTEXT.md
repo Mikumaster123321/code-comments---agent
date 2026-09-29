@@ -6,6 +6,15 @@
 
 ## Current State
 
+- V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
+  **PASS WITH NON-BLOCKING NOTES**，Critical 0、validity-blocking Medium 0，
+  Thesis Result Interpretation **ELIGIBLE**；用户提供的 Claude Sonnet 5
+  Interpretation 判定为 **ACCEPT — CLAIM-BOUNDED**。正式解读档案依据已冻结
+  Formal 报告起草并标注原文未提供；RQ1–RQ4 主表、扩展表、ContextBuilder 表和
+  Figure A–E 数据均从 Formal artifact 自动提取并逐项校验。V3.1 experiments
+  **COMPLETE**；当前剩余工作：Thesis materials 审校、Release Gate、v3.1.0
+  release。V3.2 **NOT STARTED**。本轮不修改正式结果或启动发布。
+
 - V3.1.0 Phase 6.4 Formal RQ1–RQ4 Execution：基于 execution revision
   `2749969cd3a2d4d6e1e8d81160eebd5fb360879b` 与冻结 corpus revision
   `12391233daa2149ead4f451e920b2e0d8a1a6beb`，English Test 48/48 × 17/17

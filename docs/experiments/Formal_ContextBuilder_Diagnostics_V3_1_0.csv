@@ -1,0 +1,3 @@
+configuration,budget_used,budget_total,budget_utilization_ratio,gt_evidence_rendered,gt_evidence_total,snippet_count,truncated_packages,graph_only_snippets,retained_but_unrendered_graph_provenance
+RQ4-HYBRID-NO-GRAPH,272990,384000,0.7109114583333334,101,165,425,20,0,0
+RQ4-HYBRID-GRAPH,321821,384000,0.8380755208333334,124,165,533,24,166,386
