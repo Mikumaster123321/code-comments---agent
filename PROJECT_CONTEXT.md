@@ -6,6 +6,24 @@
 
 ## Current State
 
+- V3.1.0 Phase 6.4 Formal RQ1–RQ4 Execution：基于 execution revision
+  `2749969cd3a2d4d6e1e8d81160eebd5fb360879b` 与冻结 corpus revision
+  `12391233daa2149ead4f451e920b2e0d8a1a6beb`，English Test 48/48 × 17/17
+  配置 = 816/816 unique query-config 全部 success，failed/invalid/degraded 均为 0；
+  English Dev 0、Chinese 0。8 条代表路径共 384 条 Query 的 ranking/score/metric/
+  identity 确定性比较 mismatch 为 0，RQ4 diagnostic serialization mismatch 为 0。
+  两个 Weighted Hybrid run 的 `context-diagnostic-v1` 均已物化并完成引用、hash、
+  canonical identity 和磁盘重载校验；Formal artifact-set canonical identity 为
+  `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3`，
+  file SHA-256 为 `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
+  正式结果与全部分群、辅助指标及 ContextBuilder diagnostics 见
+  `docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md`。
+  正式归档后的相关专项回归 `240 passed`，全量回归 `892 passed`。
+  结果归档提交并从新 HEAD 完成 post-commit reload 后，Formal execution 与
+  RQ1–RQ4 均为 `COMPLETED`；V3.2 保持 `NOT STARTED`。`current_gate.json` 保留为
+  Phase 6.3 authority 导航记录，因全部 Formal authority binding 明确绑定其冻结
+  SHA-256，不在结果归档中改写。
+
 - V3.1.0 Phase 6.4 Formal 前置 RQ4 Context Diagnostic Artifact Fix：上一轮基于 execution revision `5a462c70c2b10b96f6ec71314bda2b9990da0bb7` 的 Formal attempt 虽执行 English Test 48/48 × 17/17 = 816/816 且 384 次代表路径确定性比较通过，但两个冻结 RQ4 Weighted Hybrid run 未 materialize Protocol §7.5/§9.4 要求的 ContextBuilder diagnostics，artifact set 因此撤回且从未提交。修复现将 production `ContextPackage` 只读传入 runner，为两个适用配置生成 canonical `context_diagnostics.json`，在 aggregate、manifest output checksum 和 run checksum 中绑定并支持严格重载；缺失、损坏、wrong-config 或 namespace 混用 fail closed，非适用配置保持 `null`。诊断接线不参与 ranking 或 metrics。失败 attempt 的未跟踪产物已按记录 identity 后移除；无 Formal result 发布。专项回归 `240 passed`，全量回归 `892 passed`。Phase 6.3 仍 CLOSED；Formal successful execution `0/48`、配置 `0/17`、artifact set `NONE`、RQ1–RQ4 `NOT COMPLETED`。详见 `docs/development/Development_Report_V3_1_0_Phase_6_4_RQ4_Context_Diagnostic_Artifact_Fix.md`。
 
 - V3.1.0 Formal Execution 前置 Git ancestry 合同修复：Amendment 5 明确区分 Dry Run execution revision `f0f4d2da169a071c71a6099c1d106fc3fec23299`、DryRunReceipt archive commit `ae063161a98cc0d88aafd7fffea8e81cbc57f335` 与后续 Formal execution revision，并要求按此顺序构成 Git 祖先链（允许相等）。FORMAL validator 继续将 receipt、artifact set、17 个 Dry Run manifest/aggregate 绑定原 Dry Run revision；Formal 请求单独绑定实际执行代码提交。修复前全量基线 `877 passed`；生命周期/身份/安全/生产接线专项 `211 passed`，修复后全量回归 `881 passed`。Phase 6.2/6.3 仍 CLOSED；正式 English Test `0/48`、配置 `0/17`、query-config `0/816`，Formal artifacts **NONE**，RQ1–RQ4 **NOT STARTED**。归档修复提交后仍须从新 HEAD 重载 RepositoryAuthority 并以该 HEAD 验证 FORMAL 资格；未执行 Formal benchmark。
