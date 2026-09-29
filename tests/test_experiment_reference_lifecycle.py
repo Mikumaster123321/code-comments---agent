@@ -383,7 +383,43 @@ def test_current_gate_navigation_strict_record_and_legacy_compatibility():
     assert approval.approval_status == "approved"
     assert closure.approved_reference_identity == approval.identity_hash
     assert current.dry_run_eligible is True
-    assert current.formal_execution_eligible is False
+    if current.current_phase == "6.2B.6":
+        assert current.phase_status == "COMPLETED"
+        assert current.formal_execution_eligible is False
+    else:
+        assert (current.current_phase, current.phase_status) == ("6.3", "COMPLETED")
+        assert current.formal_execution_eligible is True
+        assert "Phase 6.3 CLOSED" in current.next_allowed_action
+        assert "Formal experiment execution: ALLOWED BUT NOT STARTED" in current.next_allowed_action
+        assert "Formal RQ1-RQ4: NOT STARTED" in current.next_allowed_action
+        receipt_path = next(path for path in current.authoritative_documents
+                            if path.startswith("docs/experiments/audits/dry_run_receipts/")
+                            and path.endswith("/record.json"))
+        receipt = authority.load_typed(receipt_path, DryRunReceiptV2)
+        artifact_set = authority.load_typed(receipt.artifact_set_path, DryRunArtifactSet,
+                                            receipt.artifact_set_identity)
+        runtime_record = authority.json_record(artifact_set.runs[0].manifest_path)["environment"]
+        runtime = RuntimeMetadata(**{
+            **runtime_record,
+            "dependencies": tuple(runtime_record["dependencies"].items()),
+            "thread_settings": tuple(runtime_record["thread_settings"].items()),
+        })
+        dataset, queries, draft = authority.load_frozen_inputs()
+        config = BenchmarkConfig(
+            dataset.version, dataset.dataset_hash, queries[0].query_set_version,
+            receipt.query_set_identity, draft[0].ground_truth_version,
+            canonical_hash([item.to_record() for item in draft]),
+            Strategy.LEXICAL, RetrievalUnit.SYMBOL, matrix_run_id="RQ1-SYMBOL",
+            population=Population.ENGLISH_TEST, run_kind=RunKind.FORMAL,
+            approved_reference_identity=approval.identity_hash,
+        )
+        validated = validate_formal_eligibility(
+            purpose=RunKind.FORMAL, repository_root=ROOT, requested_config=config,
+            selected_reference_approval=approval.identity_hash, runtime_evidence=runtime,
+            code_commit=receipt.execution_revision, dry_run_receipt=receipt_path,
+        )
+        assert validated.purpose is RunKind.FORMAL
+        assert validated.receipt_archive_commit == authority.artifact_archive_commit(receipt_path)
     legacy = CurrentGateIndex.from_record({**record, "current_phase": "6.2B.1",
                                            "phase_status": "IMPLEMENTED / QA PENDING"})
     assert CurrentGateIndex.from_record(legacy.to_record()) == legacy
@@ -1324,7 +1360,15 @@ def test_frozen_data_and_prepared_packages_remain_historical():
         "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37",
         "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d",
     }
-    assert not authority.load_current_gate().formal_execution_eligible
+    gate = authority.load_current_gate()
+    if gate.current_phase == "6.2B.6":
+        assert gate.phase_status == "COMPLETED"
+        assert gate.formal_execution_eligible is False
+    else:
+        assert (gate.current_phase, gate.phase_status) == ("6.3", "COMPLETED")
+        assert gate.formal_execution_eligible is True
+        assert "Formal experiment execution: ALLOWED BUT NOT STARTED" in gate.next_allowed_action
+        assert "Formal RQ1-RQ4: NOT STARTED" in gate.next_allowed_action
 
 
 def test_chinese_review_must_bind_methodology_review(synthetic_authority):

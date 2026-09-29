@@ -14,19 +14,25 @@
     "docs/experiments/audits/phase62_final/methodology_review.json",
     "docs/experiments/audits/phase62_final/chinese_coverage_audit.json",
     "docs/experiments/audits/phase62_final/final_data_qa.json",
-    "docs/experiments/reference_approval/phase62_closure.json"
+    "docs/experiments/reference_approval/phase62_closure.json",
+    "docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_3_V3_1_0.md",
+    "docs/experiments/Reference_Lifecycle_Engineering_Specification_Amendment_4_V3_1_0.md",
+    "docs/development/Development_Report_V3_1_0_Phase_6_3_English_Dev_Dry_Run.md",
+    "docs/experiments/audits/phase63_english_dev/artifact_set.json",
+    "docs/experiments/audits/phase63_english_dev/determinism_evidence.json",
+    "docs/experiments/audits/phase63_english_dev/leakage_evidence.json",
+    "docs/experiments/audits/dry_run_receipts/8383eb1c0e45ca68927cecc5170a18a0ae56cc62dcbf2e5b3ff53448073fff3e/record.json"
   ],
   "blockers": [
-    "Formal RQ1–RQ4: NOT STARTED; matching English-dev DryRunReceipt required before formal execution",
     "V3.2: NOT STARTED"
   ],
   "current_gate": "CLOSED",
-  "current_phase": "6.2B.6",
+  "current_phase": "6.3",
   "dry_run_eligible": true,
-  "formal_execution_eligible": false,
-  "next_allowed_action": "Phase 6.3 English Dev Dry Run: ALLOWED BUT NOT STARTED; this closure does not execute it; validate committed approval/closure, config/code and offline runtime at execution entry",
+  "formal_execution_eligible": true,
+  "next_allowed_action": "Phase 6.3 CLOSED; Formal experiment execution: ALLOWED BUT NOT STARTED; Formal RQ1-RQ4: NOT STARTED; revalidate committed authority, runtime, and the DryRunReceiptV2 at execution entry",
   "phase_status": "COMPLETED",
   "schema_version": "v1",
   "selected_reference_approval_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
-  "updated_by_commit": "61cbc0db166e1577068101ffbe92b3b58e38e152"
+  "updated_by_commit": "ae063161a98cc0d88aafd7fffea8e81cbc57f335"
 }
