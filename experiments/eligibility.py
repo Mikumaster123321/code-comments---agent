@@ -65,6 +65,17 @@ def _require(condition: bool, code: str) -> None:
         raise EligibilityError(code)
 
 
+def _require_git_ancestor(authority: RepositoryAuthority, ancestor: str,
+                          descendant: str, failure_code: str) -> None:
+    authority.verify_commit(ancestor)
+    authority.verify_commit(descendant)
+    result = subprocess.run(
+        ["git", "-C", str(authority.root), "merge-base", "--is-ancestor", ancestor, descendant],
+        capture_output=True, check=False,
+    )
+    _require(result.returncode == 0, failure_code)
+
+
 @dataclass(frozen=True)
 class CurrentGateIndex:
     schema_version: str
@@ -600,14 +611,14 @@ def validate_formal_eligibility(
                  f"docs/experiments/audits/dry_run_receipts/{receipt.identity_hash}/record.json",
                  "dry_run_receipt_identity_mismatch")
         receipt_archive_commit = authority.artifact_archive_commit(dry_run_receipt)
-        archived_after_execution = subprocess.run(
-            ["git", "-C", str(authority.root), "merge-base", "--is-ancestor",
-             code_commit, receipt_archive_commit], capture_output=True, check=False)
-        _require(archived_after_execution.returncode == 0, "dry_run_archive_precedes_execution")
         _validate_dry_run_receipt(authority, receipt, requested_config, dataset, queries,
                                   approval.identity_hash, dataset.dataset_hash, query_hash,
                                   approval.reference_identity.hash, runtime_identity,
-                                  runtime_evidence.to_record(), code_commit)
+                                  runtime_evidence.to_record())
+        _require_git_ancestor(authority, receipt.execution_revision, receipt_archive_commit,
+                              "dry_run_execution_not_archived")
+        _require_git_ancestor(authority, receipt_archive_commit, code_commit,
+                              "receipt_archive_not_before_formal_execution")
         _require(requested_config.semantic_mode != SemanticMode.FAKE_TEST, "formal_fake_model_forbidden")
     return _issue(repository_root=authority.root, purpose=purpose,
                   dataset_identity=dataset.dataset_hash, query_identity=query_hash,
@@ -624,7 +635,7 @@ def _validate_dry_run_receipt(
     authority: RepositoryAuthority, receipt: DryRunReceiptV2, formal_config: BenchmarkConfig,
     dataset: DatasetManifest, queries: tuple[QueryRecord, ...], approval_identity: str, dataset_identity: str,
     query_identity: str, reference_identity: str, runtime_identity: str,
-    runtime_record: dict, code_commit: str,
+    runtime_record: dict,
 ) -> None:
     from dataclasses import replace
     from .execution import executable_config
@@ -632,11 +643,10 @@ def _validate_dry_run_receipt(
 
     corpus_revision = frozen_corpus_revision(dataset)
     expected = (approval_identity, dataset_identity, query_identity, reference_identity,
-                runtime_identity, corpus_revision, code_commit)
+                runtime_identity, corpus_revision)
     _require((receipt.approved_reference_identity, receipt.dataset_identity,
               receipt.query_set_identity, receipt.reference_identity,
-              receipt.runtime_identity, receipt.corpus_revision,
-              receipt.execution_revision) == expected,
+              receipt.runtime_identity, receipt.corpus_revision) == expected,
              "dry_run_receipt_mismatch")
     _require(receipt.protocol_version == formal_config.protocol_version,
              "dry_run_protocol_mismatch")
@@ -658,7 +668,7 @@ def _validate_dry_run_receipt(
     _require((artifact_set.approved_reference_identity, artifact_set.dataset_identity,
               artifact_set.query_set_identity, artifact_set.reference_identity,
               artifact_set.runtime_identity, artifact_set.corpus_revision,
-              artifact_set.execution_revision) == expected and
+              artifact_set.execution_revision) == (*expected, receipt.execution_revision) and
              artifact_set.configuration_set_identity == matrix.identity_hash and
              artifact_set.coverage_count == receipt.coverage_count,
              "dry_run_artifact_set_mismatch")
@@ -690,7 +700,7 @@ def _validate_dry_run_receipt(
         _require(manifest.get("run_id") == run.run_id and
                  manifest.get("protocol", {}).get("version") == formal_config.protocol_version and
                  run_corpus_revision == corpus_revision and
-                 run_execution_revision == code_commit and
+                 run_execution_revision == receipt.execution_revision and
                  manifest.get("mode") == "dry_run" and
                  manifest.get("split") == "english_dev" and
                  manifest.get("approved_reference_identity") == approval_identity and
@@ -708,7 +718,7 @@ def _validate_dry_run_receipt(
                  aggregate.get("query_set", {}).get("hash") == query_identity and
                  aggregate.get("dataset", {}).get("hash") == dataset_identity and
                  aggregate.get("raw_results_sha256") == run.raw_sha256 and
-                 aggregate.get("code_commit") == code_commit and
+                 aggregate.get("code_commit") == receipt.execution_revision and
                  aggregate.get("run_status") == "success" and
                  aggregate.get("population_filters", {}).get("split") == "english_dev" and
                  aggregate.get("denominator_count") == 12 and

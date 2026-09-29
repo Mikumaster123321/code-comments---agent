@@ -27,7 +27,7 @@ from experiments import (
     validate_formal_eligibility, validate_reference_approval_readiness, write_lifecycle_artifact,
 )
 from experiments.reference import REFERENCE_METHOD, parse_external_evidence_response
-from experiments.eligibility import _validate_source_resolution, validate_current_gate
+from experiments.eligibility import _require_git_ancestor, _validate_source_resolution, validate_current_gate
 from experiments.serialization import canonical_jsonl
 from experiments.schemas import read_run_revisions
 from experiments.config import FROZEN_MATRIX_IDS
@@ -398,28 +398,13 @@ def test_current_gate_navigation_strict_record_and_legacy_compatibility():
         receipt = authority.load_typed(receipt_path, DryRunReceiptV2)
         artifact_set = authority.load_typed(receipt.artifact_set_path, DryRunArtifactSet,
                                             receipt.artifact_set_identity)
-        runtime_record = authority.json_record(artifact_set.runs[0].manifest_path)["environment"]
-        runtime = RuntimeMetadata(**{
-            **runtime_record,
-            "dependencies": tuple(runtime_record["dependencies"].items()),
-            "thread_settings": tuple(runtime_record["thread_settings"].items()),
-        })
-        dataset, queries, draft = authority.load_frozen_inputs()
-        config = BenchmarkConfig(
-            dataset.version, dataset.dataset_hash, queries[0].query_set_version,
-            receipt.query_set_identity, draft[0].ground_truth_version,
-            canonical_hash([item.to_record() for item in draft]),
-            Strategy.LEXICAL, RetrievalUnit.SYMBOL, matrix_run_id="RQ1-SYMBOL",
-            population=Population.ENGLISH_TEST, run_kind=RunKind.FORMAL,
-            approved_reference_identity=approval.identity_hash,
-        )
-        validated = validate_formal_eligibility(
-            purpose=RunKind.FORMAL, repository_root=ROOT, requested_config=config,
-            selected_reference_approval=approval.identity_hash, runtime_evidence=runtime,
-            code_commit=receipt.execution_revision, dry_run_receipt=receipt_path,
-        )
-        assert validated.purpose is RunKind.FORMAL
-        assert validated.receipt_archive_commit == authority.artifact_archive_commit(receipt_path)
+        archive_commit = authority.artifact_archive_commit(receipt_path)
+        assert receipt.execution_revision == artifact_set.execution_revision == "f0f4d2da169a071c71a6099c1d106fc3fec23299"
+        assert archive_commit == "ae063161a98cc0d88aafd7fffea8e81cbc57f335"
+        _require_git_ancestor(authority, receipt.execution_revision, archive_commit,
+                              "dry_run_execution_not_archived")
+        _require_git_ancestor(authority, archive_commit, _git(ROOT, "rev-parse", "HEAD"),
+                              "receipt_archive_not_before_formal_execution")
     legacy = CurrentGateIndex.from_record({**record, "current_phase": "6.2B.1",
                                            "phase_status": "IMPLEMENTED / QA PENDING"})
     assert CurrentGateIndex.from_record(legacy.to_record()) == legacy
@@ -623,10 +608,12 @@ def synthetic_authority(tmp_path):
 
 def _validate_fixture(fixture, **overrides):
     root, config, approval, receipt, runtime, commit = fixture
+    formal_commit = (overrides.pop("code_commit") if "code_commit" in overrides
+                     else _git(root, "rev-parse", "HEAD"))
     return validate_formal_eligibility(
         purpose=RunKind.FORMAL, repository_root=root, requested_config=config,
         selected_reference_approval=approval, runtime_evidence=runtime,
-        code_commit=commit, dry_run_receipt=receipt, **overrides,
+        code_commit=formal_commit, dry_run_receipt=receipt, **overrides,
     )
 
 
@@ -636,6 +623,7 @@ def test_synthetic_repository_authority_passes_only_with_complete_dag(synthetic_
     assert result.approval_identity == synthetic_authority[2]
     assert len(result.reference) == 72
     assert len(result.queries) == 72
+    assert result.code_commit == result.receipt_archive_commit
 
 
 def test_matrix_receipt_reloads_from_committed_head_with_false_navigation_flag(synthetic_authority):
@@ -654,6 +642,18 @@ def test_matrix_receipt_reloads_from_committed_head_with_false_navigation_flag(s
     assert validated.purpose is RunKind.FORMAL
     assert validated.receipt_archive_commit == _git(root, "rev-parse", "HEAD")
     assert validated.receipt_archive_commit != artifact_set.execution_revision
+    assert validated.code_commit == validated.receipt_archive_commit
+
+
+def test_formal_execution_descendant_of_receipt_archive_passes(synthetic_authority):
+    root, _, _, receipt_path, _, dry_run_commit = synthetic_authority
+    archive_commit = RepositoryAuthority(root).artifact_archive_commit(receipt_path)
+    _git(root, "commit", "--allow-empty", "-qm", "synthetic formal execution revision")
+    formal_commit = _git(root, "rev-parse", "HEAD")
+    validated = _validate_fixture(synthetic_authority)
+    assert len({dry_run_commit, archive_commit, formal_commit}) == 3
+    assert validated.code_commit == formal_commit
+    assert validated.receipt_archive_commit == archive_commit
 
 
 def test_legacy_run_revision_read_is_corpus_only():
@@ -746,6 +746,8 @@ def test_forged_navigation_boolean_cannot_replace_receipt(synthetic_authority):
     _git(root, "add", "docs/experiments")
     _git(root, "commit", "-qm", "synthetic navigation update")
     assert _validate_fixture(synthetic_authority).purpose is RunKind.FORMAL
+    with pytest.raises(EligibilityError, match="receipt_archive_not_before_formal_execution"):
+        _validate_fixture(synthetic_authority, code_commit=commit)
     (root / receipt_path).unlink()
     _git(root, "add", "-A", "docs/experiments")
     _git(root, "commit", "-qm", "synthetic receipt removal")
@@ -828,21 +830,53 @@ def test_formal_gate_rejects_swapped_receipt_revisions(synthetic_authority):
         _validate_fixture((*synthetic_authority[:3], path, *synthetic_authority[4:]))
 
 
-def test_receipt_archive_cannot_precede_claimed_execution(synthetic_authority):
-    root = synthetic_authority[0]
-    _git(root, "commit", "--allow-empty", "-qm", "synthetic later code revision")
-    later = _git(root, "rev-parse", "HEAD")
-    with pytest.raises(EligibilityError, match="dry_run_archive_precedes_execution"):
-        _validate_fixture((*synthetic_authority[:5], later))
+def test_formal_execution_before_receipt_archive_fails(synthetic_authority):
+    with pytest.raises(EligibilityError, match="receipt_archive_not_before_formal_execution"):
+        _validate_fixture(synthetic_authority, code_commit=synthetic_authority[5])
+
+
+def test_formal_execution_on_divergent_branch_fails(synthetic_authority):
+    root, _, _, receipt_path, _, dry_run_commit = synthetic_authority
+    original_branch = _git(root, "branch", "--show-current")
+    archive_commit = RepositoryAuthority(root).artifact_archive_commit(receipt_path)
+    _git(root, "checkout", "-qb", "divergent-formal", dry_run_commit)
+    _git(root, "commit", "--allow-empty", "-qm", "divergent formal candidate")
+    divergent = _git(root, "rev-parse", "HEAD")
+    _git(root, "checkout", "-q", original_branch)
+    with pytest.raises(EligibilityError, match="receipt_archive_not_before_formal_execution"):
+        _require_git_ancestor(RepositoryAuthority(root), archive_commit, divergent,
+                              "receipt_archive_not_before_formal_execution")
+    with pytest.raises(EligibilityError, match="execution_code_mismatch"):
+        _validate_fixture(synthetic_authority, code_commit=divergent)
+
+
+def test_dry_run_execution_after_receipt_archive_fails(synthetic_authority):
+    root, _, _, receipt_path, _, _ = synthetic_authority
+    archive_commit = RepositoryAuthority(root).artifact_archive_commit(receipt_path)
+    _git(root, "commit", "--allow-empty", "-qm", "future dry-run execution claim")
+    future_commit = _git(root, "rev-parse", "HEAD")
+    with pytest.raises(EligibilityError, match="dry_run_execution_not_archived"):
+        _require_git_ancestor(RepositoryAuthority(root), future_commit, archive_commit,
+                              "dry_run_execution_not_archived")
+
+
+def test_receipt_archive_not_in_current_git_history_fails(synthetic_authority):
+    root, _, _, receipt_path, _, dry_run_commit = synthetic_authority
+    receipt_bytes = (root / receipt_path).read_bytes()
+    _git(root, "checkout", "-q", dry_run_commit)
+    _write(root, receipt_path, receipt_bytes)
+    with pytest.raises(EligibilityError, match="artifact_not_committed"):
+        RepositoryAuthority(root).artifact_archive_commit(receipt_path)
 
 
 def test_post_execution_retrieval_code_change_invalidates_provenance(synthetic_authority):
     root = synthetic_authority[0]
+    formal_commit = _git(root, "rev-parse", "HEAD")
     _write(root, "project_intelligence/synthetic_change.py", b"changed = True\n")
     _git(root, "add", "project_intelligence/synthetic_change.py")
     _git(root, "commit", "-qm", "synthetic retrieval code change")
     with pytest.raises(EligibilityError, match="execution_code_mismatch"):
-        _validate_fixture(synthetic_authority)
+        _validate_fixture(synthetic_authority, code_commit=formal_commit)
 
 
 def test_navigation_flag_cannot_bypass_run_revision_check(synthetic_authority):
