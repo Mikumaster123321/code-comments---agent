@@ -1,0 +1,288 @@
+{
+  "aggregate_created_at": "2026-09-28T13:19:56.959943+00:00",
+  "aggregation_implementation_version": "phase6.1-aggregate-v1",
+  "code_commit": "f0f4d2da169a071c71a6099c1d106fc3fec23299",
+  "config_hash": "d9d431416ad7f3ffa1970c0e25b4b41c8f3ef8d531749a1e7224473a780975d1",
+  "context_diagnostic_summary_reference": null,
+  "counts": {
+    "degraded": 0,
+    "failure": 0,
+    "invalid": 0,
+    "success": 12
+  },
+  "dataset": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "version": "v1"
+  },
+  "denominator_count": 12,
+  "embedding_fingerprint": {
+    "dimension": 768,
+    "document_instruction": "passage: ",
+    "fingerprint_hash": "00528591f55523ebe4f440835075bf36979de9f52e70749d46e7bf95aaf9b422",
+    "max_input_policy": "512-token-explicit-truncation-v1",
+    "model_repository": "intfloat/multilingual-e5-base",
+    "normalization": "l2",
+    "query_instruction": "query: ",
+    "revision": "d128750597153bb5987e10b1c3493a34e5a4502a",
+    "runtime_kind": "transformers-torch",
+    "similarity_metric": "cosine"
+  },
+  "ground_truth": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  },
+  "index_identity": "e9499138597042c5ea6b6efa068ab3a2245c79387b90c6cb7759d498c43cf863",
+  "latency": {
+    "median_ns": 34505021,
+    "p95_ns": 75867167
+  },
+  "macro_metrics": {
+    "hit_rate_at_5": 0.9166666666666666,
+    "mrr": 0.5361111111111111,
+    "ndcg_at_5": 0.5094342415430925,
+    "precision_at_5": 0.3166666666666667,
+    "recall_at_1": 0.1875,
+    "recall_at_10": 0.8541666666666666,
+    "recall_at_5": 0.6666666666666666
+  },
+  "matrix_run_id": "RQ4-HYBRID-NO-GRAPH",
+  "performance_artifact_reference": null,
+  "population_filters": {
+    "language": "all",
+    "population": "english_dev",
+    "role": "development",
+    "split": "english_dev"
+  },
+  "protocol_version": "v3.1-phase6-protocol-v1",
+  "query_set": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "raw_results_sha256": "346e41fb7abead3c6e27d44930c4f326c936dca66667d3b4287016a42a5114a6",
+  "retrieval_unit": "symbol",
+  "run_id": "phase63-ed-rq4-hybrid-no-graph-f0f4d2da169a",
+  "run_status": "success",
+  "strata": [
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 52233812,
+        "p95_ns": 72631208
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.35,
+        "ndcg_at_5": 0.2266414012898312,
+        "precision_at_5": 0.2,
+        "recall_at_1": 0.0,
+        "recall_at_10": 0.625,
+        "recall_at_5": 0.375
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "bug_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 51410479,
+        "p95_ns": 69080792
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.35,
+        "ndcg_at_5": 0.36102028604932057,
+        "precision_at_5": 0.4,
+        "recall_at_1": 0.0,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.625
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "cross_file_understanding"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 32817708,
+        "p95_ns": 33322458
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.6,
+        "ndcg_at_5": 0.6185988563846481,
+        "precision_at_5": 0.5,
+        "recall_at_1": 0.125,
+        "recall_at_10": 1.0,
+        "recall_at_5": 0.75
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "dependency_questions"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 55511625,
+        "p95_ns": 75867167
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.5,
+        "mrr": 0.5833333333333334,
+        "ndcg_at_5": 0.4251724527673773,
+        "precision_at_5": 0.2,
+        "recall_at_1": 0.25,
+        "recall_at_10": 1.0,
+        "recall_at_5": 0.5
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "feature_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 55226125,
+        "p95_ns": 75701500
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.3333333333333333,
+        "ndcg_at_5": 0.4251724527673773,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.0,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.75
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "maintenance_tasks"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 34081396,
+        "p95_ns": 34259292
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_5": 1.0,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.75,
+        "recall_at_10": 1.0,
+        "recall_at_5": 1.0
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "symbol_lookup"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 33790875,
+        "p95_ns": 34259292
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_5": 1.0,
+        "precision_at_5": 0.5,
+        "recall_at_1": 0.625,
+        "recall_at_10": 1.0,
+        "recall_at_5": 1.0
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "java"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 34953417,
+        "p95_ns": 75867167
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9,
+        "mrr": 0.44333333333333336,
+        "ndcg_at_5": 0.4113210898517109,
+        "precision_at_5": 0.28,
+        "recall_at_1": 0.1,
+        "recall_at_10": 0.825,
+        "recall_at_5": 0.6
+      },
+      "query_count": 10,
+      "success_count": 10,
+      "value": "python"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "dataset_id",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 34505021,
+        "p95_ns": 75867167
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9166666666666666,
+        "mrr": 0.5361111111111111,
+        "ndcg_at_5": 0.5094342415430925,
+        "precision_at_5": 0.3166666666666667,
+        "recall_at_1": 0.1875,
+        "recall_at_10": 0.8541666666666666,
+        "recall_at_5": 0.6666666666666666
+      },
+      "query_count": 12,
+      "success_count": 12,
+      "value": "v3.1-phase6-dataset-v1"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "split",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 34505021,
+        "p95_ns": 75867167
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9166666666666666,
+        "mrr": 0.5361111111111111,
+        "ndcg_at_5": 0.5094342415430925,
+        "precision_at_5": 0.3166666666666667,
+        "recall_at_1": 0.1875,
+        "recall_at_10": 0.8541666666666666,
+        "recall_at_5": 0.6666666666666666
+      },
+      "query_count": 12,
+      "success_count": 12,
+      "value": "english_dev"
+    }
+  ],
+  "strategy": "weighted"
+}

@@ -1,0 +1,41 @@
+{
+  "artifact_set_identity": "08f753fe7e9cb24e29a38baa5057005203f09524d0d94a48c4fbd98c19c8715b",
+  "compared_query_count": 204,
+  "comparison_fields": [
+    "identity",
+    "ranked_hits",
+    "scores",
+    "metric_inputs",
+    "metrics",
+    "status",
+    "degraded",
+    "token_diagnostics"
+  ],
+  "comparison_scope": "all_17_configurations",
+  "configuration_set_identity": "ce5a58783a68f7e20c0635d264fc19d119212604cee1ed80b4a6b25d49863a25",
+  "excluded_fields": [
+    "latency_ns"
+  ],
+  "kind": "determinism",
+  "observed_rank_mismatches": 0,
+  "run_raw_sha256": [
+    "be3efed0a1c5f11bbcf3c44745d314c572160d3641041b712e6337a4ea19d4a8",
+    "401ab0371945c5de2826d6d06e9932e26363f27ef1a95e51048c1a0c75247949",
+    "72377d3ed8bfc80417eaaa5f4880e9ad917f9cf27d2b41164e9683659d9759bd",
+    "7597e9bc0a0ec975e2ae7e7cd227aa31ddbc6f5f6e86dfbd3cc0992e81440558",
+    "9366b317bbbc85426810f436ef17f9e54dc55d51cb9e7916b043fc78787103f2",
+    "e7a84a680a25373b44b2663bc6b4716ccff8e8bcfc1976cdf70729b9fc41676a",
+    "cf3f2162b7d2a76f498c168ebeb15b06f4156768610fb8cb5a3596ca578ac5cc",
+    "72c97c4866ce3fc9074c679d2dd7ce5f6a7e447ba11c576ef25ca1b5d382312d",
+    "10df0cdacf4f26fc0ba5aa0c8836831fbfd178fdc9cb90d662c49cce821ae91d",
+    "834636ee29a3ba625c2033b00513d5bfca6375bbce58d741f61db24aedbb02bc",
+    "04013bbb69c0b8ddac436dd352a4d457f2c5d336f9c6116524e17d73ba6aa6b4",
+    "1fb8c66ecaa5463f355e591cd3ef752a0eea741ab66fe0bd5fca977d8e201982",
+    "e4634ec2177774bbfd0ebb8d5e1b5d3fc4842f7a4ba49657828ced0b9b28ff09",
+    "346e41fb7abead3c6e27d44930c4f326c936dca66667d3b4287016a42a5114a6",
+    "74c9e4286212a6a87d4673ae71178d4cb4faa6f4e311d7c5351159791231329f",
+    "6727b04ac029ba9706c8db5cd5c3f81a2d54c314e1916266359dbda8227d9910",
+    "59891e6e8ddad7db3a5b70dd0d0a009618c9d51d8a37567c19dd7da0f93aca75"
+  ],
+  "status": "pass"
+}

@@ -1,0 +1,22 @@
+{
+  "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+  "artifact_set_identity": "08f753fe7e9cb24e29a38baa5057005203f09524d0d94a48c4fbd98c19c8715b",
+  "artifact_set_path": "docs/experiments/audits/phase63_english_dev/artifact_set.json",
+  "configuration_set_identity": "ce5a58783a68f7e20c0635d264fc19d119212604cee1ed80b4a6b25d49863a25",
+  "corpus_revision": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+  "coverage_count": 204,
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "determinism_evidence_path": "docs/experiments/audits/phase63_english_dev/determinism_evidence.json",
+  "determinism_evidence_sha256": "e669141e5d4eda54a4478779f149cae71a8c575124fe8c25718b2a1a29d406d5",
+  "execution_revision": "f0f4d2da169a071c71a6099c1d106fc3fec23299",
+  "leakage_evidence_path": "docs/experiments/audits/phase63_english_dev/leakage_evidence.json",
+  "leakage_evidence_sha256": "63e33bd5fd271658a9c7d5740800255efd0fb5d7b813e288b4c6d3f1bf49a579",
+  "mode": "dry_run",
+  "population": "english_dev",
+  "protocol_version": "v3.1-phase6-protocol-v1",
+  "query_set_identity": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "runtime_identity": "e50ffa93a0aa64d9ebe63dd121f9124b958219609bee63414f495115137c1b1b",
+  "schema_version": "v2.1",
+  "status": "pass"
+}

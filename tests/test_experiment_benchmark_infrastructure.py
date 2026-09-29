@@ -24,6 +24,8 @@ from experiments import (
     DatasetEvidenceRegistry,
     DatasetManifest,
     DatasetProject,
+    DryRunArtifactSet,
+    DryRunReceiptV2,
     EvidenceRecord,
     ExperimentalBM25Index,
     FileIdentity,
@@ -59,7 +61,10 @@ from experiments import (
     load_queries,
     write_run_artifacts,
 )
+from experiments.config import FROZEN_MATRIX_IDS
+from experiments.execution import executable_config
 from experiments.schemas import read_run_revisions
+from project_intelligence import LocalE5EmbeddingProvider
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "experiments"
@@ -815,7 +820,7 @@ def test_run_metadata_separates_deterministic_identity_from_environment_and_time
     assert record["execution"]["started_at"].endswith("+00:00")
 
 
-def test_no_formal_dataset_truth_or_result_artifacts_were_added():
+def test_preformal_dataset_truth_and_dry_run_artifact_scope():
     root = Path(__file__).parents[1]
     artifacts = root / "docs" / "experiments"
     draft_paths = (
@@ -830,7 +835,111 @@ def test_no_formal_dataset_truth_or_result_artifacts_were_added():
         assert all(record.annotation_status == "drafted" for record in records)
         assert all(record.reviewed_at is None for record in records)
         assert all(record.adjudicator_id is None for record in records)
-    assert not (root / "docs" / "experiments" / "runs").exists()
+    assert_preformal_dry_run_artifact_scope(root)
+
+
+def assert_preformal_dry_run_artifact_scope(root: Path) -> None:
+    artifacts = root / "docs/experiments"
+    runs_root = artifacts / "runs"
+    artifact_set_path = artifacts / "audits/phase63_english_dev/artifact_set.json"
+    receipt_root = artifacts / "audits/dry_run_receipts"
+    if not artifact_set_path.exists():
+        assert not runs_root.exists()
+        assert not receipt_root.exists()
+        return
+
+    assert runs_root.is_dir()
+    assert sha256(artifact_set_path.read_bytes()).hexdigest() == artifact_set_path.with_name(
+        "artifact_set.json.sha256"
+    ).read_text(encoding="ascii").strip()
+    artifact_set = DryRunArtifactSet.from_record(json.loads(artifact_set_path.read_text(encoding="utf-8")))
+    assert artifact_set.identity_hash == "08f753fe7e9cb24e29a38baa5057005203f09524d0d94a48c4fbd98c19c8715b"
+    assert artifact_set.configuration_set_identity == "ce5a58783a68f7e20c0635d264fc19d119212604cee1ed80b4a6b25d49863a25"
+    assert artifact_set.corpus_revision == "12391233daa2149ead4f451e920b2e0d8a1a6beb"
+    assert artifact_set.execution_revision == "f0f4d2da169a071c71a6099c1d106fc3fec23299"
+    assert artifact_set.english_test_count == artifact_set.chinese_count == 0
+    assert artifact_set.coverage_count == 204
+    receipt_path = receipt_root / "8383eb1c0e45ca68927cecc5170a18a0ae56cc62dcbf2e5b3ff53448073fff3e/record.json"
+    assert {path.name for path in receipt_root.iterdir()} == {receipt_path.parent.name}
+    assert {path.name for path in receipt_path.parent.iterdir()} == {
+        "record.json", "record.json.sha256", "checksums.sha256"
+    }
+    assert sha256(receipt_path.read_bytes()).hexdigest() == receipt_path.with_name(
+        "record.json.sha256"
+    ).read_text(encoding="ascii").strip()
+    receipt = DryRunReceiptV2.from_record(json.loads(receipt_path.read_text(encoding="utf-8")))
+    assert receipt.identity_hash == receipt_path.parent.name
+    assert receipt.artifact_set_identity == artifact_set.identity_hash
+    assert receipt.configuration_set_identity == artifact_set.configuration_set_identity
+    assert (receipt.corpus_revision, receipt.execution_revision) == (
+        artifact_set.corpus_revision, artifact_set.execution_revision
+    )
+    for path, expected_hash in (
+        (receipt.determinism_evidence_path, receipt.determinism_evidence_sha256),
+        (receipt.leakage_evidence_path, receipt.leakage_evidence_sha256),
+    ):
+        assert sha256((root / path).read_bytes()).hexdigest() == expected_hash
+    frozen_queries = load_queries(artifacts / "queries/v1/queries.jsonl")
+    expected_queries = tuple(sorted(item.query_id for item in frozen_queries if item.split == "english_dev"))
+    assert len(expected_queries) == 12 and artifact_set.query_ids == expected_queries
+    frozen_dataset = load_dataset_manifest(artifacts / "datasets/v1/manifest.json")
+    draft = load_ground_truth(artifacts / "ground_truth/v1/ground_truth.jsonl")
+    template = BenchmarkConfig(
+        frozen_dataset.version, frozen_dataset.dataset_hash,
+        frozen_queries[0].query_set_version,
+        canonical_hash([item.to_record() for item in frozen_queries]),
+        draft[0].ground_truth_version,
+        canonical_hash([item.to_record() for item in draft]),
+        Strategy.LEXICAL, RetrievalUnit.SYMBOL, matrix_run_id="RQ1-SYMBOL",
+        run_kind=RunKind.DRY_RUN,
+        approved_reference_identity=artifact_set.approved_reference_identity,
+        embedding_fingerprint=LocalE5EmbeddingProvider(local_files_only=True).fingerprint,
+    )
+    configs = tuple(executable_config(template, matrix_id) for matrix_id in FROZEN_MATRIX_IDS)
+    assert {path.name for path in runs_root.iterdir()} == {item.run_id for item in artifact_set.runs}
+    pairs = set()
+    for reference, config in zip(artifact_set.runs, configs):
+        assert (reference.matrix_run_id, reference.config_identity) == (config.matrix_run_id, config.identity_hash)
+        run_dir = runs_root / reference.run_id
+        assert {path.name for path in run_dir.iterdir()} == {
+            "run_manifest.json", "aggregate_results.json", "raw_results.jsonl", "checksums.sha256"
+        }
+        for path, expected_hash in (
+            (reference.manifest_path, reference.manifest_sha256),
+            (reference.aggregate_path, reference.aggregate_sha256),
+            (reference.raw_path, reference.raw_sha256),
+        ):
+            assert sha256((root / path).read_bytes()).hexdigest() == expected_hash
+        manifest = json.loads((root / reference.manifest_path).read_text(encoding="utf-8"))
+        aggregate = json.loads((root / reference.aggregate_path).read_text(encoding="utf-8"))
+        raw = [json.loads(line) for line in (root / reference.raw_path).read_text(encoding="utf-8").splitlines()]
+        assert read_run_revisions(manifest) == (
+            artifact_set.corpus_revision, artifact_set.execution_revision
+        )
+        assert (manifest["run_id"], manifest["mode"], manifest["split"], manifest["config_hashes"]) == (
+            reference.run_id, "dry_run", "english_dev", [config.identity_hash]
+        )
+        assert manifest["output_checksums"] == {
+            "aggregate_results.json": reference.aggregate_sha256,
+            "raw_results.jsonl": reference.raw_sha256,
+        }
+        assert (aggregate["run_id"], aggregate["run_status"], aggregate["counts"]) == (
+            reference.run_id, "success", {"success": 12, "failure": 0, "invalid": 0, "degraded": 0}
+        )
+        assert aggregate["raw_results_sha256"] == reference.raw_sha256
+        assert {line.split("  ")[1] for line in (run_dir / "checksums.sha256").read_text(
+            encoding="ascii"
+        ).splitlines()} == {"run_manifest.json", "aggregate_results.json", "raw_results.jsonl"}
+        assert len(raw) == 12 and {item["query_id"] for item in raw} == set(expected_queries)
+        assert all(item["split"] == "english_dev" and item["status"] == "success"
+                   and item["degraded"] is False and item["config_identity"] == config.identity_hash
+                   for item in raw)
+        for item in raw:
+            pair = (reference.matrix_run_id, item["query_id"])
+            assert pair not in pairs
+            pairs.add(pair)
+    assert pairs == {(matrix_id, query_id) for matrix_id in FROZEN_MATRIX_IDS
+                     for query_id in expected_queries}
 
 
 def test_hardening_truth_denominator_is_authoritative_not_strategy_controlled():

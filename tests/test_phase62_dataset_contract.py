@@ -21,6 +21,7 @@ from experiments.schemas import (
 )
 from experiments.serialization import canonical_hash, normalize_lf, sha256_hex
 from project_intelligence.lexical import tokenize
+from test_experiment_benchmark_infrastructure import assert_preformal_dry_run_artifact_scope
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -354,7 +355,7 @@ def test_draft_lifecycle_and_annotation_audit(bundle):
         assert annotation["translation_review_required"] == (query.split == "chinese_coverage")
     assert audit["retrieval_runs_before_freeze"] == identity["retrieval_runs_before_freeze"] == 0
     assert audit["human_IAA"] == "not_available_not_claimed"
-    assert not (DOCS / "runs").exists()
+    assert_preformal_dry_run_artifact_scope(ROOT)
 
 
 def test_leakage_and_permitted_overlap_audits(bundle):
