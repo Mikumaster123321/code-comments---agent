@@ -32,6 +32,7 @@ from .config import (
     GraphExperimentConfig, HybridExperimentConfig, Population, RetrievalUnit,
     RunKind, SemanticMode, Strategy,
 )
+from .context_diagnostics import requires_context_diagnostics
 from .eligibility import ValidatedExecutionInputs, is_validator_issued
 from .runner import BenchmarkRunner, BenchmarkRunResult, GraphProvenanceRecord, StrategyHit, StrategyResult
 from .schemas import DatasetManifest, QueryRecord, RunMetadata
@@ -361,10 +362,10 @@ class ProductionBenchmarkStrategy:
             result = retriever.fuse(lexical, semantic, index.documents, graph_result=graph)
         else:
             result = retriever.retrieve(query.query_text)
-        if config.matrix_run_id in {"RQ4-HYBRID-NO-GRAPH", "RQ4-HYBRID-GRAPH"}:
-            self.context_packages[query.query_id] = ContextBuilder().build(
-                result, index.identity, 8000,
-            )
+        context_package = None
+        if requires_context_diagnostics(config.matrix_run_id):
+            context_package = ContextBuilder().build(result, index.identity, 8000)
+            self.context_packages[query.query_id] = context_package
         return StrategyResult(tuple(
             self._symbol_hit(
                 query.project_id, hit.document, hit.rank,
@@ -383,7 +384,8 @@ class ProductionBenchmarkStrategy:
             ) for hit in result.hits
         ), degraded=result.degraded,
            degradation_reason="semantic_branch_failure" if result.degraded else None,
-           token_diagnostics=self._query_diagnostics(query))
+           token_diagnostics=self._query_diagnostics(query),
+           context_package=context_package)
 
     def _symbol_hit(self, project_id, document, rank, **scores):
         spans = {item.symbol_id: item for item in self._registry.symbol_ranges_for(project_id)}

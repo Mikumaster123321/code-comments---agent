@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from hashlib import sha256
+import json
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,12 @@ from experiments.config import (
     GraphExperimentConfig, HybridExperimentConfig, Population, RetrievalUnit,
     RunKind, SemanticMode, Strategy,
 )
+from experiments import (
+    CONTEXT_DIAGNOSTIC_FILENAME, FormalRunGuardError, StrategyResult,
+    canonical_json, load_context_diagnostic_artifact, validate_run_result,
+    write_run_artifacts,
+)
+from experiments.context_diagnostics import requires_context_diagnostics
 from experiments.execution import (
     ExecutionWiringError, ProductionBenchmarkStrategy, bind_frozen_dataset,
     bind_project, executable_config, registry_from_bound_projects,
@@ -38,6 +45,28 @@ def _bound():
 def _strategy(config, *, provider=None):
     _, projects, registry = _bound()
     return ProductionBenchmarkStrategy(config, projects, registry, (query(),), provider), registry
+
+
+def _rq4_diagnostic_config(*, graph_enabled=False):
+    provider = DeterministicFakeEmbeddingProvider()
+    config = config_for(
+        (query(),), (truth(),), strategy=Strategy.WEIGHTED,
+        semantic_mode=SemanticMode.FAKE_TEST, fingerprint=provider.fingerprint,
+        graph_enabled=graph_enabled,
+    )
+    suffix = "GRAPH" if graph_enabled else "NO-GRAPH"
+    return replace(config, matrix_run_id=f"SYNTHETIC-RQ4-HYBRID-{suffix}"), provider
+
+
+def _run_rq4_diagnostic(*, graph_enabled=False, clock=(10, 20)):
+    config, provider = _rq4_diagnostic_config(graph_enabled=graph_enabled)
+    strategy, registry = _strategy(config, provider=provider)
+    metadata = metadata_for(config, index_identity=strategy.index_identity)
+    result = BenchmarkRunner(clock_ns=iter(clock).__next__).run(
+        dataset=dataset(), queries=(query(),), truth=(truth(),), config=config,
+        strategy=strategy, metadata=metadata, evidence_registry=registry,
+    )
+    return config, strategy, registry, metadata, result
 
 
 def test_all_17_frozen_rows_resolve_without_new_rows():
@@ -111,6 +140,150 @@ def test_weighted_rrf_graph_and_stable_order_use_production_stack():
         outputs[row] = first
     assert outputs["embedding"].hits
     assert outputs["rrf_on"].hits
+
+
+@pytest.mark.parametrize("graph_enabled", (False, True))
+def test_rq4_hybrid_materializes_reloadable_context_diagnostics(tmp_path, graph_enabled):
+    config, _, _, metadata, result = _run_rq4_diagnostic(graph_enabled=graph_enabled)
+    assert result.aggregate.context_diagnostic_summary_reference == CONTEXT_DIAGNOSTIC_FILENAME
+    assert result.context_diagnostic_artifact is not None
+    query_diagnostic = result.context_diagnostic_artifact.queries[0]
+    assert query_diagnostic.query_id == "q-1"
+    assert result.context_diagnostic_artifact.config_identity == config.identity_hash
+    assert result.context_diagnostic_artifact.corpus_revision == metadata.corpus_revision
+    assert result.context_diagnostic_artifact.execution_revision == metadata.execution_revision
+    assert query_diagnostic.context_characters == query_diagnostic.budget_used
+    assert set(result.context_diagnostic_artifact.to_record()["summary"]) == {
+        "query_count", "relevant_ground_truth_evidence_rendered",
+        "relevant_ground_truth_evidence_total", "relevant_ranked_hits_rendered",
+        "relevant_ranked_hits_total", "budget_used", "budget",
+        "budget_utilization_ratio", "snippet_count", "context_characters",
+        "package_truncation_count", "package_truncation_rate",
+        "snippet_truncation_count", "snippet_truncation_rate",
+        "ranked_hits_not_rendered", "graph_only_rendered_snippets",
+        "retained_but_unrendered_graph_provenance_count",
+    }
+    run_path = write_run_artifacts(tmp_path, result, metadata)
+    reloaded = load_context_diagnostic_artifact(run_path)
+    assert reloaded == result.context_diagnostic_artifact
+    assert reloaded.identity_hash == result.context_diagnostic_artifact.identity_hash
+    manifest = json.loads((run_path / "run_manifest.json").read_text(encoding="utf-8"))
+    assert CONTEXT_DIAGNOSTIC_FILENAME in manifest["output_checksums"]
+
+
+@pytest.mark.parametrize("graph_enabled", (False, True))
+def test_context_diagnostic_collection_does_not_change_ranking_or_metrics(graph_enabled):
+    diagnostic_config, provider = _rq4_diagnostic_config(graph_enabled=graph_enabled)
+    control_config = replace(diagnostic_config, matrix_run_id="SYNTHETIC-SMOKE")
+    diagnostic_strategy, diagnostic_registry = _strategy(diagnostic_config, provider=provider)
+    control_strategy, control_registry = _strategy(control_config, provider=provider)
+    diagnostic_output = diagnostic_strategy.retrieve(query(), diagnostic_config)
+    control_output = control_strategy.retrieve(query(), control_config)
+    assert diagnostic_output.context_package is not None
+    assert control_output.context_package is None
+    assert diagnostic_output.hits == control_output.hits
+    diagnostic_result = BenchmarkRunner(clock_ns=iter((10, 20)).__next__).run(
+        dataset=dataset(), queries=(query(),), truth=(truth(),), config=diagnostic_config,
+        strategy=diagnostic_strategy,
+        metadata=metadata_for(diagnostic_config, index_identity=diagnostic_strategy.index_identity),
+        evidence_registry=diagnostic_registry,
+    )
+    control_result = BenchmarkRunner(clock_ns=iter((10, 20)).__next__).run(
+        dataset=dataset(), queries=(query(),), truth=(truth(),), config=control_config,
+        strategy=control_strategy,
+        metadata=metadata_for(control_config, index_identity=control_strategy.index_identity),
+        evidence_registry=control_registry,
+    )
+    assert diagnostic_result.raw_results[0].ranked_hits == control_result.raw_results[0].ranked_hits
+    assert diagnostic_result.raw_results[0].metrics == control_result.raw_results[0].metrics
+
+
+def test_required_context_diagnostic_fails_closed_when_strategy_omits_package():
+    config, provider = _rq4_diagnostic_config()
+    production, registry = _strategy(config, provider=provider)
+    output = production.retrieve(query(), config)
+
+    class MissingDiagnosticStrategy:
+        semantic_mode = production.semantic_mode
+        embedding_fingerprint = production.embedding_fingerprint
+        index_identity = production.index_identity
+
+        def retrieve(self, question, requested_config):
+            return StrategyResult(
+                output.hits, output.degraded, output.degradation_reason,
+                output.token_diagnostics, None,
+            )
+
+    with pytest.raises(FormalRunGuardError, match="diagnostics are incomplete"):
+        BenchmarkRunner(clock_ns=iter((10, 20)).__next__).run(
+            dataset=dataset(), queries=(query(),), truth=(truth(),), config=config,
+            strategy=MissingDiagnosticStrategy(),
+            metadata=metadata_for(config, index_identity=production.index_identity),
+            evidence_registry=registry,
+        )
+
+
+def test_context_diagnostic_scope_is_exactly_the_two_protocol_weighted_rows():
+    assert requires_context_diagnostics("RQ4-HYBRID-NO-GRAPH")
+    assert requires_context_diagnostics("RQ4-HYBRID-GRAPH")
+    assert not requires_context_diagnostics("RRF-HYBRID-NO-GRAPH")
+    assert not requires_context_diagnostics("RRF-HYBRID-GRAPH")
+    assert not requires_context_diagnostics("RQ3-GRAPH-ON")
+
+
+def test_required_context_artifact_cannot_be_removed_after_aggregation():
+    _, _, _, _, result = _run_rq4_diagnostic()
+    with pytest.raises(ValueError, match="recompute"):
+        validate_run_result(replace(result, context_diagnostic_artifact=None))
+
+
+def test_context_diagnostic_wrong_config_and_namespace_binding_fail_closed():
+    _, _, _, _, result = _run_rq4_diagnostic()
+    artifact = result.context_diagnostic_artifact
+    assert artifact is not None
+    wrong_config = replace(artifact, matrix_run_id="SYNTHETIC-RQ4-HYBRID-GRAPH")
+    with pytest.raises(ValueError, match="recompute"):
+        validate_run_result(replace(result, context_diagnostic_artifact=wrong_config))
+    with pytest.raises(ValueError, match="namespace"):
+        replace(artifact, mode="formal")
+
+
+def test_context_diagnostic_corrupt_hash_is_rejected(tmp_path):
+    _, _, _, metadata, result = _run_rq4_diagnostic()
+    run_path = write_run_artifacts(tmp_path, result, metadata)
+    diagnostic_path = run_path / CONTEXT_DIAGNOSTIC_FILENAME
+    record = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    record["summary"]["snippet_count"] += 1
+    diagnostic_path.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(ValueError, match="checksum"):
+        load_context_diagnostic_artifact(run_path)
+
+
+def test_context_diagnostic_serialization_is_deterministic():
+    config, strategy, registry, metadata, result = _run_rq4_diagnostic()
+    first = result.context_diagnostic_artifact
+    second = BenchmarkRunner(clock_ns=iter((10, 20)).__next__).run(
+        dataset=dataset(), queries=(query(),), truth=(truth(),), config=config,
+        strategy=strategy, metadata=metadata, evidence_registry=registry,
+    ).context_diagnostic_artifact
+    assert first is not None and second is not None
+    assert canonical_json(first.to_record()) == canonical_json(second.to_record())
+    assert first.identity_hash == second.identity_hash
+
+
+def test_non_required_config_keeps_null_context_reference_and_no_artifact(tmp_path):
+    questions, truths = (query(),), (truth(),)
+    config = config_for(questions, truths)
+    strategy, registry = _strategy(config)
+    metadata = metadata_for(config, index_identity=strategy.index_identity)
+    result = BenchmarkRunner(clock_ns=iter((10, 20)).__next__).run(
+        dataset=dataset(), queries=questions, truth=truths, config=config,
+        strategy=strategy, metadata=metadata, evidence_registry=registry,
+    )
+    assert result.aggregate.context_diagnostic_summary_reference is None
+    assert result.context_diagnostic_artifact is None
+    run_path = write_run_artifacts(tmp_path, result, metadata)
+    assert not (run_path / CONTEXT_DIAGNOSTIC_FILENAME).exists()
 
 
 def test_graph_on_and_pair_filter_reach_symbol_provenance():

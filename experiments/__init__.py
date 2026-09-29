@@ -1,6 +1,13 @@
 """V3.1 Phase 6 experiment infrastructure, isolated from production retrieval."""
 
-from .artifacts import ArtifactCollisionError, validate_run_result, write_lifecycle_artifact, write_run_artifacts
+from .artifacts import (
+    ArtifactCollisionError, load_context_diagnostic_artifact, validate_run_result,
+    write_lifecycle_artifact, write_run_artifacts,
+)
+from .context_diagnostics import (
+    CONTEXT_DIAGNOSTIC_FILENAME, CONTEXT_DIAGNOSTIC_MATRIX_IDS,
+    ContextDiagnosticArtifact, ContextQueryDiagnostic,
+)
 from .eligibility import (
     CurrentGateIndex, EligibilityError, RepositoryAuthority,
     ValidatedExecutionInputs, validate_formal_eligibility, validate_reference_approval_readiness,
@@ -94,6 +101,10 @@ __all__ = [
     "ChunkExperimentConfig",
     "ChunkIdentity",
     "ConfigValidationError",
+    "CONTEXT_DIAGNOSTIC_FILENAME",
+    "CONTEXT_DIAGNOSTIC_MATRIX_IDS",
+    "ContextDiagnosticArtifact",
+    "ContextQueryDiagnostic",
     "DatasetFile",
     "DatasetEvidenceRegistry",
     "DatasetManifest",
@@ -165,6 +176,7 @@ __all__ = [
     "derive_reference",
     "executable_config",
     "load_dataset_manifest",
+    "load_context_diagnostic_artifact",
     "load_ground_truth",
     "load_queries",
     "raw_sha256",

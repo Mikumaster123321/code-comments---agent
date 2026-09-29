@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, Mapping, Protocol, Sequence, runtime_checkable
 
 from code_maintenance import SymbolId
-from project_intelligence import EmbeddingFingerprint
+from project_intelligence import ContextPackage, EmbeddingFingerprint
 
 from .baselines import (
     CandidateIdentity,
@@ -15,6 +15,12 @@ from .baselines import (
     serialize_candidate_identity,
 )
 from .config import BenchmarkConfig, Population, RunKind, SemanticMode
+from .context_diagnostics import (
+    CONTEXT_DIAGNOSTIC_FILENAME,
+    ContextDiagnosticArtifact,
+    ContextQueryDiagnostic,
+    requires_context_diagnostics,
+)
 from .eligibility import (
     EligibilityError, ValidatedExecutionInputs, is_validator_issued,
     validate_formal_eligibility,
@@ -142,6 +148,7 @@ class StrategyResult:
     degraded: bool = False
     degradation_reason: str | None = None
     token_diagnostics: tuple[Mapping[str, object], ...] = ()
+    context_package: ContextPackage | None = None
 
     def __post_init__(self) -> None:
         if type(self.hits) is not tuple or not all(isinstance(item, StrategyHit) for item in self.hits):
@@ -154,6 +161,8 @@ class StrategyResult:
             "semantic_branch_failure", "semantic_timeout", "semantic_unavailable"
         }:
             raise SchemaValidationError("degradation_reason must be a frozen safe code")
+        if self.context_package is not None and not isinstance(self.context_package, ContextPackage):
+            raise SchemaValidationError("context_package must be a production ContextPackage or null")
         allowed_diagnostic_fields = {
             "identity",
             "kind",
@@ -483,6 +492,13 @@ class AggregateResult:
                 "embedding_fingerprint",
                 immutable_mapping(self.embedding_fingerprint),
             )
+        diagnostic_required = requires_context_diagnostics(self.matrix_run_id)
+        if diagnostic_required != (
+            self.context_diagnostic_summary_reference == CONTEXT_DIAGNOSTIC_FILENAME
+        ):
+            raise SchemaValidationError(
+                "aggregate ContextBuilder diagnostic reference does not match its config"
+            )
 
     def to_record(self) -> dict:
         return {
@@ -525,6 +541,7 @@ class AggregateResult:
 class BenchmarkRunResult:
     raw_results: tuple[RawQueryResult, ...]
     aggregate: AggregateResult
+    context_diagnostic_artifact: ContextDiagnosticArtifact | None = None
 
 
 def _fingerprint_record(fingerprint: EmbeddingFingerprint | None) -> dict | None:
@@ -604,6 +621,7 @@ class BenchmarkRunner:
         if not selected_queries:
             raise BenchmarkRunnerError("configured population has no queries")
         raw: list[RawQueryResult] = []
+        context_diagnostics: list[ContextQueryDiagnostic] = []
         for query in selected_queries:
             annotation = truth_by_id[query.ground_truth_id]
             candidates = evidence_registry.candidates_for(query.project_id, config.retrieval_unit)
@@ -613,6 +631,11 @@ class BenchmarkRunner:
             latency: int | None = None
             try:
                 output = strategy.retrieve(query, config)
+                diagnostic_required = requires_context_diagnostics(config.matrix_run_id)
+                if diagnostic_required and output.context_package is None:
+                    raise FormalRunGuardError("required ContextBuilder diagnostic is missing")
+                if not diagnostic_required and output.context_package is not None:
+                    raise BenchmarkRunnerError("context diagnostic is not allowed for this config")
                 latency = self._elapsed(start)
                 for hit in output.hits:
                     evidence_registry.validate_retrieved(
@@ -642,8 +665,7 @@ class BenchmarkRunner:
                 status = "failed"
                 failure_type = type(error).__name__
                 failure_stage = "retrieval"
-            raw.append(
-                RawQueryResult(
+            raw_result = RawQueryResult(
                     run_id=metadata.run_id,
                     experiment_id=metadata.run_id,
                     protocol_version=config.protocol_version,
@@ -672,8 +694,71 @@ class BenchmarkRunner:
                     embedding_fingerprint=_fingerprint_record(strategy.embedding_fingerprint),
                     token_diagnostics=output.token_diagnostics,
                 )
-            )
+            raw.append(raw_result)
+            if output.context_package is not None and status == "success":
+                package = output.context_package
+                rendered_ids = {
+                    serialize_candidate_identity(item.symbol_id) for item in package.snippets
+                }
+                relevant_ids = {
+                    identity for identity, grade in relevance.items() if grade in {1, 2}
+                }
+                relevant_ranked_ids = {
+                    item.candidate_identity for item in ranked if item.relevance in {1, 2}
+                }
+                rendered_provenance = {
+                    provenance for item in package.snippets
+                    for provenance in item.graph_provenance
+                }
+                context_diagnostics.append(ContextQueryDiagnostic(
+                    query_id=query.query_id,
+                    query_input_identity=canonical_hash(query.to_record()),
+                    retrieval_identity=canonical_hash({
+                        "query_id": query.query_id,
+                        "config_identity": config.identity_hash,
+                        "index_identity": strategy.index_identity,
+                        "ranked_hits": [item.to_record() for item in ranked],
+                    }),
+                    relevant_ground_truth_evidence_rendered=len(relevant_ids & rendered_ids),
+                    relevant_ground_truth_evidence_total=len(relevant_ids),
+                    relevant_ranked_hits_rendered=len(relevant_ranked_ids & rendered_ids),
+                    relevant_ranked_hits_total=len(relevant_ranked_ids),
+                    budget_used=package.budget_used,
+                    budget=package.budget,
+                    snippet_count=len(package.snippets),
+                    context_characters=len(package.context_text),
+                    package_truncated=package.truncated,
+                    truncated_snippet_count=sum(item.truncated for item in package.snippets),
+                    ranked_hits_not_rendered=len({
+                        item.candidate_identity for item in ranked
+                    } - rendered_ids),
+                    graph_only_rendered_snippets=sum(
+                        item.hybrid_rank is None for item in package.snippets
+                    ),
+                    retained_but_unrendered_graph_provenance_count=sum(
+                        item not in rendered_provenance for item in package.graph_provenance
+                    ),
+                ))
         raw_values = tuple(raw)
+        diagnostic_required = requires_context_diagnostics(config.matrix_run_id)
+        if diagnostic_required and len(context_diagnostics) != len(selected_queries):
+            raise FormalRunGuardError("required ContextBuilder diagnostics are incomplete")
+        if not diagnostic_required and context_diagnostics:
+            raise BenchmarkRunnerError("unexpected ContextBuilder diagnostics were collected")
+        context_artifact = (
+            ContextDiagnosticArtifact(
+                mode=config.run_kind.value,
+                split=config.population.value,
+                run_id=metadata.run_id,
+                matrix_run_id=config.matrix_run_id,
+                config_identity=config.identity_hash,
+                corpus_revision=metadata.corpus_revision,
+                execution_revision=metadata.execution_revision,
+                index_identity=strategy.index_identity,
+                queries=tuple(context_diagnostics),
+            )
+            if diagnostic_required else None
+        )
         raw_sha = sha256_hex(canonical_jsonl(item.to_record() for item in raw_values))
         strata: list[AggregateStratum] = []
         for dimension in ("task_type", "language", "dataset_id", "split"):
@@ -708,13 +793,15 @@ class BenchmarkRunner:
             },
             overall=summarize_metrics(raw_values),
             strata=tuple(strata),
-            context_diagnostic_summary_reference=None,
+            context_diagnostic_summary_reference=(
+                CONTEXT_DIAGNOSTIC_FILENAME if context_artifact is not None else None
+            ),
             performance_artifact_reference=None,
             raw_results_sha256=raw_sha,
             aggregation_implementation_version="phase6.1-aggregate-v1",
             aggregate_created_at=metadata.ended_at,
         )
-        return BenchmarkRunResult(raw_values, aggregate)
+        return BenchmarkRunResult(raw_values, aggregate, context_artifact)
 
     def _elapsed(self, start: int) -> int:
         end = self._clock_ns()
