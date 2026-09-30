@@ -1,14 +1,14 @@
 # V3.1.1 Release Notes
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
-**Status:** Release Candidate / Ready for DeepSeek Final Release QA
+**Status:** Released
 
 **Version:** `3.1.1`
 
 **Theme:** Workflow & Developer Experience Optimization
 
-V3.1.1 是已发布 V3.1.0 之上的维护候选版本，集中改善开发命令、环境诊断、测试入口、
+V3.1.1 是已发布 V3.1.0 之上的维护版本，集中改善开发命令、环境诊断、测试入口、
 冻结实验追溯和发布一致性。它不改变 Project Intelligence retrieval semantics 或 ranking。
 
 ## Highlights
@@ -102,4 +102,4 @@ V3.1.0 Formal results 完全不变：
 
 ## Next maintenance version
 
-V3.1.x maintenance continues。V3.2 **NOT STARTED**；本候选版不启动 Multi-Agent 工作。
+V3.1.x maintenance continues。V3.2 **NOT STARTED**；本版本不启动 Multi-Agent 工作。

@@ -1,6 +1,6 @@
 # V3.1.1 Workflow & Developer Experience 论文工程素材
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
 ## 1. 定位与边界
 

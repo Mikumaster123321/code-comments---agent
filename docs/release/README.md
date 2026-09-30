@@ -1,10 +1,10 @@
 # V3.1 Documentation Index
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
-V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 当前为
-**RELEASE CANDIDATE / READY FOR DEEPSEEK FINAL QA**。V3.2 **NOT STARTED**。
+V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
+（**RELEASED**，tag `v3.1.1`）。V3.2 **NOT STARTED**。
 
 ## Start Here
 
@@ -81,6 +81,7 @@ LLM 维护质量声明。
 - V3.1.0 release commit：`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`
 - V3.1.0 tag：`v3.1.0`
 - V3.1.0 push / remote verification：Completed
-- V3.1.1：RELEASE CANDIDATE / Ready for DeepSeek Final Release QA
-- V3.1.1 tag / push：Not created / No
+- V3.1.1：RELEASED
+- V3.1.1 tag：`v3.1.1`
+- V3.1.1 push / remote verification：Pending（本轮仅本地 finalize）
 - V3.2 Multi-Agent Collaboration：Not Started

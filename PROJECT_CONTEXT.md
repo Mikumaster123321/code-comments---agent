@@ -1,6 +1,6 @@
 # Project Context
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
 ## Project
 
@@ -8,8 +8,7 @@
 
 ## Current State
 
-- V3.1.1 Workflow & Developer Experience Optimization：**IMPLEMENTED / RELEASE
-  CANDIDATE**。六项冻结工作均已完成：统一 Python developer command hub、runtime/test
+- V3.1.1 Workflow & Developer Experience Optimization：**RELEASED**。六项冻结工作均已完成：统一 Python developer command hub、runtime/test
   doctor、offline-first E5 preflight、稳定 test profiles、只读 experiment/archive
   validator、release consistency gate。新增 workflow/release 测试 `30 passed`；production
   `198 passed`；experiments `240 passed`；统一 full 与 legacy full 均为 `922 passed`。
@@ -72,7 +71,7 @@
 
 - Current Version: `3.1.1`
 - Current branch: `v3.1.0-dev`
-- V3.1.1: `IMPLEMENTED / RELEASE CANDIDATE`
+- V3.1.1: `RELEASED`
 - V3.1.1 theme: Workflow & Developer Experience Optimization
 - V3.1.1 scope: V311-DX-01 through V311-DX-06 `COMPLETE`
 - V3.1.1 tests: workflow/release `30`; production `198`; experiments `240`;

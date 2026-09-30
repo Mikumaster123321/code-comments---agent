@@ -1,8 +1,8 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
-**当前候选版本：V3.1.1（`3.1.1`）— Release Candidate**
+**当前版本：V3.1.1（`3.1.1`）— Released**
 
 Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG。V3.1.1 聚焦 Workflow & Developer Experience Optimization，不改变 retrieval ranking 或冻结 Formal 结果；V3.2 Multi-Agent Collaboration **尚未开始**。
 
@@ -257,7 +257,7 @@ code-comments---agent/
 - **V3.0.1 — Managed AI Access & Credits**：Released / Stable Release
 - **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
 - **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
-- **V3.1.1 — Workflow & Developer Experience Optimization**：Release Candidate
+- **V3.1.1 — Workflow & Developer Experience Optimization**：Released
 - **V3.1.x — Maintenance**：Continues
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
@@ -269,7 +269,7 @@ code-comments---agent/
 
 ### V3.1.1
 
-**Workflow & Developer Experience Optimization — Release Candidate（`3.1.1`）**
+**Workflow & Developer Experience Optimization — Released（`3.1.1`）**
 
 完成六项冻结维护工作：统一 developer command hub、环境 doctor、offline-first E5
 preflight、稳定 test profiles、只读 experiment/archive validator、release consistency
@@ -328,7 +328,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
-| V3.1.1 | 候选 | 维护版本 | Workflow & Developer Experience Optimization |
+| V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
 | V3.0.1 | 2026-09-20 | 小版本 | Managed AI Access & Credits |
 | V3.0.0 | 2026-09-11 → 2026-09-18 | 大版本 | Project-level Maintenance Core Foundation |

@@ -1,12 +1,12 @@
 # V3.1.1 Development Report
 
-<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.1 RELEASED -->
 
 ## 1. Summary
 
 - **Version:** 3.1.1
 - **Theme:** Workflow & Developer Experience Optimization
-- **Status:** IMPLEMENTED / RELEASE CANDIDATE
+- **Status:** RELEASED
 - **Branch:** `v3.1.0-dev`
 - **Released baseline:** V3.1.0 commit
   `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`, tag `v3.1.0`
@@ -115,5 +115,5 @@ Post-check 继续得到：
 
 ## 10. Release readiness
 
-实现与文档已进入 RELEASE_CANDIDATE。Critical 0；validity/release-blocking Medium 0。
-下一步是独立 DeepSeek Final Release QA。V3.1.x maintenance continues；V3.2 未开始。
+实现与文档已进入 RELEASED。Critical 0；validity/release-blocking Medium 0。
+独立 DeepSeek Final Release QA 已完成并通过；V3.1.x maintenance continues；V3.2 未开始。
