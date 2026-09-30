@@ -1,0 +1,20 @@
+{
+  "query_count": 3,
+  "success_count": 2,
+  "failure_count": 1,
+  "invalid_count": 0,
+  "degraded_count": 0,
+  "metrics": {
+    "recall_at_1": 0.6666666666666666,
+    "recall_at_5": 0.6666666666666666,
+    "recall_at_10": 0.6666666666666666,
+    "mrr": 0.6666666666666666,
+    "ndcg_at_5": 0.6666666666666666,
+    "precision_at_5": 0.13333333333333333,
+    "hit_rate_at_5": 0.6666666666666666
+  },
+  "latency": {
+    "median_ns": 10,
+    "p95_ns": 10
+  }
+}

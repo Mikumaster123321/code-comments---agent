@@ -1,0 +1,31 @@
+{
+  "accepted_attempt_number": 2,
+  "other_capture_attempts": [
+    {
+      "attempt_number": 1,
+      "classification": "RECAPTURE_REQUIRED",
+      "external_file_name": "et-cf-ja-01-native-copy-all.txt",
+      "formal_audit_created": false,
+      "privacy_basic": true,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "2649cc0a052f8a8e07b4255ad4ac9e58197814b81775e0bc8a18839fcb778792",
+      "reasons": [
+        "Copy All includes content beyond isolated Final Answer; exact complete Final Answer boundary not established",
+        "full captured bytes fail formal whole-final json.loads validator"
+      ]
+    },
+    {
+      "attempt_number": 3,
+      "classification": "BLOCKED",
+      "external_file_name": "et-cf-ja-01-attempt3-native-copy-all.txt",
+      "formal_audit_created": false,
+      "raw_location": "external capture workspace only",
+      "raw_sha256": "fb5174c1ada4f1ce687202e9812ce9a77e1daa8cb24fa4b607b1b6493d3885d7",
+      "reason": "Second fresh recapture again has prose outside JSON; whole Final Answer fails frozen JSON contract. Two-attempt cap exhausted.",
+      "submitted_local": "2026-09-28 10:24 Asia/Shanghai"
+    }
+  ],
+  "query_id": "et-cf-ja-01",
+  "source_progress_sha256": "258af85d1267b4a891a82a20b312c82e1f326fa2f4fabace356d1b39d5bb5607",
+  "source_stage1_sha256": "ea5f82101bebdc7a2be24df41675aa13b1e537bcf72edb9c959e4d0b7b995d88"
+}

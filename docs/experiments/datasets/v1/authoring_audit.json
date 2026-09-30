@@ -1,0 +1,1917 @@
+{
+  "annotation_status": "drafted",
+  "chinese_english_overlap_audit": [
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "ed-cf-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-mt-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-fl-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeAudit.record",
+        "relative_path": "intake_queue/audit.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-bl-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-dq-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "Dispatcher.enqueue",
+        "relative_path": "intake_queue/dispatcher.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-sl-py-01",
+          "split": "english_dev"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-cf-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "Envelope.declared_checksum",
+        "relative_path": "intake_queue/envelope.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-dq-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-sl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-cf-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "function",
+        "language": "python",
+        "qualified_name": "compute_checksum",
+        "relative_path": "intake_queue/envelope.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-cf-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-bl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-mt-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeParser.reject_reason",
+        "relative_path": "intake_queue/parser.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "ed-bl-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-fl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-dq-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeRules.accepts",
+        "relative_path": "intake_queue/rules.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-cf-py-01",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "MemoryRouteStore.save",
+        "relative_path": "route_ledger/store.py",
+        "semantic_disambiguator": null
+      }
+    }
+  ],
+  "created_at": "2026-09-23T04:00:42.357095+00:00",
+  "earliest_allowed_review_at": "2026-09-25T04:00:42.357095+00:00",
+  "english_test_quotas": {
+    "bug_localization": {
+      "cross_file": 5,
+      "multi_relevant": 7,
+      "total": 8
+    },
+    "cross_file_understanding": {
+      "cross_file": 6,
+      "multi_relevant": 8,
+      "total": 8
+    },
+    "dependency_questions": {
+      "cross_file": 5,
+      "multi_relevant": 8,
+      "total": 8
+    },
+    "feature_localization": {
+      "cross_file": 4,
+      "multi_relevant": 7,
+      "total": 8
+    },
+    "maintenance_tasks": {
+      "cross_file": 5,
+      "multi_relevant": 7,
+      "total": 8
+    },
+    "symbol_lookup": {
+      "cross_file": 0,
+      "multi_relevant": 1,
+      "total": 8
+    }
+  },
+  "evidence_grades": {
+    "0": 0,
+    "1": 62,
+    "2": 72
+  },
+  "fixture_hash_record_keys": [
+    "path",
+    "language",
+    "content_hash"
+  ],
+  "fixtures": [
+    {
+      "file_count": 8,
+      "fixture_hash": "850ea55734eeceb3cb020257bb463c166a42c837f40cc88b88e7610a76e29097",
+      "language": "python",
+      "project_id": "fixture-py-route-ledger",
+      "purpose": "Route closure, state policy, persistence and summary consistency; preserved open-stop counting defect.",
+      "query_ids": [
+        "ed-dq-py-01",
+        "ed-fl-py-02",
+        "ed-mt-py-02",
+        "et-bl-py-05",
+        "et-cf-py-05",
+        "et-dq-py-05",
+        "et-fl-py-05",
+        "et-mt-py-05",
+        "et-sl-py-05",
+        "zh-bl-py-02",
+        "zh-cf-py-01",
+        "zh-dq-py-01",
+        "zh-sl-py-02"
+      ],
+      "symbol_count": 28
+    },
+    {
+      "file_count": 7,
+      "fixture_hash": "86406e36f5e0c6ad2f00e64794d3cc2ddf805e5e928636e21828572f3c49b685",
+      "language": "python",
+      "project_id": "fixture-py-intake-queue",
+      "purpose": "Checksum acceptance, dispatch/rejection audit, normalization boundaries and final-record loss.",
+      "query_ids": [
+        "ed-bl-py-02",
+        "ed-cf-py-02",
+        "ed-sl-py-01",
+        "et-bl-py-06",
+        "et-cf-py-06",
+        "et-dq-py-06",
+        "et-fl-py-06",
+        "et-mt-py-06",
+        "et-sl-py-06",
+        "zh-cf-py-02",
+        "zh-dq-py-02",
+        "zh-fl-py-02",
+        "zh-mt-py-02"
+      ],
+      "symbol_count": 15
+    },
+    {
+      "file_count": 6,
+      "fixture_hash": "b511160d6851cfd61bb1dd28b5108db4799de2a9fa7edfbfd9d6a6acb51cbbd8",
+      "language": "java",
+      "project_id": "fixture-java-desk-queue",
+      "purpose": "Exact local imports, distinct overloads, detached-copy closure and state-insensitive count/notification.",
+      "query_ids": [
+        "ed-dq-ja-02",
+        "ed-sl-ja-02",
+        "et-bl-ja-01",
+        "et-bl-ja-02",
+        "et-cf-ja-01",
+        "et-cf-ja-02",
+        "et-dq-ja-01",
+        "et-dq-ja-02",
+        "et-fl-ja-01",
+        "et-fl-ja-02",
+        "et-mt-ja-01",
+        "et-mt-ja-02",
+        "et-sl-ja-01",
+        "et-sl-ja-02"
+      ],
+      "symbol_count": 23
+    }
+  ],
+  "frozen_runtime": {
+    "device": "cpu",
+    "dtype": "float32",
+    "executed": false,
+    "model": "intfloat/multilingual-e5-base",
+    "revision": "d128750597153bb5987e10b1c3493a34e5a4502a",
+    "token_policy": "512-token-explicit-truncation-v1"
+  },
+  "future_new_embedding_documents": [
+    "Bin",
+    "Bin.count",
+    "Bin.put",
+    "Shelf",
+    "Shelf.add",
+    "Shelf.label",
+    "checksum"
+  ],
+  "grade1_overlap_audit": [
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-dq-ja-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-ja-01",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskAudit.recordOpen",
+        "relative_path": "src/com/desk/audit/DeskAudit.java",
+        "semantic_disambiguator": "recordOpen(Ticket)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-ja-02",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-dq-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskClock.minutesUntil",
+        "relative_path": "src/com/desk/model/DeskClock.java",
+        "semantic_disambiguator": "minutesUntil(int)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-bl-ja-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-sl-ja-01",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "Ticket.isOpen",
+        "relative_path": "src/com/desk/model/Ticket.java",
+        "semantic_disambiguator": "isOpen()"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "et-fl-ja-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskMail.render",
+        "relative_path": "src/com/desk/notify/DeskMail.java",
+        "semantic_disambiguator": "render(String,String)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-ja-02",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.minutesLate",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "minutesLate(String,int)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-fl-ja-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-mt-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.notifyOwner",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "notifyOwner(String)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "ed-dq-ja-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-cf-ja-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-sl-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.openTicket",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "openTicket(String,String)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-bl-ja-02",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-cf-ja-02",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "TicketFolder.find",
+        "relative_path": "src/com/desk/store/TicketFolder.java",
+        "semantic_disambiguator": "find(String)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-ja-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-ja-01",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-java-desk-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "TicketFolder.put",
+        "relative_path": "src/com/desk/store/TicketFolder.java",
+        "semantic_disambiguator": "put(Ticket)"
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "ed-cf-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-mt-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-fl-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeAudit.record",
+        "relative_path": "intake_queue/audit.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-bl-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-dq-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "Dispatcher.enqueue",
+        "relative_path": "intake_queue/dispatcher.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-dq-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-sl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-cf-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "function",
+        "language": "python",
+        "qualified_name": "compute_checksum",
+        "relative_path": "intake_queue/envelope.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-cf-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-bl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "zh-mt-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeParser.reject_reason",
+        "relative_path": "intake_queue/parser.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "ed-bl-py-02",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-fl-py-06",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-dq-py-02",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-intake-queue",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "IntakeRules.accepts",
+        "relative_path": "intake_queue/rules.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-fl-py-05",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "StopPolicy.can_close",
+        "relative_path": "route_ledger/policy.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-bl-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-05",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "StopPolicy.counts_as_open",
+        "relative_path": "route_ledger/policy.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "et-bl-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-05",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "RouteReport.count_open_stops",
+        "relative_path": "route_ledger/report.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-dq-py-05",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "zh-cf-py-01",
+          "split": "chinese_coverage"
+        }
+      ],
+      "project_id": "fixture-py-route-ledger",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "MemoryRouteStore.save",
+        "relative_path": "route_ledger/store.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "ed-cf-py-01",
+          "split": "english_dev"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-04",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "self-code-comments-agent",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "ProjectGraphBuilder._add_class_containment",
+        "relative_path": "code_maintenance/graph.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-dq-py-04",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-03",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "self-code-comments-agent",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "SQLiteCreditLedger._append_transaction",
+        "relative_path": "credits/sqlite_ledger.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-fl-py-04",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-mt-py-01",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "self-code-comments-agent",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "TokenPricingPolicy._price",
+        "relative_path": "managed_access/pricing.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 2,
+          "query_id": "et-bl-py-01",
+          "split": "english_test"
+        },
+        {
+          "grade": 1,
+          "query_id": "et-cf-py-03",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "self-code-comments-agent",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "python",
+        "qualified_name": "RetrievalIndex.update",
+        "relative_path": "project_intelligence/index.py",
+        "semantic_disambiguator": null
+      }
+    },
+    {
+      "occurrences": [
+        {
+          "grade": 1,
+          "query_id": "et-fl-py-02",
+          "split": "english_test"
+        },
+        {
+          "grade": 2,
+          "query_id": "et-sl-py-01",
+          "split": "english_test"
+        }
+      ],
+      "project_id": "self-code-comments-agent",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "function",
+        "language": "python",
+        "qualified_name": "tokenize",
+        "relative_path": "project_intelligence/lexical.py",
+        "semantic_disambiguator": null
+      }
+    }
+  ],
+  "grade2_dev_test_overlaps": [],
+  "ground_truth_records": 72,
+  "human_IAA": "not_available_not_claimed",
+  "identifier_leakage_audit": [
+    {
+      "banned_identifier_token": "validate_files",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-bl-py-01",
+      "simple_name": "_validate_files",
+      "tokens": [
+        "validate_files",
+        "validate",
+        "files"
+      ]
+    },
+    {
+      "banned_identifier_token": "enqueue",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-bl-py-02",
+      "simple_name": "enqueue",
+      "tokens": [
+        "enqueue"
+      ]
+    },
+    {
+      "banned_identifier_token": "add_class_containment",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-cf-py-01",
+      "simple_name": "_add_class_containment",
+      "tokens": [
+        "add_class_containment",
+        "add",
+        "class",
+        "containment"
+      ]
+    },
+    {
+      "banned_identifier_token": "reject_reason",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-cf-py-02",
+      "simple_name": "reject_reason",
+      "tokens": [
+        "reject_reason",
+        "reject",
+        "reason"
+      ]
+    },
+    {
+      "banned_identifier_token": "recordopen",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-dq-ja-02",
+      "simple_name": "recordOpen",
+      "tokens": [
+        "recordopen",
+        "record",
+        "open"
+      ]
+    },
+    {
+      "banned_identifier_token": "load_all",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-dq-py-01",
+      "simple_name": "load_all",
+      "tokens": [
+        "load_all",
+        "load",
+        "all"
+      ]
+    },
+    {
+      "banned_identifier_token": "retrieve",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-fl-py-01",
+      "simple_name": "retrieve",
+      "tokens": [
+        "retrieve"
+      ]
+    },
+    {
+      "banned_identifier_token": "open_route",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-fl-py-02",
+      "simple_name": "open_route",
+      "tokens": [
+        "open_route",
+        "open",
+        "route"
+      ]
+    },
+    {
+      "banned_identifier_token": "initialize_schema",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-mt-py-01",
+      "simple_name": "_initialize_schema",
+      "tokens": [
+        "initialize_schema",
+        "initialize",
+        "schema"
+      ]
+    },
+    {
+      "banned_identifier_token": "closed_count",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "ed-mt-py-02",
+      "simple_name": "closed_count",
+      "tokens": [
+        "closed_count",
+        "closed",
+        "count"
+      ]
+    },
+    {
+      "banned_identifier_token": "deskclock",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "ed-sl-ja-02",
+      "simple_name": "DeskClock",
+      "tokens": [
+        "deskclock",
+        "desk",
+        "clock"
+      ]
+    },
+    {
+      "banned_identifier_token": "declared_checksum",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "ed-sl-py-01",
+      "simple_name": "declared_checksum",
+      "tokens": [
+        "declared_checksum",
+        "declared",
+        "checksum"
+      ]
+    },
+    {
+      "banned_identifier_token": "listopen",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-ja-01",
+      "simple_name": "listOpen",
+      "tokens": [
+        "listopen",
+        "list",
+        "open"
+      ]
+    },
+    {
+      "banned_identifier_token": "closeticket",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-ja-02",
+      "simple_name": "closeTicket",
+      "tokens": [
+        "closeticket",
+        "close",
+        "ticket"
+      ]
+    },
+    {
+      "banned_identifier_token": "update",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-01",
+      "simple_name": "update",
+      "tokens": [
+        "update"
+      ]
+    },
+    {
+      "banned_identifier_token": "extract_zip_safe",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-02",
+      "simple_name": "_extract_zip_safe",
+      "tokens": [
+        "extract_zip_safe",
+        "extract",
+        "zip",
+        "safe"
+      ]
+    },
+    {
+      "banned_identifier_token": "charge",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-03",
+      "simple_name": "charge",
+      "tokens": [
+        "charge"
+      ]
+    },
+    {
+      "banned_identifier_token": "verify_java_annotated_code",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-04",
+      "simple_name": "_verify_java_annotated_code",
+      "tokens": [
+        "verify_java_annotated_code",
+        "verify",
+        "java",
+        "annotated",
+        "code"
+      ]
+    },
+    {
+      "banned_identifier_token": "count_open_stops",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-05",
+      "simple_name": "count_open_stops",
+      "tokens": [
+        "count_open_stops",
+        "count",
+        "open",
+        "stops"
+      ]
+    },
+    {
+      "banned_identifier_token": "last_record_included",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-bl-py-06",
+      "simple_name": "last_record_included",
+      "tokens": [
+        "last_record_included",
+        "last",
+        "record",
+        "included"
+      ]
+    },
+    {
+      "banned_identifier_token": "openticket",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-ja-01",
+      "simple_name": "openTicket",
+      "tokens": [
+        "openticket",
+        "open",
+        "ticket"
+      ]
+    },
+    {
+      "banned_identifier_token": "find",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-ja-02",
+      "simple_name": "find",
+      "tokens": [
+        "find"
+      ]
+    },
+    {
+      "banned_identifier_token": "document",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-01",
+      "simple_name": "_document",
+      "tokens": [
+        "document"
+      ]
+    },
+    {
+      "banned_identifier_token": "fuse",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-02",
+      "simple_name": "fuse",
+      "tokens": [
+        "fuse"
+      ]
+    },
+    {
+      "banned_identifier_token": "snapshotdiff",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-03",
+      "simple_name": "SnapshotDiff",
+      "tokens": [
+        "snapshotdiff",
+        "snapshot",
+        "diff"
+      ]
+    },
+    {
+      "banned_identifier_token": "add_symbols",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-04",
+      "simple_name": "_add_symbols",
+      "tokens": [
+        "add_symbols",
+        "add",
+        "symbols"
+      ]
+    },
+    {
+      "banned_identifier_token": "close_route",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-05",
+      "simple_name": "close_route",
+      "tokens": [
+        "close_route",
+        "close",
+        "route"
+      ]
+    },
+    {
+      "banned_identifier_token": "dispatch_ready",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-cf-py-06",
+      "simple_name": "dispatch_ready",
+      "tokens": [
+        "dispatch_ready",
+        "dispatch",
+        "ready"
+      ]
+    },
+    {
+      "banned_identifier_token": "put",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-ja-01",
+      "simple_name": "put",
+      "tokens": [
+        "put"
+      ]
+    },
+    {
+      "banned_identifier_token": "minuteslate",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-ja-02",
+      "simple_name": "minutesLate",
+      "tokens": [
+        "minuteslate",
+        "minutes",
+        "late"
+      ]
+    },
+    {
+      "banned_identifier_token": "analyze",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-01",
+      "simple_name": "analyze",
+      "tokens": [
+        "analyze"
+      ]
+    },
+    {
+      "banned_identifier_token": "python_imports",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-02",
+      "simple_name": "_python_imports",
+      "tokens": [
+        "python_imports",
+        "python",
+        "imports"
+      ]
+    },
+    {
+      "banned_identifier_token": "java_type_lookup",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-03",
+      "simple_name": "_java_type_lookup",
+      "tokens": [
+        "java_type_lookup",
+        "java",
+        "type",
+        "lookup"
+      ]
+    },
+    {
+      "banned_identifier_token": "apply",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-04",
+      "simple_name": "_apply",
+      "tokens": [
+        "apply"
+      ]
+    },
+    {
+      "banned_identifier_token": "save",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-05",
+      "simple_name": "save",
+      "tokens": [
+        "save"
+      ]
+    },
+    {
+      "banned_identifier_token": "accepts",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-dq-py-06",
+      "simple_name": "accepts",
+      "tokens": [
+        "accepts"
+      ]
+    },
+    {
+      "banned_identifier_token": "render",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-ja-01",
+      "simple_name": "render",
+      "tokens": [
+        "render"
+      ]
+    },
+    {
+      "banned_identifier_token": "markclosed",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-ja-02",
+      "simple_name": "markClosed",
+      "tokens": [
+        "markclosed",
+        "mark",
+        "closed"
+      ]
+    },
+    {
+      "banned_identifier_token": "read_source",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-01",
+      "simple_name": "_read_source",
+      "tokens": [
+        "read_source",
+        "read",
+        "source"
+      ]
+    },
+    {
+      "banned_identifier_token": "search",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-02",
+      "simple_name": "search",
+      "tokens": [
+        "search"
+      ]
+    },
+    {
+      "banned_identifier_token": "finalize_success",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-03",
+      "simple_name": "_finalize_success",
+      "tokens": [
+        "finalize_success",
+        "finalize",
+        "success"
+      ]
+    },
+    {
+      "banned_identifier_token": "price_usage",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-04",
+      "simple_name": "price_usage",
+      "tokens": [
+        "price_usage",
+        "price",
+        "usage"
+      ]
+    },
+    {
+      "banned_identifier_token": "can_close",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-05",
+      "simple_name": "can_close",
+      "tokens": [
+        "can_close",
+        "can",
+        "close"
+      ]
+    },
+    {
+      "banned_identifier_token": "normalize_payload",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-fl-py-06",
+      "simple_name": "normalize_payload",
+      "tokens": [
+        "normalize_payload",
+        "normalize",
+        "payload"
+      ]
+    },
+    {
+      "banned_identifier_token": "statuslabel",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-ja-01",
+      "simple_name": "statusLabel",
+      "tokens": [
+        "statuslabel",
+        "status",
+        "label"
+      ]
+    },
+    {
+      "banned_identifier_token": "notifyowner",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-ja-02",
+      "simple_name": "notifyOwner",
+      "tokens": [
+        "notifyowner",
+        "notify",
+        "owner"
+      ]
+    },
+    {
+      "banned_identifier_token": "canonical_decimal",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-01",
+      "simple_name": "_canonical_decimal",
+      "tokens": [
+        "canonical_decimal",
+        "canonical",
+        "decimal"
+      ]
+    },
+    {
+      "banned_identifier_token": "build",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-02",
+      "simple_name": "build",
+      "tokens": [
+        "build"
+      ]
+    },
+    {
+      "banned_identifier_token": "grant",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-03",
+      "simple_name": "grant",
+      "tokens": [
+        "grant"
+      ]
+    },
+    {
+      "banned_identifier_token": "graph_signal",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-04",
+      "simple_name": "_graph_signal",
+      "tokens": [
+        "graph_signal",
+        "graph",
+        "signal"
+      ]
+    },
+    {
+      "banned_identifier_token": "allows_skip",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-05",
+      "simple_name": "allows_skip",
+      "tokens": [
+        "allows_skip",
+        "allows",
+        "skip"
+      ]
+    },
+    {
+      "banned_identifier_token": "record",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "et-mt-py-06",
+      "simple_name": "record",
+      "tokens": [
+        "record"
+      ]
+    },
+    {
+      "banned_identifier_token": "isopen",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-ja-01",
+      "simple_name": "isOpen",
+      "tokens": [
+        "isopen",
+        "is",
+        "open"
+      ]
+    },
+    {
+      "banned_identifier_token": "openticket",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-ja-02",
+      "simple_name": "openTicket",
+      "tokens": [
+        "openticket",
+        "open",
+        "ticket"
+      ]
+    },
+    {
+      "banned_identifier_token": "tokenize",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-01",
+      "simple_name": "tokenize",
+      "tokens": [
+        "tokenize"
+      ]
+    },
+    {
+      "banned_identifier_token": "compare_snapshots",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-02",
+      "simple_name": "compare_snapshots",
+      "tokens": [
+        "compare_snapshots",
+        "compare",
+        "snapshots"
+      ]
+    },
+    {
+      "banned_identifier_token": "expand_graph",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-03",
+      "simple_name": "expand_graph",
+      "tokens": [
+        "expand_graph",
+        "expand",
+        "graph"
+      ]
+    },
+    {
+      "banned_identifier_token": "scan",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-04",
+      "simple_name": "scan",
+      "tokens": [
+        "scan"
+      ]
+    },
+    {
+      "banned_identifier_token": "mark_closed",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-05",
+      "simple_name": "mark_closed",
+      "tokens": [
+        "mark_closed",
+        "mark",
+        "closed"
+      ]
+    },
+    {
+      "banned_identifier_token": "compute_checksum",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "et-sl-py-06",
+      "simple_name": "compute_checksum",
+      "tokens": [
+        "compute_checksum",
+        "compute",
+        "checksum"
+      ]
+    },
+    {
+      "banned_identifier_token": "load_workspace",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-bl-py-01",
+      "simple_name": "load_workspace",
+      "tokens": [
+        "load_workspace",
+        "load",
+        "workspace"
+      ]
+    },
+    {
+      "banned_identifier_token": "reopen",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-bl-py-02",
+      "simple_name": "reopen",
+      "tokens": [
+        "reopen"
+      ]
+    },
+    {
+      "banned_identifier_token": "add_stop",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-cf-py-01",
+      "simple_name": "add_stop",
+      "tokens": [
+        "add_stop",
+        "add",
+        "stop"
+      ]
+    },
+    {
+      "banned_identifier_token": "declared_checksum",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-cf-py-02",
+      "simple_name": "declared_checksum",
+      "tokens": [
+        "declared_checksum",
+        "declared",
+        "checksum"
+      ]
+    },
+    {
+      "banned_identifier_token": "notify_closed",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-dq-py-01",
+      "simple_name": "notify_closed",
+      "tokens": [
+        "notify_closed",
+        "notify",
+        "closed"
+      ]
+    },
+    {
+      "banned_identifier_token": "enqueue",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-dq-py-02",
+      "simple_name": "enqueue",
+      "tokens": [
+        "enqueue"
+      ]
+    },
+    {
+      "banned_identifier_token": "refund",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-fl-py-01",
+      "simple_name": "refund",
+      "tokens": [
+        "refund"
+      ]
+    },
+    {
+      "banned_identifier_token": "record",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-fl-py-02",
+      "simple_name": "record",
+      "tokens": [
+        "record"
+      ]
+    },
+    {
+      "banned_identifier_token": "canceltoken",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-mt-py-01",
+      "simple_name": "CancelToken",
+      "tokens": [
+        "canceltoken",
+        "cancel",
+        "token"
+      ]
+    },
+    {
+      "banned_identifier_token": "reject_reason",
+      "failed": false,
+      "lookup_exempt": false,
+      "query_id": "zh-mt-py-02",
+      "simple_name": "reject_reason",
+      "tokens": [
+        "reject_reason",
+        "reject",
+        "reason"
+      ]
+    },
+    {
+      "banned_identifier_token": "canonicalize_graph",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "zh-sl-py-01",
+      "simple_name": "canonicalize_graph",
+      "tokens": [
+        "canonicalize_graph",
+        "canonicalize",
+        "graph"
+      ]
+    },
+    {
+      "banned_identifier_token": "validate_entry",
+      "failed": false,
+      "lookup_exempt": true,
+      "query_id": "zh-sl-py-02",
+      "simple_name": "validate_entry",
+      "tokens": [
+        "validate_entry",
+        "validate",
+        "entry"
+      ]
+    }
+  ],
+  "incremental_validation": {
+    "added": [
+      "Bin.count",
+      "Shelf.label"
+    ],
+    "changed": [
+      "Bin",
+      "Bin.put",
+      "Shelf",
+      "Shelf.add",
+      "checksum"
+    ],
+    "removed": [
+      "Bin.remove",
+      "Shelf.drop"
+    ],
+    "unchanged": []
+  },
+  "java_test_subsets": {
+    "contains": [
+      "et-bl-ja-01",
+      "et-fl-ja-02",
+      "et-mt-ja-01",
+      "et-sl-ja-01",
+      "et-sl-ja-02"
+    ],
+    "imports_exact_unique": [
+      "et-bl-ja-02",
+      "et-cf-ja-01",
+      "et-cf-ja-02",
+      "et-dq-ja-01",
+      "et-dq-ja-02",
+      "et-fl-ja-01",
+      "et-mt-ja-02"
+    ]
+  },
+  "limitations": [
+    "Single human annotator wang; no human IAA; delayed blinded self-review pending.",
+    "Fixture-design bias and fixed heuristics; self-repository author-familiarity bias.",
+    "Python from-import targets may remain external under current graph semantics.",
+    "Java fixture-only coverage uses the lightweight parser, not compiler-grade analysis.",
+    "Zero-symbol files remain in File/Chunk baselines; identity enrichment and candidate pools affect construct validity.",
+    "Python-heavy dataset; one pinned E5 model; no required external project; no superiority claim."
+  ],
+  "materialization_provenance": "Clean regeneration from Git Source of Truth by Codex; wang is the protocol-designated annotator. Frozen relevance decisions are materialized, not newly inferred from rankings. Human delayed review remains pending.",
+  "minimum_delay_hours": 48,
+  "near_duplicate_audit": {
+    "failures": 0,
+    "max_jaccard": 0.5,
+    "pair_count": 2556,
+    "threshold": 0.55
+  },
+  "phase61_test_migration": "User explicitly authorized preserving the test while allowing drafted data and rejecting completed review/freeze; runs remain forbidden.",
+  "primary_annotator_id": "wang",
+  "project_allocation": {
+    "fixture-java-desk-queue": 14,
+    "fixture-py-intake-queue": 13,
+    "fixture-py-route-ledger": 13,
+    "self-code-comments-agent": 32
+  },
+  "query_distribution": {
+    "chinese_coverage": 12,
+    "english_dev": 12,
+    "english_test": 48
+  },
+  "retrieval_authoring_methods": [
+    "adapter parsing",
+    "source reading",
+    "snapshot build/compare",
+    "file/chunk construction",
+    "tokenize",
+    "schema validation",
+    "hashing"
+  ],
+  "retrieval_runs_before_freeze": 0,
+  "review_method": "delayed_blinded_self_review",
+  "review_pending": [
+    "48-hour delay",
+    "masked delayed self-review",
+    "Chinese non-translation judgment",
+    "comparison/adjudication",
+    "independent data QA"
+  ],
+  "reviewed_at": null,
+  "rq1_mapping_probes": {
+    "cross_file_paths": {
+      "et-bl-ja-02": [
+        "src/com/desk/service/DeskQueue.java",
+        "src/com/desk/store/TicketFolder.java"
+      ],
+      "et-cf-py-05": [
+        "route_ledger/policy.py",
+        "route_ledger/report.py",
+        "route_ledger/service.py",
+        "route_ledger/store.py"
+      ],
+      "et-dq-py-04": [
+        "admin_operations/service.py",
+        "credits/sqlite_ledger.py"
+      ]
+    },
+    "last_record_chunks": [
+      [
+        1000,
+        1917
+      ]
+    ],
+    "last_record_span": [
+      1834,
+      1916
+    ],
+    "long_symbol_chunks": [
+      [
+        0,
+        1200
+      ],
+      [
+        1000,
+        1917
+      ]
+    ],
+    "long_symbol_length": 1689,
+    "reject_reason_chunks": [
+      [
+        0,
+        1200
+      ]
+    ],
+    "reject_reason_span": [
+      20,
+      141
+    ],
+    "shared_chunks": []
+  },
+  "second_human_annotator": "absent",
+  "self_repository_statistics": {
+    "chunk_documents": 857,
+    "file_documents": 72,
+    "java_files": 0,
+    "kinds": {
+      "class": 190,
+      "function": 666,
+      "method": 377
+    },
+    "long_symbols": 151,
+    "multi_chunk_symbols": 747,
+    "production_files": 44,
+    "python_files": 72,
+    "symbols": 1233,
+    "test_files": 28,
+    "zero_symbol_files": [
+      "Java/__init__.py",
+      "Py/__init__.py",
+      "admin_operations/__init__.py",
+      "code_maintenance/__init__.py",
+      "credits/__init__.py",
+      "main.py",
+      "managed_access/__init__.py",
+      "project_intelligence/__init__.py"
+    ]
+  },
+  "total_evidence": 134
+}

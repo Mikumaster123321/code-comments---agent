@@ -1,0 +1,121 @@
+{
+  "status": "PREPARED / NOT EXECUTED",
+  "query_id": "et-cf-ja-02",
+  "input_path": "inputs/et-cf-ja-02.txt",
+  "input_sha256": "ae9d6e7ffac5ed57410fe57103378edc21aed87be1cfbeaa6843a3af370c6a46",
+  "actual_pasted_text_raw_path": null,
+  "actual_pasted_text_sha256": null,
+  "execution_status": "NOT_EXECUTED",
+  "model_display_name": null,
+  "visible_version": null,
+  "started_at_utc": null,
+  "ended_at_utc": null,
+  "traework_session_id": null,
+  "thinking_region": {
+    "raw_path": null,
+    "sha256": null,
+    "availability": "NOT_EXECUTED"
+  },
+  "final_answer": {
+    "raw_path": null,
+    "sha256": null,
+    "availability": "NOT_EXECUTED"
+  },
+  "raw_reply": {
+    "raw_path": null,
+    "sha256": null,
+    "completeness": "NOT_EXECUTED",
+    "completeness_notes": null
+  },
+  "platform_fields": {
+    "exact_revision": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    },
+    "token_usage": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    },
+    "finish_reason": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    }
+  },
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "original_identity": {
+        "relative_path": "src/com/desk/model/DeskClock.java",
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskClock.minutesUntil",
+          "relative_path": "src/com/desk/model/DeskClock.java",
+          "semantic_disambiguator": "minutesUntil(int)"
+        },
+        "span": {
+          "start_offset": 75,
+          "end_offset": 143,
+          "start_line": 6,
+          "end_line": 6
+        },
+        "grade": 1
+      },
+      "status": "NOT_EXECUTED",
+      "source_behavior_or_reason": null,
+      "span_grade_mismatch_suspected": null
+    },
+    {
+      "evidence_id": "E02",
+      "original_identity": {
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskQueue.minutesLate",
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "semantic_disambiguator": "minutesLate(String,int)"
+        },
+        "span": {
+          "start_offset": 1127,
+          "end_offset": 1315,
+          "start_line": 40,
+          "end_line": 44
+        },
+        "grade": 1
+      },
+      "status": "NOT_EXECUTED",
+      "source_behavior_or_reason": null,
+      "span_grade_mismatch_suspected": null
+    },
+    {
+      "evidence_id": "E03",
+      "original_identity": {
+        "relative_path": "src/com/desk/store/TicketFolder.java",
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "TicketFolder.find",
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "semantic_disambiguator": "find(String)"
+        },
+        "span": {
+          "start_offset": 563,
+          "end_offset": 933,
+          "start_line": 21,
+          "end_line": 31
+        },
+        "grade": 2
+      },
+      "status": "NOT_EXECUTED",
+      "source_behavior_or_reason": null,
+      "span_grade_mismatch_suspected": null
+    }
+  ],
+  "structured_transcription_sha256": null,
+  "overall_status": "NOT_EXECUTED",
+  "failure_reason": null
+}

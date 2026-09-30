@@ -1,0 +1,288 @@
+{
+  "aggregate_created_at": "2026-09-28T09:36:44.703189+00:00",
+  "aggregation_implementation_version": "phase6.1-aggregate-v1",
+  "code_commit": "f0f4d2da169a071c71a6099c1d106fc3fec23299",
+  "config_hash": "cfee6b2a9224f665feec77981004e92631016d1faf04ca87d68e835711cf4ac1",
+  "context_diagnostic_summary_reference": null,
+  "counts": {
+    "degraded": 0,
+    "failure": 0,
+    "invalid": 0,
+    "success": 12
+  },
+  "dataset": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "version": "v1"
+  },
+  "denominator_count": 12,
+  "embedding_fingerprint": {
+    "dimension": 768,
+    "document_instruction": "passage: ",
+    "fingerprint_hash": "00528591f55523ebe4f440835075bf36979de9f52e70749d46e7bf95aaf9b422",
+    "max_input_policy": "512-token-explicit-truncation-v1",
+    "model_repository": "intfloat/multilingual-e5-base",
+    "normalization": "l2",
+    "query_instruction": "query: ",
+    "revision": "d128750597153bb5987e10b1c3493a34e5a4502a",
+    "runtime_kind": "transformers-torch",
+    "similarity_metric": "cosine"
+  },
+  "ground_truth": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  },
+  "index_identity": "d59cfd56480cb61e2f3a34cc6bfa511a7ee38f9aaa403da9e131f1c20f649f8e",
+  "latency": {
+    "median_ns": 50198938,
+    "p95_ns": 103294250
+  },
+  "macro_metrics": {
+    "hit_rate_at_5": 0.9166666666666666,
+    "mrr": 0.7083333333333334,
+    "ndcg_at_5": 0.6149529292194917,
+    "precision_at_5": 0.3333333333333333,
+    "recall_at_1": 0.25,
+    "recall_at_10": 0.875,
+    "recall_at_5": 0.6875
+  },
+  "matrix_run_id": "RQ2-E5",
+  "performance_artifact_reference": null,
+  "population_filters": {
+    "language": "all",
+    "population": "english_dev",
+    "role": "development",
+    "split": "english_dev"
+  },
+  "protocol_version": "v3.1-phase6-protocol-v1",
+  "query_set": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "raw_results_sha256": "9366b317bbbc85426810f436ef17f9e54dc55d51cb9e7916b043fc78787103f2",
+  "retrieval_unit": "symbol",
+  "run_id": "phase63-ed-rq2-e5-f0f4d2da169a",
+  "run_status": "success",
+  "strata": [
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 70166375,
+        "p95_ns": 87877542
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.75,
+        "ndcg_at_5": 0.5033196790919505,
+        "precision_at_5": 0.4,
+        "recall_at_1": 0.25,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.625
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "bug_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 63587375,
+        "p95_ns": 83455958
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.6666666666666666,
+        "ndcg_at_5": 0.61035703646881,
+        "precision_at_5": 0.4,
+        "recall_at_1": 0.125,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.625
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "cross_file_understanding"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 45941270,
+        "p95_ns": 46309458
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.5,
+        "mrr": 0.5833333333333334,
+        "ndcg_at_5": 0.37716279251972945,
+        "precision_at_5": 0.3,
+        "recall_at_1": 0.125,
+        "recall_at_10": 1.0,
+        "recall_at_5": 0.375
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "dependency_questions"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 76716250,
+        "p95_ns": 95646583
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.5,
+        "ndcg_at_5": 0.5054516636191897,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.0,
+        "recall_at_10": 1.0,
+        "recall_at_5": 0.75
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "feature_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 74348062,
+        "p95_ns": 103294250
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.75,
+        "ndcg_at_5": 0.6934264036172708,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.25,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.75
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "maintenance_tasks"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 47350750,
+        "p95_ns": 47942667
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_5": 1.0,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.75,
+        "recall_at_10": 1.0,
+        "recall_at_5": 1.0
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "symbol_lookup"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 46757875,
+        "p95_ns": 47942667
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_5": 0.8771627925197294,
+        "precision_at_5": 0.4,
+        "recall_at_1": 0.625,
+        "recall_at_10": 1.0,
+        "recall_at_5": 0.875
+      },
+      "query_count": 2,
+      "success_count": 2,
+      "value": "java"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 55120563,
+        "p95_ns": 103294250
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9,
+        "mrr": 0.65,
+        "ndcg_at_5": 0.5625109565594443,
+        "precision_at_5": 0.32,
+        "recall_at_1": 0.175,
+        "recall_at_10": 0.85,
+        "recall_at_5": 0.65
+      },
+      "query_count": 10,
+      "success_count": 10,
+      "value": "python"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "dataset_id",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 50198938,
+        "p95_ns": 103294250
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9166666666666666,
+        "mrr": 0.7083333333333334,
+        "ndcg_at_5": 0.6149529292194917,
+        "precision_at_5": 0.3333333333333333,
+        "recall_at_1": 0.25,
+        "recall_at_10": 0.875,
+        "recall_at_5": 0.6875
+      },
+      "query_count": 12,
+      "success_count": 12,
+      "value": "v3.1-phase6-dataset-v1"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "split",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 50198938,
+        "p95_ns": 103294250
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.9166666666666666,
+        "mrr": 0.7083333333333334,
+        "ndcg_at_5": 0.6149529292194917,
+        "precision_at_5": 0.3333333333333333,
+        "recall_at_1": 0.25,
+        "recall_at_10": 0.875,
+        "recall_at_5": 0.6875
+      },
+      "query_count": 12,
+      "success_count": 12,
+      "value": "english_dev"
+    }
+  ],
+  "strategy": "embedding"
+}

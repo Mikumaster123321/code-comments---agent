@@ -1,0 +1,288 @@
+{
+  "aggregate_created_at": "2026-09-29T06:12:46.873150+00:00",
+  "aggregation_implementation_version": "phase6.1-aggregate-v1",
+  "code_commit": "2749969cd3a2d4d6e1e8d81160eebd5fb360879b",
+  "config_hash": "610eca977b04c2525c8bcd89aebe28f2282bcf23e919e7be363deece186a6fa5",
+  "context_diagnostic_summary_reference": null,
+  "counts": {
+    "degraded": 0,
+    "failure": 0,
+    "invalid": 0,
+    "success": 48
+  },
+  "dataset": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "version": "v1"
+  },
+  "denominator_count": 48,
+  "embedding_fingerprint": {
+    "dimension": 768,
+    "document_instruction": "passage: ",
+    "fingerprint_hash": "00528591f55523ebe4f440835075bf36979de9f52e70749d46e7bf95aaf9b422",
+    "max_input_policy": "512-token-explicit-truncation-v1",
+    "model_repository": "intfloat/multilingual-e5-base",
+    "normalization": "l2",
+    "query_instruction": "query: ",
+    "revision": "d128750597153bb5987e10b1c3493a34e5a4502a",
+    "runtime_kind": "transformers-torch",
+    "similarity_metric": "cosine"
+  },
+  "ground_truth": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  },
+  "index_identity": "947a592a9b04400995aebf0e155f8dc4ff84e57762216bf9c9cde7cf8b04aec2",
+  "latency": {
+    "median_ns": 54101583,
+    "p95_ns": 85899750
+  },
+  "macro_metrics": {
+    "hit_rate_at_5": 0.8958333333333334,
+    "mrr": 0.6599537037037037,
+    "ndcg_at_5": 0.4643641464617274,
+    "precision_at_5": 0.34166666666666673,
+    "recall_at_1": 0.14010416666666667,
+    "recall_at_10": 0.6633680555555556,
+    "recall_at_5": 0.5315972222222222
+  },
+  "matrix_run_id": "RQ3-CONTAINS-FORWARD",
+  "performance_artifact_reference": null,
+  "population_filters": {
+    "language": "all",
+    "population": "english_test",
+    "role": "primary",
+    "split": "english_test"
+  },
+  "protocol_version": "v3.1-phase6-protocol-v1",
+  "query_set": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "raw_results_sha256": "eb43160fad867d7d97438067ae14c2983b844966e3c173f073ef0a412ce5bee1",
+  "retrieval_unit": "symbol",
+  "run_id": "phase64-et-rq3-contains-forward-2749969cd3a2",
+  "run_status": "success",
+  "strata": [
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54971625,
+        "p95_ns": 85899750
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.625,
+        "mrr": 0.4,
+        "ndcg_at_5": 0.2607988368156509,
+        "precision_at_5": 0.325,
+        "recall_at_1": 0.05625,
+        "recall_at_10": 0.475,
+        "recall_at_5": 0.41875
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "bug_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54569833,
+        "p95_ns": 79709833
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.875,
+        "mrr": 0.78125,
+        "ndcg_at_5": 0.39831311556547844,
+        "precision_at_5": 0.4,
+        "recall_at_1": 0.14895833333333333,
+        "recall_at_10": 0.41770833333333335,
+        "recall_at_5": 0.36041666666666666
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "cross_file_understanding"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 53553895,
+        "p95_ns": 148211708
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.65,
+        "ndcg_at_5": 0.529443807608175,
+        "precision_at_5": 0.325,
+        "recall_at_1": 0.10416666666666666,
+        "recall_at_10": 0.6875,
+        "recall_at_5": 0.4895833333333333
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "dependency_questions"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 53879499,
+        "p95_ns": 76505625
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.6666666666666666,
+        "ndcg_at_5": 0.40663807713904476,
+        "precision_at_5": 0.3,
+        "recall_at_1": 0.14583333333333331,
+        "recall_at_10": 0.6666666666666666,
+        "recall_at_5": 0.4895833333333333
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "feature_localization"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54533563,
+        "p95_ns": 121333250
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.8229166666666666,
+        "ndcg_at_5": 0.5653290227731281,
+        "precision_at_5": 0.42500000000000004,
+        "recall_at_1": 0.21875,
+        "recall_at_10": 0.775,
+        "recall_at_5": 0.5979166666666667
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "maintenance_tasks"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "task_type",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54241208,
+        "p95_ns": 75132959
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.875,
+        "mrr": 0.6388888888888888,
+        "ndcg_at_5": 0.6256620188688873,
+        "precision_at_5": 0.275,
+        "recall_at_1": 0.16666666666666666,
+        "recall_at_10": 0.9583333333333334,
+        "recall_at_5": 0.8333333333333334
+      },
+      "query_count": 8,
+      "success_count": 8,
+      "value": "symbol_lookup"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 34433124,
+        "p95_ns": 36265667
+      },
+      "metrics": {
+        "hit_rate_at_5": 1.0,
+        "mrr": 0.8472222222222222,
+        "ndcg_at_5": 0.607426520355286,
+        "precision_at_5": 0.46666666666666673,
+        "recall_at_1": 0.2222222222222222,
+        "recall_at_10": 0.75,
+        "recall_at_5": 0.6805555555555555
+      },
+      "query_count": 12,
+      "success_count": 12,
+      "value": "java"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "language",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 74195104,
+        "p95_ns": 121333250
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.8611111111111112,
+        "mrr": 0.5975308641975308,
+        "ndcg_at_5": 0.4166766884972079,
+        "precision_at_5": 0.30000000000000004,
+        "recall_at_1": 0.11273148148148149,
+        "recall_at_10": 0.6344907407407407,
+        "recall_at_5": 0.4819444444444445
+      },
+      "query_count": 36,
+      "success_count": 36,
+      "value": "python"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "dataset_id",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54101583,
+        "p95_ns": 85899750
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.8958333333333334,
+        "mrr": 0.6599537037037037,
+        "ndcg_at_5": 0.4643641464617274,
+        "precision_at_5": 0.34166666666666673,
+        "recall_at_1": 0.14010416666666667,
+        "recall_at_10": 0.6633680555555556,
+        "recall_at_5": 0.5315972222222222
+      },
+      "query_count": 48,
+      "success_count": 48,
+      "value": "v3.1-phase6-dataset-v1"
+    },
+    {
+      "degraded_count": 0,
+      "dimension": "split",
+      "failure_count": 0,
+      "invalid_count": 0,
+      "latency": {
+        "median_ns": 54101583,
+        "p95_ns": 85899750
+      },
+      "metrics": {
+        "hit_rate_at_5": 0.8958333333333334,
+        "mrr": 0.6599537037037037,
+        "ndcg_at_5": 0.4643641464617274,
+        "precision_at_5": 0.34166666666666673,
+        "recall_at_1": 0.14010416666666667,
+        "recall_at_10": 0.6633680555555556,
+        "recall_at_5": 0.5315972222222222
+      },
+      "query_count": 48,
+      "success_count": 48,
+      "value": "english_test"
+    }
+  ],
+  "strategy": "weighted"
+}

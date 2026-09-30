@@ -35,9 +35,35 @@ The targeted LLM-contract test is an offline smoke check: it stubs the LLM call.
 - Make each completed phase its own commit.
 - Before handoff, report changed files, tests run, behavior changes, open problems, commit, and status.
 
-## Roles
+## Model Collaboration Roles
 
-- Codex/GPT is the primary implementer.
-- DeepSeek defaults to QA and documentation and must not overturn frozen architecture.
-- Claude defaults to reviewer.
-- If a tool does not automatically load these files, explicitly instruct it at task start to read `AGENTS.md` and `PROJECT_CONTEXT.md`.
+- GPT-5.6 Sol controls the overall workflow, performs cross-phase audits, and keeps
+  prompts, gates, thesis claims, and engineering evidence consistent.
+- Codex performs repository implementation, testing, Git operations, and
+  documentation materialization.
+- DeepSeek R1 performs independent QA, directed retests, and adversarial
+  verification. It must not overturn frozen architecture or methodology.
+- Claude, using the highest available Opus model with high reasoning, is the
+  preferred Primary Research Architecture & Methodology Reviewer. It reviews
+  architecture and research design, RQs and experiment protocols, dataset and
+  ground-truth methodology, and the methodological validity of research results.
+- Grok 4.7 normally serves as the Independent Research Cross-Reviewer / Alternative
+  Methodology Reviewer. It independently challenges Claude/GPT research designs and
+  reviews dataset bias, leakage, threats to validity, negative results, and claim
+  discipline.
+- Grok 4.7 assumes Claude's Primary Research/Methodology Reviewer duties only when
+  the user explicitly states that Claude is currently unavailable. This is a
+  temporary fallback, not an automatic substitution. When Claude becomes available,
+  the Primary role returns to Claude and Grok 4.7 returns to its normal independent
+  cross-review role.
+- The user makes final decisions and acceptance.
+
+Formal prompts and execution reports should be written primarily in Simplified
+Chinese; English technical terms may be retained where they improve precision. Any
+important external-model decision that will determine code, formal experiment, or
+release behavior must first be materialized in a Git-tracked specification or
+decision document before a later phase may depend on it. Chat history alone is not a
+repository Source of Truth.
+
+If a tool does not automatically load these files, explicitly instruct it at task
+start to read `AGENTS.md` and `PROJECT_CONTEXT.md`.

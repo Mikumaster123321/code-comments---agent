@@ -1,0 +1,32 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "fffb0f22a70c7b0e4c91da5c00cd8afef1056c148d1717a33d29248e0d642449",
+    "grade_observation": "{\"grade_assessment\":\"Grade 1（契约/调用路径/预期行为）成立：该方法正是 E02 中 minutesLate 调用 clock.minutesUntil(deadline) 的被调目标，提供时钟差值语义。理由中“为队列的迟到值提供时钟计算”由本 span 加 E02 的调用点共同支持，无夸大。\",\"span_grade_concern\":false}",
+    "reason": "{\"grade_assessment\":\"Grade 1（契约/调用路径/预期行为）成立：该方法正是 E02 中 minutesLate 调用 clock.minutesUntil(deadline) 的被调目标，提供时钟差值语义。理由中“为队列的迟到值提供时钟计算”由本 span 加 E02 的调用点共同支持，无夸大。\",\"observed_behavior\":\"第 6 行内容为 `public int minutesUntil(int deadline) { return deadline - now; }`，返回 deadline 与 now 的整数差，即基于时钟的剩余分钟计算。span [75,143) 恰好覆盖该行（该行起于 offset 75、长 68 字符），与文件声明 bytes=146 的布局一致，身份未混淆。\",\"span_grade_concern\":false}",
+    "source_locations": [
+      "src/com/desk/model/DeskClock.java:L6-L6 [75,143)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "823d5b5718d962c5fe8ea25f4c036a854b7939a141adfe7cecb82fde3357440e",
+    "grade_observation": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：此 span 即“查找票据 → 赋予时钟迟到值”这一查询行为的直接实现，理由描述与源码逐句对应，无遗漏或添加。\",\"span_grade_concern\":false}",
+    "reason": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：此 span 即“查找票据 → 赋予时钟迟到值”这一查询行为的直接实现，理由描述与源码逐句对应，无遗漏或添加。\",\"observed_behavior\":\"L40-L44 为 `minutesLate(String id, int deadline)`：先 `Ticket ticket = folder.find(id);`，若为 null 则 `return 0;`，否则 `return -clock.minutesUntil(deadline);`（取负得到迟到分钟数）。span [1127,1315) 长度 188，与 L40-L44 逐字符长度完全吻合，边界精确。\",\"span_grade_concern\":false}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L40-L44 [1127,1315)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E03",
+    "evidence_identity": "4e8eebf80bc772f5c2c32ca341dbd6e5fb1575da508c61f87aa14a7d73469b56",
+    "grade_observation": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：find 正是“stored ticket 如何被找到”的直接实现。理由中“返回副本、不返回数组原对象”的描述与源码一致，属对实现的关键行为刻画，无失实。\",\"span_grade_concern\":false}",
+    "reason": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：find 正是“stored ticket 如何被找到”的直接实现。理由中“返回副本、不返回数组原对象”的描述与源码一致，属对实现的关键行为刻画，无失实。\",\"observed_behavior\":\"L21-L31 为 `find(String id)`：遍历 entries，按 `stored.id().equals(id)` 命中后 `new Ticket(stored.id(), stored.title())` 新建副本，复制 `note`，若原票非 open 则 `copy.markClosed()`，返回该副本；未命中返回 null。span [563,933) 长度 370，与 L21-L31 逐字符长度完全吻合。\",\"span_grade_concern\":false}",
+    "source_locations": [
+      "src/com/desk/store/TicketFolder.java:L21-L31 [563,933)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "materialized_at": "2026-09-28T06:11:25.918290+00:00",
+  "repository_commit": "61cbc0db166e1577068101ffbe92b3b58e38e152",
+  "schema_version": "v1",
+  "source": "existing committed ResolutionRecords; no new source review"
+}

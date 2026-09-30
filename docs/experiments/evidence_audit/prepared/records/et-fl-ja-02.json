@@ -1,0 +1,73 @@
+{
+  "status": "PREPARED / NOT EXECUTED",
+  "query_id": "et-fl-ja-02",
+  "input_path": "inputs/et-fl-ja-02.txt",
+  "input_sha256": "4534441740756cb240f523231de25706ca570c8948f4f15ef1dc570de51acc17",
+  "actual_pasted_text_raw_path": null,
+  "actual_pasted_text_sha256": null,
+  "execution_status": "NOT_EXECUTED",
+  "model_display_name": null,
+  "visible_version": null,
+  "started_at_utc": null,
+  "ended_at_utc": null,
+  "traework_session_id": null,
+  "thinking_region": {
+    "raw_path": null,
+    "sha256": null,
+    "availability": "NOT_EXECUTED"
+  },
+  "final_answer": {
+    "raw_path": null,
+    "sha256": null,
+    "availability": "NOT_EXECUTED"
+  },
+  "raw_reply": {
+    "raw_path": null,
+    "sha256": null,
+    "completeness": "NOT_EXECUTED",
+    "completeness_notes": null
+  },
+  "platform_fields": {
+    "exact_revision": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    },
+    "token_usage": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    },
+    "finish_reason": {
+      "value": null,
+      "availability": "NOT_EXECUTED"
+    }
+  },
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "original_identity": {
+        "relative_path": "src/com/desk/model/Ticket.java",
+        "symbol_id": {
+          "fallback_line": null,
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "Ticket.markClosed",
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "semantic_disambiguator": "markClosed()"
+        },
+        "span": {
+          "start_offset": 407,
+          "end_offset": 458,
+          "start_line": 17,
+          "end_line": 17
+        },
+        "grade": 2
+      },
+      "status": "NOT_EXECUTED",
+      "source_behavior_or_reason": null,
+      "span_grade_mismatch_suspected": null
+    }
+  ],
+  "structured_transcription_sha256": null,
+  "overall_status": "NOT_EXECUTED",
+  "failure_reason": null
+}

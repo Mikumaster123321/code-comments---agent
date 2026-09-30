@@ -1,0 +1,120 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 2,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/provenance.json",
+    "raw_sha256": "a4c776566a1493c2cd74f9931c5ad0e8ff8c55b9beb7b9f9295108227679e0d9"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-28T02:21:55.695116+00:00",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "evidence_identity": "c1fa49c300e57a2a498150a20b1b25ae213890e26f21e226a28d829c69d05365",
+      "grade_observation": "{\"grade_assessment\":\"理由所述行为与所引源码逐句一致。该重载确为查询目标（带 note 的 openTicket）的相邻契约与调用路径，但本身不满足『stores a free-text note』，故 Grade 1 与理由自洽。\",\"span_grade_consistency_suspected\":false}",
+      "reason": "{\"grade_assessment\":\"理由所述行为与所引源码逐句一致。该重载确为查询目标（带 note 的 openTicket）的相邻契约与调用路径，但本身不满足『stores a free-text note』，故 Grade 1 与理由自洽。\",\"observed_source_behavior\":\"所示 L15-L20 为双参数重载 public Ticket openTicket(String id, String title)：构造 Ticket(id,title) 后调用 folder.put(ticket) 与 audit.recordOpen(ticket)，随后 return ticket；全程未触及 ticket.note，不写入任何自由文本备注。\",\"span_grade_consistency_suspected\":false}",
+      "source_locations": [
+        "src/com/desk/service/DeskQueue.java:L15-L20 [407,600)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "evidence_identity": "e755661bf0bf3cb80d03e773f1d6d86b0d4053170955ddde70b38d9d3617646e",
+      "grade_observation": "{\"grade_assessment\":\"理由所述『委托双参数开单流程后把额外参数写入 ticket.note』与 L23-L24 完全吻合，正是查询所求的方法，Grade 2 与理由自洽。\",\"span_grade_consistency_suspected\":false}",
+      "reason": "{\"grade_assessment\":\"理由所述『委托双参数开单流程后把额外参数写入 ticket.note』与 L23-L24 完全吻合，正是查询所求的方法，Grade 2 与理由自洽。\",\"observed_source_behavior\":\"所示 L22-L26 为三参数重载 public Ticket openTicket(String id, String title, String note)：先委托打开 openTicket(id,title)，再执行 ticket.note = note，最后 return ticket，即返回带自由文本备注的同一票据。\",\"span_grade_consistency_suspected\":false}",
+      "source_locations": [
+        "src/com/desk/service/DeskQueue.java:L22-L26 [602,774)"
+      ],
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "exact_revision": {
+    "reason": "exact backend revision not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "finish_reason": {
+    "reason": "finish reason not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-sl-ja-02",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/provenance.json",
+    "raw_sha256": "a4c776566a1493c2cd74f9931c5ad0e8ff8c55b9beb7b9f9295108227679e0d9"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/provenance.json",
+    "raw_sha256": "a4c776566a1493c2cd74f9931c5ad0e8ff8c55b9beb7b9f9295108227679e0d9"
+  },
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "SUPPORTS",
+  "platform_session_id": {
+    "reason": "unavailable: UI did not expose independent ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "ee45fba89ca97267347d353f109b47a4a8920c66f51d29fc8c4200ad0d3c21a8",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-sl-ja-02",
+  "query_identity": "1de573236dadb69bfb8ae1a8d16a7ea8f0702a3684231e3a1cdc4c8133cfb9e3",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/raw-reply.txt",
+    "raw_sha256": "daada6af0d437b21703046251c3a6a68add91a990eecfedbcc72a2a710dd96fd"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete exportable Final Answer only; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v1",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/sent-input.txt",
+    "raw_sha256": "ee45fba89ca97267347d353f109b47a4a8920c66f51d29fc8c4200ad0d3c21a8"
+  },
+  "started_at": "2026-09-28T02:14:00+00:00",
+  "supersedes_attempt": 1,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp, not precise model completion.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture provenance; capture file modification timestamp",
+  "token_usage": {
+    "reason": "token usage not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/transcription.json",
+    "raw_sha256": "de438093e43d27fc8f739672bf866440e144b0202c3fc395daedf9b83e937c1e"
+  },
+  "transcription_hash": "de438093e43d27fc8f739672bf866440e144b0202c3fc395daedf9b83e937c1e",
+  "ui_mode": "cloud",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete exportable Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/8b4a5b8657912ffbffe6a210f46e59c54102b9ce02bf6b41fb42d7dc1d32451c/raw-reply.txt",
+      "raw_sha256": "daada6af0d437b21703046251c3a6a68add91a990eecfedbcc72a2a710dd96fd"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}

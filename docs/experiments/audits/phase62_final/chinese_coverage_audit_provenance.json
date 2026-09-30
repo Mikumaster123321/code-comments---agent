@@ -1,0 +1,10 @@
+{
+  "completed_at_semantics": "archive completion, not a new review time",
+  "extraction": "12 table rows; removed Markdown table padding only; note contents preserved including Markdown escapes",
+  "materialized_at": "2026-09-28T06:11:25.918290+00:00",
+  "review_date": "2026-09-28",
+  "reviewer": "Grok 4.7",
+  "schema_version": "v1",
+  "source_methodology_review_identity": "9920c292dbd5f46fc4acbc57ed63a6c9227bb9dbf96b049fa8653dc69e7358fb",
+  "source_output_raw_sha256": "89c352bed26b86558a2f26e9d1dc4be8ec7cd515f8a804433603fc5b2ca7272e"
+}

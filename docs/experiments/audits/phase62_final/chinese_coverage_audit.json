@@ -1,0 +1,33 @@
+{
+  "completed_at": "2026-09-28T06:11:25.918290+00:00",
+  "input_identities": [
+    [
+      "dataset",
+      "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7"
+    ],
+    [
+      "methodology_review",
+      "9920c292dbd5f46fc4acbc57ed63a6c9227bb9dbf96b049fa8653dc69e7358fb"
+    ],
+    [
+      "query_set",
+      "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba"
+    ],
+    [
+      "reference",
+      "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04"
+    ],
+    [
+      "source_draft",
+      "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87"
+    ]
+  ],
+  "output_artifact_path": "docs/experiments/audits/phase62_final/chinese_coverage_audit_output.json",
+  "output_identity": "e6909f18facfd82f03878fa0b50dfd3417605a30c7b38c60fbad0ebadeb3a11a",
+  "provenance_artifact_path": "docs/experiments/audits/phase62_final/chinese_coverage_audit_provenance.json",
+  "provenance_identity": "632a885ba7a0ed6d663cd492fb85d6af6d91c39c5bfda0a06c21ab4ebc52c5a1",
+  "resolution_status": "closed",
+  "role": "chinese_coverage_audit",
+  "schema_version": "v1",
+  "status": "pass"
+}

@@ -1,0 +1,102 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 4,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/provenance.json",
+    "raw_sha256": "01b3fcb2162778e483d7f74f38fe20a1926a529779423542d737ecdb82708906"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-28T04:24:56.852174+00:00",
+  "evidence_reviews": [],
+  "exact_revision": {
+    "reason": "not exposed in final capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "execution_outcome": "CANNOT_ASSESS",
+  "failure_reason": "response_contract_failure",
+  "finish_reason": {
+    "reason": "not exposed in final capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-bl-ja-01",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/provenance.json",
+    "raw_sha256": "01b3fcb2162778e483d7f74f38fe20a1926a529779423542d737ecdb82708906"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/provenance.json",
+    "raw_sha256": "01b3fcb2162778e483d7f74f38fe20a1926a529779423542d737ecdb82708906"
+  },
+  "model_verdict": "unavailable",
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "CANNOT_ASSESS",
+  "platform_session_id": {
+    "reason": "UI did not expose independent session ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "79e88f043ec2a5d3720e8b8d9a6449fd47687393d36e8f259fc87d95820ad10d",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-bl-ja-01",
+  "query_identity": "ef4a27fd7b6412697c2a8ef667891105316c731d2d33ef1f5ac5428a0229bf44",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/raw-reply.txt",
+    "raw_sha256": "c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete Final Answer retained; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v2",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/sent-input.txt",
+    "raw_sha256": "79e88f043ec2a5d3720e8b8d9a6449fd47687393d36e8f259fc87d95820ad10d"
+  },
+  "started_at": "2026-09-28T04:15:00+00:00",
+  "supersedes_attempt": 3,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture manifest; final-answer file modification timestamp",
+  "token_usage": {
+    "reason": "not exposed in final capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/transcription.json",
+    "raw_sha256": "12582e3a2ca57ab28ad3c031e620834351277c2457a239df3f841cd1602b26f0"
+  },
+  "transcription_hash": "12582e3a2ca57ab28ad3c031e620834351277c2457a239df3f841cd1602b26f0",
+  "ui_mode": "Trae Work; final attempt mode not independently recorded",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323/raw-reply.txt",
+      "raw_sha256": "c7cbc3d12b8b4f85aeb862570972605d3afa3d2081dcff137f9e2155d7c2cd56"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "Thinking visible in UI, but complete standalone export unavailable under Amendment 1",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "end_marker": "RESPONSE_END_ET_CF_JA_01",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "identity": {
+        "grade": 1,
+        "relative_path": "src/com/desk/audit/DeskAudit.java",
+        "span": {
+          "end_line": 8,
+          "end_offset": 188,
+          "start_line": 8,
+          "start_offset": 117
+        },
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskAudit.recordOpen",
+          "relative_path": "src/com/desk/audit/DeskAudit.java",
+          "semantic_disambiguator": "recordOpen(Ticket)"
+        }
+      },
+      "observed_behavior": "第 8 行即为方法体 public void recordOpen(Ticket ticket) { lastOpened = ticket.id(); }，将传入票据的 id 写入字段 lastOpened，即保存最近一次开单编号；未做其他操作。",
+      "rationale_supported": true,
+      "span_grade_note": "span [117,188) 精确覆盖第 8 行方法定义行本身，与 Grade 1 所述『相关契约/调用路径/预期行为支持证据』一致。",
+      "span_grade_suspected_mismatch": false,
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "identity": {
+        "grade": 2,
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "span": {
+          "end_line": 20,
+          "end_offset": 600,
+          "start_line": 15,
+          "start_offset": 407
+        },
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskQueue.openTicket",
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "semantic_disambiguator": "openTicket(String,String)"
+        }
+      },
+      "observed_behavior": "L15-L20 恰为两参 openTicket(String id, String title)：构造 new Ticket(id, title)，调用 folder.put(ticket)，再调用 audit.recordOpen(ticket)，最后 return ticket；方法体未设置 note 字段。行为与理由描述完全一致。",
+      "rationale_supported": true,
+      "span_grade_note": "span [407,600) 精确覆盖 L15-L20 方法边界，Grade 2『直接定位实现/身份』成立：该方法是无备注开单存储与记录的唯一直接实现。",
+      "span_grade_suspected_mismatch": false,
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E03",
+      "identity": {
+        "grade": 1,
+        "relative_path": "src/com/desk/store/TicketFolder.java",
+        "span": {
+          "end_line": 19,
+          "end_offset": 561,
+          "start_line": 8,
+          "start_offset": 130
+        },
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "TicketFolder.put",
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "semantic_disambiguator": "put(Ticket)"
+        }
+      },
+      "observed_behavior": "L8-L19 为 put(Ticket)：循环比对 entries[i].id().equals(ticket.id())，同 id 则 entries[i] = ticket 并 return（原地替换）；未命中则新建长度 +1 的数组、arraycopy 后追加于末尾并回写 entries。行为与理由一致。",
+      "rationale_supported": true,
+      "span_grade_note": "span [130,561) 精确覆盖 L8-L19 方法边界，与 Grade 1『相关契约/调用路径/预期行为支持证据』一致。",
+      "span_grade_suspected_mismatch": false,
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "overall_status": "SUPPORTS",
+  "query_id": "et-cf-ja-01",
+  "scope_statement": "本次仅依据给定源码文本与每项已引用 span，核对其是否支持既定 Grade 与理由；未判断未展示项目范围内是否还存在其他相关 Symbol，未生成新的主标签，未使用、请求或调用任何被评估检索器的排名、得分或正式结果。"
+}

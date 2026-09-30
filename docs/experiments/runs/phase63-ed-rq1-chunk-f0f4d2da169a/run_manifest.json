@@ -1,0 +1,74 @@
+{
+  "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+  "config_hashes": [
+    "f4d96d050797db74322edf198bdb1120fbcaf9600835a1a1e99defb731943bbc"
+  ],
+  "corpus_revision": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+  "dataset": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "id": "v3.1-phase6-dataset-v1",
+    "path_manifest_hash": "9adddbc3e69716b899352185d22b15df74b9c03e6d25aac9857a958fe7c33978",
+    "version": "v1"
+  },
+  "dirty_state": false,
+  "embedding_fingerprint": null,
+  "environment": {
+    "cpu_model": "Apple M4",
+    "dependencies": {
+      "torch": "2.8.0",
+      "transformers": "4.56.2"
+    },
+    "device": "cpu",
+    "dtype": "float32",
+    "logical_cores": 10,
+    "model_local_files_only": true,
+    "network_disabled": true,
+    "os_build": "Darwin Kernel Version 24.3.0: Thu Jan  2 20:31:46 PST 2025; root:xnu-11215.81.4~4/RELEASE_ARM64_T8132",
+    "os_name": "Darwin",
+    "physical_cores": 10,
+    "power_mode": "unmeasured; dry-run execution",
+    "python_implementation": "CPython",
+    "python_version": "3.12.14",
+    "ram_bytes": 17179869184,
+    "thread_settings": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false"
+    }
+  },
+  "execution": {
+    "ended_at": "2026-09-28T09:32:44.889436+00:00",
+    "started_at": "2026-09-28T09:32:39.163801+00:00"
+  },
+  "execution_revision": "f0f4d2da169a071c71a6099c1d106fc3fec23299",
+  "formal_gate": null,
+  "ground_truth": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  },
+  "independent_audit_status": "pending",
+  "index_identity": "d7fac0c901c13576ae48df60eaa2b2ee8d642a031a58715d76ae292ef07f4551",
+  "mode": "dry_run",
+  "model_cache_verified": null,
+  "operator_id": "codex-phase63-english-dev",
+  "output_checksums": {
+    "aggregate_results.json": "53e06e2724e92ef56bb5c83f79aa13e72c6a37939057710accb485c505ad72b8",
+    "raw_results.jsonl": "72377d3ed8bfc80417eaaa5f4880e9ad917f9cf27d2b41164e9683659d9759bd"
+  },
+  "performance": null,
+  "protocol": {
+    "hash": "214360ac17633db7d77caec2ea2a135bf4372a773f9343b2fcb91bff8ee4e341",
+    "id": "phase6",
+    "version": "v3.1-phase6-protocol-v1"
+  },
+  "python_hash_seed": "0",
+  "query_set": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "random_seed": 310,
+  "reference_hash": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "revision_schema_version": "v2",
+  "run_id": "phase63-ed-rq1-chunk-f0f4d2da169a",
+  "split": "english_dev"
+}

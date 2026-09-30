@@ -1,0 +1,22 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "7e18e48c7a5b3d5aeb6ba194d3b5b53eae698127299e70c7190e90981aea9b8f",
+    "grade_observation": "{\"original_grade\":2,\"span_grade_suspect\":false}",
+    "reason": "{\"notes\":\"span [50,153) 覆盖 L4-L6，与所引 render 方法体一致（起于 L4 首个字符，止于 L6 右括号后、换行前）。该方法即产生拥有者消息文本的实现，Grade 2（直接定位冻结任务所需实现/身份）相称。\",\"rationale_supported\":true,\"source_behavior\":\"render(String id, String title) 方法体仅一条 return \\\"Ticket \\\" + id + \\\": \\\" + title;，把票据编号与标题拼接成消息字符串，全程未检查票据状态。\",\"span_grade_suspect\":false}",
+    "source_locations": [
+      "src/com/desk/notify/DeskMail.java:L4-L6 [50,153)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "47ac7f3b85f891dcd70d5e4bc4e437956b18e07306ad01b22b36bcf26d7d0c78",
+    "grade_observation": "{\"original_grade\":1,\"span_grade_suspect\":false}",
+    "reason": "{\"notes\":\"span 覆盖 L33-L36，与 notifyOwner 方法体一致。该符号体现渲染消息的调用路径/契约，属相关支持证据，Grade 1 相称；理由中\\\"无开放状态条件\\\"与源码一致。\",\"rationale_supported\":true,\"source_behavior\":\"notifyOwner(String id) 先 Ticket ticket = folder.find(id); 取票，再直接 return mail.render(ticket.id(), ticket.title());，方法内无对开放/关闭状态的任何条件判断，故关闭票据同样会生成消息。\",\"span_grade_suspect\":false}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L33-L36 [918,1064)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

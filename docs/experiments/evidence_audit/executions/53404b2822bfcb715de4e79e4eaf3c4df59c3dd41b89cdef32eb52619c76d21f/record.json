@@ -1,0 +1,110 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 1,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/provenance.json",
+    "raw_sha256": "cb9ffc7196c94be99fb38bffac8cbad8693c5e3e6ea2cb19c0d13ef4336175d6"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-24T09:18:43.804650+00:00",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "evidence_identity": "c4542a19a208dcdb0a70936ca9b173f8ba5ec50f108aee0279e3f4044264f7ef",
+      "grade_observation": "{\"grade_support\":\"Consistent with the frozen task. The query asks which method currently returns only the two existing labels; statusLabel is that method, and its identity plus the two-label return expression is directly captured by the cited line. Grade 2 (directly locating the required implementation/identity) is supported by the shown source behavior.\",\"span_grade_correspondence_suspect\":false}",
+      "reason": "{\"grade_support\":\"Consistent with the frozen task. The query asks which method currently returns only the two existing labels; statusLabel is that method, and its identity plus the two-label return expression is directly captured by the cited line. Grade 2 (directly locating the required implementation/identity) is supported by the shown source behavior.\",\"notes\":\"Independent offset accounting places L18's start at offset 459, matching the declared start_offset; the declared span [459,531) covers essentially the whole L18 statement, including the signature and the two-label ternary return. Only a possible ±1-byte boundary ambiguity around the closing brace exists, which does not alter the behavior or the grade. Rationale's file hash prefix (b511160d...) matches fixture_hash in the header.\",\"source_behavior_verified\":\"L18 is `    public String statusLabel() { return isOpen() ? \\\"open\\\" : \\\"closed\\\"; }`. The method delegates to isOpen() (which returns status.equals(\\\"open\\\")) and yields exactly two possible labels: \\\"open\\\" when open, otherwise \\\"closed\\\". There is no third/waiting branch and no reference to a non-open, non-closed state.\",\"span_grade_correspondence_suspect\":false}",
+      "source_locations": [
+        "src/com/desk/model/Ticket.java:L18-L18 [459,531)"
+      ],
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "exact_revision": {
+    "reason": "exact backend revision not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "finish_reason": {
+    "reason": "finish reason not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-mt-ja-01",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/provenance.json",
+    "raw_sha256": "cb9ffc7196c94be99fb38bffac8cbad8693c5e3e6ea2cb19c0d13ef4336175d6"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/provenance.json",
+    "raw_sha256": "cb9ffc7196c94be99fb38bffac8cbad8693c5e3e6ea2cb19c0d13ef4336175d6"
+  },
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "SUPPORTS",
+  "platform_session_id": {
+    "reason": "unavailable: UI did not expose independent ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "bacc51f58a4dbe1d7a25b1ae7fcb45fe83ad83574b1dc7947cd7b0261d9f64f1",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-mt-ja-01",
+  "query_identity": "b21bc9f961a1a676cb41b7aaaacf3244017b1e928046f40db43013d6301551e5",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/raw-reply.txt",
+    "raw_sha256": "8976426de59961aca599aff06343eaa147a2c9990f0abdedc9e82442182fad78"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete exportable Final Answer only; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v1",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/sent-input.txt",
+    "raw_sha256": "bacc51f58a4dbe1d7a25b1ae7fcb45fe83ad83574b1dc7947cd7b0261d9f64f1"
+  },
+  "started_at": "2026-09-24T09:08:00+00:00",
+  "supersedes_attempt": null,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp, not precise model completion.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture provenance; capture file modification timestamp",
+  "token_usage": {
+    "reason": "token usage not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/transcription.json",
+    "raw_sha256": "8524a79d5a057ecaa6bb60a21629f45a21e99328dd5c6b2663686d984bdfd85d"
+  },
+  "transcription_hash": "8524a79d5a057ecaa6bb60a21629f45a21e99328dd5c6b2663686d984bdfd85d",
+  "ui_mode": "cloud",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete exportable Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/53404b2822bfcb715de4e79e4eaf3c4df59c3dd41b89cdef32eb52619c76d21f/raw-reply.txt",
+      "raw_sha256": "8976426de59961aca599aff06343eaa147a2c9990f0abdedc9e82442182fad78"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}

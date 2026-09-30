@@ -1,0 +1,21 @@
+{
+  "binding_basis": "unchanged reviewed dataset/query/draft/reference and Java execution bytes; fulfills explicit deferred L-ZH-01/L-RES-01 materialization actions",
+  "completed_at_semantics": "deterministic archival/binding completion; external reviewer did not sign later artifact hashes",
+  "critical": 0,
+  "data_qa_status": "ELIGIBLE",
+  "extraction_boundary": "unique # FINAL INDEPENDENT DATA QA VERDICT: heading through original end of file, bytes unchanged",
+  "low": 4,
+  "materialized_at": "2026-09-28T06:11:25.918290+00:00",
+  "no_new_qa": true,
+  "non_blocking_medium": 0,
+  "output_start_byte": 256038,
+  "reviewed_repository_commit": "61cbc0db166e1577068101ffbe92b3b58e38e152",
+  "reviewer_identity": "not stated in exported final output; no model identity inferred",
+  "schema_version": "v1",
+  "source_attachment_name": "粘贴的文本 (1).txt",
+  "source_export_raw_sha256": "6b685c0cb5dfabce3ec2f84c88ff0823b4242ad4edabf320bdd49b85ccdbb8f0",
+  "source_kind": "user-attached completed independent Data QA export",
+  "source_task_id": "6a9f79c5-5688-83ee-8455-5e0ead293778",
+  "validity_blocking_medium": 0,
+  "verdict": "PASS WITH NON-BLOCKING NOTES"
+}

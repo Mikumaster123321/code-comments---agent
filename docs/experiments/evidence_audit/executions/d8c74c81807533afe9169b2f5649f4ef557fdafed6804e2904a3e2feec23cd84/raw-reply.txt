@@ -1,0 +1,32 @@
+{
+  "query_id": "et-fl-ja-02",
+  "overall_status": "SUPPORTS",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "verdict": "SUPPORTS",
+      "identity_preserved": {
+        "relative_path": "src/com/desk/model/Ticket.java",
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "Ticket.markClosed",
+          "semantic_disambiguator": "markClosed()",
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "fallback_line": null
+        },
+        "span": {
+          "start_line": 17,
+          "end_line": 17,
+          "start_offset": 407,
+          "end_offset": 458
+        }
+      },
+      "source_behavior": "第 17 行源码为 `public void markClosed() { status = "closed"; }`（含 4 空格缩进，长度 51 字符），其唯一语句 `status = "closed";` 把实例字段 status 由默认的 \"open\" 覆写为 \"closed\"，即票据被切换到 closed 状态的具体写入点。span [407,458) 与 L17 单行范围逐字对齐，长度 51 与行文本一致。",
+      "grade_supported": true,
+      "span_grade_concern": "未发现 span 与 Grade 的对应关系存在偏移或错配：被引用区间精确覆盖完成状态写入的方法体，行为与理由中“把内部 status 字段设为 closed，是票据状态变更的具体位置”一致。",
+      "reasoning": "查询为 feature_localization，问的是“票据在何处被切换到 closed 状态”。已展示源码中唯一把 status 赋值为 \"closed\" 的位置就是 Ticket.markClosed，且该赋值发生在被引用的 span 内，故该 span 足以直接定位目标实现，支持其既有 Grade 与理由。仅就给定 span 而言，不存在与理由不符的证据。"
+    }
+  ],
+  "scope_statement": "本次审计仅针对上面已引用的源码与给定 span 判断其是否支持既有 Grade 和理由；未判断未展示项目范围内是否还有其他相关 Symbol（例如同文件内 Ticket.statusLabel() 读取 closed 的分支、或构造函数中的初始状态等均未纳入评估），也未生成新的主标签，未使用、请求或调用任何被评估检索器的排名、得分或正式结果。",
+  "end_marker": "RESPONSE_END_ET_FL_JA_02

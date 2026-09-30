@@ -1,0 +1,126 @@
+{
+  "code_tree_identity": "cd7f227d29af093697bca81c6c9b4d46b755a152",
+  "config": {
+    "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+    "chunk": {
+      "boundary": "unicode_codepoint",
+      "overlap": 200,
+      "size": 1200,
+      "stride": 1000
+    },
+    "dataset": {
+      "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+      "version": "v1"
+    },
+    "embedding_fingerprint": null,
+    "file": {
+      "identity": "relative_path",
+      "text_layout": "relative_path_newline_full_source"
+    },
+    "graph": {
+      "directions": [
+        "forward",
+        "reverse"
+      ],
+      "enabled": false,
+      "max_expanded_per_seed": 5,
+      "max_hops": 1,
+      "max_total_context_nodes": 30,
+      "relations": [
+        "contains",
+        "imports"
+      ],
+      "score_factors": {
+        "contains": 0.75,
+        "forward": 1.0,
+        "imports": 1.0,
+        "reverse": 0.8
+      },
+      "signals": [
+        [
+          "contains",
+          "forward"
+        ],
+        [
+          "contains",
+          "reverse"
+        ],
+        [
+          "imports",
+          "forward"
+        ],
+        [
+          "imports",
+          "reverse"
+        ]
+      ]
+    },
+    "ground_truth": {
+      "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+      "version": "v3.1-phase6-truth-v1"
+    },
+    "hybrid": {
+      "graph_weight": 0.0,
+      "lexical_weight": 1.0,
+      "rrf_k": 60,
+      "semantic_weight": 0.0
+    },
+    "matrix_run_id": "RQ1-SYMBOL",
+    "metric": {
+      "hit_rate_k": 5,
+      "mrr_cutoff": 10,
+      "ndcg_k": 5,
+      "precision_k": 5,
+      "recall_k": [
+        1,
+        5,
+        10
+      ]
+    },
+    "population": "english_dev",
+    "protocol_version": "v3.1-phase6-protocol-v1",
+    "query_set": {
+      "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+      "version": "v3.1-phase6-queries-v1"
+    },
+    "retrieval_unit": "symbol",
+    "run_kind": "dry_run",
+    "semantic_mode": "none",
+    "strategy": "lexical",
+    "top_k": 10
+  },
+  "execution_performed": false,
+  "formal_request": "REJECTED: current_gate_conflict; no DryRunReceipt",
+  "model_inference_calls": 0,
+  "network_control": "HF_HUB_OFFLINE=1; TRANSFORMERS_OFFLINE=1; Python audit hook rejects socket connect, DNS and bind",
+  "post_closure_dry_run_eligibility": "PASS",
+  "purpose": "dry_run",
+  "query_executions": 0,
+  "runtime": {
+    "cpu_model": "Apple M4",
+    "dependencies": {
+      "torch": "2.8.0",
+      "transformers": "4.56.2"
+    },
+    "device": "cpu",
+    "dtype": "float32",
+    "logical_cores": 10,
+    "model_local_files_only": true,
+    "network_disabled": true,
+    "os_build": "Darwin Kernel Version 24.3.0: Thu Jan  2 20:31:46 PST 2025; root:xnu-11215.81.4~4/RELEASE_ARM64_T8132",
+    "os_name": "Darwin",
+    "physical_cores": 10,
+    "power_mode": "unmeasured; eligibility-only check, no timing claim",
+    "python_implementation": "CPython",
+    "python_version": "3.12.14",
+    "ram_bytes": 17179869184,
+    "thread_settings": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false"
+    }
+  },
+  "validation_commit": "8ef043d9ce6d5471baf8565154cba5b6bcfddb7c",
+  "validation_commit_scope": "temporary verification repository only; future execution must revalidate its own committed code",
+  "verification_scope": "isolated candidate Git snapshot before the single main-repository commit; this is eligibility verification, not an experiment result"
+}

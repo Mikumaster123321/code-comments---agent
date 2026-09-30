@@ -1,0 +1,79 @@
+{
+  "dataset_id": "v3.1-phase6-dataset-v1",
+  "dataset_identity": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "version": "v1"
+  },
+  "engineering_identity": {
+    "hash": "6b3bb3200ee6cec43efc1620e7da2e467cfe57055e4e79b7953c8962bc5fa045",
+    "version": "v1"
+  },
+  "methodology_identity": "733eb5fe73fd6993fed2d2736c5285532a5db2f14c56f68a2b4061adfa51c32e",
+  "prerequisite_identities": [
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/chinese_coverage_audit.json",
+      "identity": "a2c3c7f60c0f80dc323e41fda5278c1ddf5ab378d10e28234513b56cf5091a98",
+      "required": true,
+      "role": "chinese_coverage_audit",
+      "schema_version": "v1"
+    },
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/final_data_qa.json",
+      "identity": "e16d79a93c119a52d60437da97f5223bd8d7828f5e8cdba269f1187db7eff517",
+      "required": true,
+      "role": "final_data_qa",
+      "schema_version": "v1"
+    },
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/java_evidence_audit_set.json",
+      "identity": "054288894760683312c9b3acd7280e4516669c320bad5bb3abafe9133c7fa494",
+      "required": true,
+      "role": "java_evidence_audit_set",
+      "schema_version": "v1"
+    },
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/methodology_review.json",
+      "identity": "9920c292dbd5f46fc4acbc57ed63a6c9227bb9dbf96b049fa8653dc69e7358fb",
+      "required": true,
+      "role": "methodology_review",
+      "schema_version": "v1"
+    },
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/preregistration.json",
+      "identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+      "required": true,
+      "role": "preregistration",
+      "schema_version": "v1"
+    },
+    {
+      "artifact_path": "docs/experiments/audits/phase62_final/resolution_set.json",
+      "identity": "70508a9636519ff42713bf2e5dc1bfc4a035efdc1a5f11d007ad9500be0e7580",
+      "required": true,
+      "role": "resolution_set",
+      "schema_version": "v1"
+    }
+  ],
+  "query_set_identity": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "reference_artifact_path": "docs/experiments/reference/v3.1-phase6-spec-anchor-reference-v1.jsonl",
+  "reference_identity": {
+    "hash": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+    "version": "v3.1-phase6-spec-anchor-reference-v1"
+  },
+  "resolution_identities": [
+    {
+      "hash": "1680c6463324907a8f39e11f8a1e5b52ff79a79c71ea628078eeed9d89b8bc37",
+      "version": "v1"
+    },
+    {
+      "hash": "ac39e3072674ef7740eb53a194c8b2cc00bca3edf73ce8529ed25344faa26b1d",
+      "version": "v1"
+    }
+  ],
+  "source_draft_identity": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  }
+}

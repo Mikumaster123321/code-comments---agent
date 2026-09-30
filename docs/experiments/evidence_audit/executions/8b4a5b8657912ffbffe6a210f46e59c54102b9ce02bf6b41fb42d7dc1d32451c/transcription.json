@@ -1,0 +1,22 @@
+[
+  {
+    "evidence_id": "E01",
+    "evidence_identity": "c1fa49c300e57a2a498150a20b1b25ae213890e26f21e226a28d829c69d05365",
+    "grade_observation": "{\"grade_assessment\":\"理由所述行为与所引源码逐句一致。该重载确为查询目标（带 note 的 openTicket）的相邻契约与调用路径，但本身不满足『stores a free-text note』，故 Grade 1 与理由自洽。\",\"span_grade_consistency_suspected\":false}",
+    "reason": "{\"grade_assessment\":\"理由所述行为与所引源码逐句一致。该重载确为查询目标（带 note 的 openTicket）的相邻契约与调用路径，但本身不满足『stores a free-text note』，故 Grade 1 与理由自洽。\",\"observed_source_behavior\":\"所示 L15-L20 为双参数重载 public Ticket openTicket(String id, String title)：构造 Ticket(id,title) 后调用 folder.put(ticket) 与 audit.recordOpen(ticket)，随后 return ticket；全程未触及 ticket.note，不写入任何自由文本备注。\",\"span_grade_consistency_suspected\":false}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L15-L20 [407,600)"
+    ],
+    "verdict": "SUPPORTS"
+  },
+  {
+    "evidence_id": "E02",
+    "evidence_identity": "e755661bf0bf3cb80d03e773f1d6d86b0d4053170955ddde70b38d9d3617646e",
+    "grade_observation": "{\"grade_assessment\":\"理由所述『委托双参数开单流程后把额外参数写入 ticket.note』与 L23-L24 完全吻合，正是查询所求的方法，Grade 2 与理由自洽。\",\"span_grade_consistency_suspected\":false}",
+    "reason": "{\"grade_assessment\":\"理由所述『委托双参数开单流程后把额外参数写入 ticket.note』与 L23-L24 完全吻合，正是查询所求的方法，Grade 2 与理由自洽。\",\"observed_source_behavior\":\"所示 L22-L26 为三参数重载 public Ticket openTicket(String id, String title, String note)：先委托打开 openTicket(id,title)，再执行 ticket.note = note，最后 return ticket，即返回带自由文本备注的同一票据。\",\"span_grade_consistency_suspected\":false}",
+    "source_locations": [
+      "src/com/desk/service/DeskQueue.java:L22-L26 [602,774)"
+    ],
+    "verdict": "SUPPORTS"
+  }
+]

@@ -1,0 +1,46 @@
+{
+  "query_id": "et-fl-ja-01",
+  "overall_status": "SUPPORTS",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "verdict": "SUPPORTS",
+      "file": "src/com/desk/notify/DeskMail.java",
+      "symbol_id": {
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskMail.render",
+        "relative_path": "src/com/desk/notify/DeskMail.java",
+        "semantic_disambiguator": "render(String,String)",
+        "fallback_line": null
+      },
+      "span": { "start_line": 4, "end_line": 6, "start_offset": 50, "end_offset": 153 },
+      "original_grade": 2,
+      "source_behavior": "render(String id, String title) 方法体仅一条 return \"Ticket \" + id + \": \" + title;，把票据编号与标题拼接成消息字符串，全程未检查票据状态。",
+      "rationale_supported": true,
+      "span_grade_suspect": false,
+      "notes": "span [50,153) 覆盖 L4-L6，与所引 render 方法体一致（起于 L4 首个字符，止于 L6 右括号后、换行前）。该方法即产生拥有者消息文本的实现，Grade 2（直接定位冻结任务所需实现/身份）相称。"
+    },
+    {
+      "evidence_id": "E02",
+      "verdict": "SUPPORTS",
+      "file": "src/com/desk/service/DeskQueue.java",
+      "symbol_id": {
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.notifyOwner",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "notifyOwner(String)",
+        "fallback_line": null
+      },
+      "span": { "start_line": 33, "end_line": 36, "start_offset": 918, "end_offset": 1064 },
+      "original_grade": 1,
+      "source_behavior": "notifyOwner(String id) 先 Ticket ticket = folder.find(id); 取票，再直接 return mail.render(ticket.id(), ticket.title());，方法内无对开放/关闭状态的任何条件判断，故关闭票据同样会生成消息。",
+      "rationale_supported": true,
+      "span_grade_suspect": false,
+      "notes": "span 覆盖 L33-L36，与 notifyOwner 方法体一致。该符号体现渲染消息的调用路径/契约，属相关支持证据，Grade 1 相称；理由中\"无开放状态条件\"与源码一致。"
+    }
+  ],
+  "scope_statement": "本次仅审查输入中已展示的两项 evidence 及其给定源码与 span 是否支持各自既有 Grade 与理由，未判断未展示项目范围内是否还有其他相关 Symbol，也不生成新的主标签。",
+  "end_marker": "RESPONSE_END_ET_FL_JA_01"
+}

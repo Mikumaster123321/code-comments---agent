@@ -1,0 +1,101 @@
+{
+  "actual_embedding_calls": 0,
+  "authoritative_diff": {
+    "added": [
+      "Bin.count",
+      "Shelf.label"
+    ],
+    "changed": [
+      "Bin",
+      "Bin.put",
+      "Shelf",
+      "Shelf.add",
+      "checksum"
+    ],
+    "removed": [
+      "Bin.remove",
+      "Shelf.drop"
+    ],
+    "unchanged": []
+  },
+  "dataset_id": "v3.1-phase6-incremental-v1",
+  "direct_edit_set": {
+    "added": [
+      "Bin.count",
+      "Shelf.label"
+    ],
+    "changed": [
+      "Bin.put",
+      "Shelf.add",
+      "checksum"
+    ],
+    "removed": [
+      "Bin.remove",
+      "Shelf.drop"
+    ]
+  },
+  "enclosing_symbol_effect": [
+    "Bin",
+    "Shelf"
+  ],
+  "future_embed_documents_batches": 1,
+  "new_embedding_documents": [
+    "Bin",
+    "Bin.count",
+    "Bin.put",
+    "Shelf",
+    "Shelf.add",
+    "Shelf.label",
+    "checksum"
+  ],
+  "project_id": "fixture-py-incremental-delta",
+  "source_revision": "fixture-v1",
+  "states": {
+    "base": {
+      "file_count": 3,
+      "files": [
+        {
+          "content_hash": "8fa0a16da852686f4082e6ae9b3349a1d7f92ea894af080d3e42cb66717b7019",
+          "language": "python",
+          "relative_path": "bin.py"
+        },
+        {
+          "content_hash": "d60cd336b1864b8af52cd8cacc998e8ff5b5aace5c628efe3909846a265540a6",
+          "language": "python",
+          "relative_path": "checksum.py"
+        },
+        {
+          "content_hash": "44667ea67dc32b530ffda22e8b296d2c6e6c097e36cdb77c473d8630350d9a94",
+          "language": "python",
+          "relative_path": "shelf.py"
+        }
+      ],
+      "fixture_hash": "4ae059cfede1e916bc736d07b644aca7086b19e7e6be44de0b72e0425c7f2502",
+      "snapshot_hash": "1d247581cebd91e6507c56b27b732d56dc10c8ed0c606897a08c8098b226ef0a",
+      "symbol_count": 7
+    },
+    "update": {
+      "file_count": 3,
+      "files": [
+        {
+          "content_hash": "bd90fffa24ebb0bb86d9be172b69c0ae36e0caa29460215404638a43de0d757e",
+          "language": "python",
+          "relative_path": "bin.py"
+        },
+        {
+          "content_hash": "a2ca071ba03e0945a0eec8074d21ef7951ad04c760650d1985180f1949988d16",
+          "language": "python",
+          "relative_path": "checksum.py"
+        },
+        {
+          "content_hash": "3b9562292ce5cbd81f3285026cbe4d572a6655f7b6115d66a1b00e25a2c24a51",
+          "language": "python",
+          "relative_path": "shelf.py"
+        }
+      ],
+      "fixture_hash": "26ba1c4769f54aa8c46307cd0cd9e62de07cc36fd1b285e447cc12b06596d17a",
+      "snapshot_hash": "0d299644fbbf2fbabdef4f9a025c9e2e7280fed92bbd3fae20feb15dc9bae6b7",
+      "symbol_count": 7
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "entries": [
+    {
+      "natural_independent_query": "PASS",
+      "note": "重新打开工作区失败时的读取逻辑对应 `load_workspace` 的缺失、格式、编码与解析失败返回。`save_workspace` 是写入侧支持证据。",
+      "query_id": "zh-bl-py-01",
+      "query_identity": "7502dd4af86467905e7d5235161d2be03f5c51ab9c884eac5d464c0b497a76cf",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "`RouteService.reopen` 只把 `status` 改为 `open` 并保存，不恢复 `pending`。与「重开后剩余停靠数未复原」及已写明的 rationale 一致。",
+      "query_id": "zh-bl-py-02",
+      "query_identity": "5262fb0c635c21aaad71fa0e8f31a39c394f42cf356c25245dbbc09ae60777af",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "`add_stop` 增加 `pending` 后调用 `MemoryRouteStore.save`；`save` 按 `route_id` 覆盖内存记录。",
+      "query_id": "zh-cf-py-01",
+      "query_identity": "0da153dfda0174abd3bd01d7ccec4e01a147bfdb5cdddb98419536b18b15ac05",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "声明校验值来自 `Envelope.declared_checksum`，重算值来自 `compute_checksum`。句中的 envelope 是领域对象，不是 Grade-2 标识符泄漏。",
+      "query_id": "zh-cf-py-02",
+      "query_identity": "0ec1f426fdd5d63da080e2a0f7c1b3c33b9e1f64113d586b2771f77d43268e53",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "关闭后的通知出口与文字拼接，分别对应 `notify_closed` 与 `format_message`。",
+      "query_id": "zh-dq-py-01",
+      "query_identity": "3db37b0532140d9fd7b7a1ac4421ab115e72533ba8cc3acd520fc3df5a958d4b",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "入队操作与准入规则对应 `Dispatcher.enqueue` 与 `IntakeRules.accepts`。「解析结果」在该 fixture 中就是待入队 envelope，不改变目标。",
+      "query_id": "zh-dq-py-02",
+      "query_identity": "b8468a99b079b931eb3793264eb423c4da74fbbec744f08dbd678a6916ef2128",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "退款记为正向流水，与 `InMemoryCreditLedger.refund` 使用正 `amount` 入账一致。`validate_integer_amount` 经 `_validate_positive_amount` 提供金额约束，作 Grade 1 合理。",
+      "query_id": "zh-fl-py-01",
+      "query_identity": "f777e727d5e2e0b18e0c44ed23236946c38ac622c58d4492b4044a7667b048af",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "问拒绝记录里编号与原因的保存位置。`IntakeAudit.record` 追加 `(envelope_id, reason)`。与英文 maintenance 题共享符号，问法独立。",
+      "query_id": "zh-fl-py-02",
+      "query_identity": "7035654d1bdb170e63f20b1019d10350de85e40161234aeb19d1bf225f6eca2d",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "`CancelToken` 是取消状态；`process_batch_with_progress` 在解压与逐文件阶段检查 `is_canceled()`。",
+      "query_id": "zh-mt-py-01",
+      "query_identity": "204e9bc17348b3cb41db82af87bfca6043dc2094eb7ce82399151c568044a4fc",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "拒绝说明由 `IntakeParser.reject_reason` 拼出。与英文 bug 题共享符号，任务意图不同。",
+      "query_id": "zh-mt-py-02",
+      "query_identity": "dbd77bdb8be84f4028c57eb2c940704ac7cb6e9905a9d0cfbcae7457125f5ae0",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "「请定位 canonicalize\\_graph」可独立作为符号查找。冻结 `canonicalize_graph` 按节点键与边键排序后重建 `ProjectGraph`。无对应英文同题。",
+      "query_id": "zh-sl-py-01",
+      "query_identity": "fc6234ec735f9ab48025ec2058ca44914f605be8cbc4cb874d88e862885f5ab6",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    },
+    {
+      "natural_independent_query": "PASS",
+      "note": "「请定位 validate\\_entry」可独立成立。`validate_entry` 拒绝空 `route_id` 并返回合法条目。无对应英文同题。",
+      "query_id": "zh-sl-py-02",
+      "query_identity": "7698e27d60127947d6a231bd6d561e73e27f7996d283269eff7ee386332d86c2",
+      "semantic_alignment": "PASS",
+      "translation_artifact_risk": "LOW"
+    }
+  ],
+  "methodology_review_identity": "9920c292dbd5f46fc4acbc57ed63a6c9227bb9dbf96b049fa8653dc69e7358fb",
+  "new_review_performed": false,
+  "query_gt_grade_changed": false,
+  "review_date": "2026-09-28",
+  "reviewer": "Grok 4.7",
+  "rule_verbatim": "中文 query 是否能独立作为检索问题；query intent 与已冻结 GT/evidence 是否对得上；只有会实质扭曲检索任务的直译痕迹才记为 MATERIAL。",
+  "schema_version": "v1",
+  "source_review_output_sha256": "89c352bed26b86558a2f26e9d1dc4be8ec7cd515f8a804433603fc5b2ca7272e",
+  "verdict": "PASS"
+}

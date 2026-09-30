@@ -1,0 +1,40 @@
+{
+  "schema_version": "v1",
+  "query_id": "et-fl-ja-02",
+  "query_text": "Where is a ticket switched into the closed state?",
+  "query_split": "english_test",
+  "project_id": "fixture-java-desk-queue",
+  "target_execution_identity": "d8c74c81807533afe9169b2f5649f4ef557fdafed6804e2904a3e2feec23cd84",
+  "execution_outcome_retained": "CANNOT_ASSESS",
+  "prepared_input_sha256": "4534441740756cb240f523231de25706ca570c8948f4f15ef1dc570de51acc17",
+  "basis": "frozen source, authoritative JavaAdapter, prepared evidence and unchanged drafted GT; no model reply verdict used",
+  "checks": [
+    {
+      "evidence_id": "E01",
+      "relative_path": "src/com/desk/model/Ticket.java",
+      "source_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+      "symbol_id": {
+        "fallback_line": null,
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "Ticket.markClosed",
+        "relative_path": "src/com/desk/model/Ticket.java",
+        "semantic_disambiguator": "markClosed()"
+      },
+      "span": {
+        "start_offset": 407,
+        "end_offset": 458,
+        "start_line": 17,
+        "end_line": 17
+      },
+      "source_excerpt": "    public void markClosed() { status = \"closed\"; }",
+      "grade": 2,
+      "rationale": "来源 b511160d6851cfd61bb1dd28b5108db4799de2a9fa7edfbfd9d6a6acb51cbbd8；src/com/desk/model/Ticket.java::Ticket.markClosed；L17-L17；[407,458)。行为：把内部 status 字段设为 closed，是票据状态变更的具体位置。直接定位冻结任务所需的实现或身份。",
+      "source_behavior_assessment": "Ticket.markClosed assigns status = \"closed\"; this is the direct state transition requested by the query, supporting Grade 2.",
+      "verdict": "SUPPORTED_BY_FROZEN_SOURCE"
+    }
+  ],
+  "overall_resolution": "SUPPORTED_BY_FROZEN_SOURCE",
+  "gt_or_grade_changed": false,
+  "scope_limit": "Checks cited evidence only; does not assert all relevant symbols were found."
+}

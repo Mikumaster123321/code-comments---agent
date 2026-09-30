@@ -1,0 +1,48 @@
+{
+  "end_marker": "RESPONSE_END_ET_SL_JA_02",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "grade_assessment": "理由所述行为与所引源码逐句一致。该重载确为查询目标（带 note 的 openTicket）的相邻契约与调用路径，但本身不满足『stores a free-text note』，故 Grade 1 与理由自洽。",
+      "identity": {
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.openTicket",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "openTicket(String,String)",
+        "span": {
+          "end_line": 20,
+          "end_offset": 600,
+          "start_line": 15,
+          "start_offset": 407
+        }
+      },
+      "observed_source_behavior": "所示 L15-L20 为双参数重载 public Ticket openTicket(String id, String title)：构造 Ticket(id,title) 后调用 folder.put(ticket) 与 audit.recordOpen(ticket)，随后 return ticket；全程未触及 ticket.note，不写入任何自由文本备注。",
+      "span_grade_consistency_suspected": false,
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "grade_assessment": "理由所述『委托双参数开单流程后把额外参数写入 ticket.note』与 L23-L24 完全吻合，正是查询所求的方法，Grade 2 与理由自洽。",
+      "identity": {
+        "kind": "method",
+        "language": "java",
+        "qualified_name": "DeskQueue.openTicket",
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "semantic_disambiguator": "openTicket(String,String,String)",
+        "span": {
+          "end_line": 26,
+          "end_offset": 774,
+          "start_line": 22,
+          "start_offset": 602
+        }
+      },
+      "observed_source_behavior": "所示 L22-L26 为三参数重载 public Ticket openTicket(String id, String title, String note)：先委托打开 openTicket(id,title)，再执行 ticket.note = note，最后 return ticket，即返回带自由文本备注的同一票据。",
+      "span_grade_consistency_suspected": false,
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "overall_status": "SUPPORTS",
+  "query_id": "et-sl-ja-02",
+  "scope_statement": "本审计仅就所展示的 src/com/desk/service/DeskQueue.java 内容及其给定 span 判断各自 Grade 与理由是否成立；未判断、未搜索也未断言在未展示的项目范围内是否还存在其他相关 Symbol，也未使用任何检索器排名、得分或正式结果。"
+}

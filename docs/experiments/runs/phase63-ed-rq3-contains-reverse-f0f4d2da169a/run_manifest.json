@@ -1,0 +1,85 @@
+{
+  "approved_reference_identity": "e89ce78f4c7b27754b52cab1b9217b349f5e7a382423bd75eb44a2a1deafb5d8",
+  "config_hashes": [
+    "2d294be9f8470aed66b3093f3550a9f224a58cbd08ccd5d606f7fc044be08204"
+  ],
+  "corpus_revision": "12391233daa2149ead4f451e920b2e0d8a1a6beb",
+  "dataset": {
+    "hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+    "id": "v3.1-phase6-dataset-v1",
+    "path_manifest_hash": "9adddbc3e69716b899352185d22b15df74b9c03e6d25aac9857a958fe7c33978",
+    "version": "v1"
+  },
+  "dirty_state": false,
+  "embedding_fingerprint": {
+    "dimension": 768,
+    "document_instruction": "passage: ",
+    "fingerprint_hash": "00528591f55523ebe4f440835075bf36979de9f52e70749d46e7bf95aaf9b422",
+    "max_input_policy": "512-token-explicit-truncation-v1",
+    "model_repository": "intfloat/multilingual-e5-base",
+    "normalization": "l2",
+    "query_instruction": "query: ",
+    "revision": "d128750597153bb5987e10b1c3493a34e5a4502a",
+    "runtime_kind": "transformers-torch",
+    "similarity_metric": "cosine"
+  },
+  "environment": {
+    "cpu_model": "Apple M4",
+    "dependencies": {
+      "torch": "2.8.0",
+      "transformers": "4.56.2"
+    },
+    "device": "cpu",
+    "dtype": "float32",
+    "logical_cores": 10,
+    "model_local_files_only": true,
+    "network_disabled": true,
+    "os_build": "Darwin Kernel Version 24.3.0: Thu Jan  2 20:31:46 PST 2025; root:xnu-11215.81.4~4/RELEASE_ARM64_T8132",
+    "os_name": "Darwin",
+    "physical_cores": 10,
+    "power_mode": "unmeasured; dry-run execution",
+    "python_implementation": "CPython",
+    "python_version": "3.12.14",
+    "ram_bytes": 17179869184,
+    "thread_settings": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false"
+    }
+  },
+  "execution": {
+    "ended_at": "2026-09-28T09:52:40.463791+00:00",
+    "started_at": "2026-09-28T09:52:33.334342+00:00"
+  },
+  "execution_revision": "f0f4d2da169a071c71a6099c1d106fc3fec23299",
+  "formal_gate": null,
+  "ground_truth": {
+    "hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+    "version": "v3.1-phase6-truth-v1"
+  },
+  "independent_audit_status": "pending",
+  "index_identity": "3e8607b4e0c28dabfc9567a78e6cacb97fa67ec74624aa59fe555282761ca9e7",
+  "mode": "dry_run",
+  "model_cache_verified": true,
+  "operator_id": "codex-phase63-english-dev",
+  "output_checksums": {
+    "aggregate_results.json": "350f32e58ddced978861586db40ab439ea428c483bfe38f80c9b78da89173c9b",
+    "raw_results.jsonl": "10df0cdacf4f26fc0ba5aa0c8836831fbfd178fdc9cb90d662c49cce821ae91d"
+  },
+  "performance": null,
+  "protocol": {
+    "hash": "214360ac17633db7d77caec2ea2a135bf4372a773f9343b2fcb91bff8ee4e341",
+    "id": "phase6",
+    "version": "v3.1-phase6-protocol-v1"
+  },
+  "python_hash_seed": "0",
+  "query_set": {
+    "hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+    "version": "v3.1-phase6-queries-v1"
+  },
+  "random_seed": 310,
+  "reference_hash": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "revision_schema_version": "v2",
+  "run_id": "phase63-ed-rq3-contains-reverse-f0f4d2da169a",
+  "split": "english_dev"
+}

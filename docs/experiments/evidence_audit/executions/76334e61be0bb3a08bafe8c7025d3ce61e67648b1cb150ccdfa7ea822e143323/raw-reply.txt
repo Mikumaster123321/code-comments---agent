@@ -1,0 +1,60 @@
+Both cited spans land exactly where claimed, so I checked line content and offset arithmetic against the two sources.
+
+```json
+{
+  "query_id": "et-bl-ja-01",
+  "overall_status": "SUPPORTS",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "identity_preserved": {
+        "relative_path": "src/com/desk/model/Ticket.java",
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "Ticket.isOpen",
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "semantic_disambiguator": "isOpen()",
+          "fallback_line": null
+        },
+        "span": {
+          "start_line": 16,
+          "end_line": 16,
+          "start_offset": 345,
+          "end_offset": 406
+        }
+      },
+      "observed_source_behavior": "Line 16 is `    public boolean isOpen() { return status.equals(\"open\"); }`. The method returns true only when the status field is exactly \"open\". Because markClosed() (line 17) sets status = \"closed\", a closed ticket yields isOpen() == false. The cited span [345,406) is 61 characters and matches line 16 exactly (4-space indent + 57 characters of code), so the span points at the isOpen() body and nothing else.",
+      "status": "SUPPORTS",
+      "span_grade_correspondence_suspected": false,
+      "notes": "The rationale's stated behavior (true only on status.equals(\"open\"); closed is not treated as open) is directly readable at the cited span. As supporting contract/expected-behavior evidence (Grade 1, i.e. not itself the localizing implementation), the span is consistent with the stated role: isOpen() encodes the correct open/closed semantics that the open-count path does not honor. No grade/span mismatch observed."
+    },
+    {
+      "evidence_id": "E02",
+      "identity_preserved": {
+        "relative_path": "src/com/desk/service/DeskQueue.java",
+        "symbol_id": {
+          "kind": "method",
+          "language": "java",
+          "qualified_name": "DeskQueue.listOpen",
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "semantic_disambiguator": "listOpen()",
+          "fallback_line": null
+        },
+        "span": {
+          "start_line": 38,
+          "end_line": 38,
+          "start_offset": 1066,
+          "end_offset": 1125
+        }
+      },
+      "observed_source_behavior": "Line 38 is `    public int listOpen() { return folder.entries.length; }`. The method returns the raw backing-array length of folder.entries with no status predicate, no call to Ticket.isOpen(), and no filtering of any kind. The cited span [1066,1125) is 59 characters and matches line 38 exactly (4-space indent + 55 characters of code), so the span points at the listOpen() body and nothing else. The only other visible mutation path, closeTicket (lines 28-30), calls ticket.markClosed() and does not remove the ticket from folder.entries.",
+      "status": "SUPPORTS",
+      "span_grade_correspondence_suspected": false,
+      "notes": "The core claim of the rationale — the count is returned without filtering by ticket status — is directly verified at the cited span, which is what makes this the count that 'causes' the reported symptom, so the Grade 2 role (directly locating the implementation) is consistent with the span. One dependency worth flagging without raising a question: the sub-claim that closed tickets are therefore *included* also relies on closed tickets remaining in folder.entries; the shown closeTicket() only marks the ticket closed and performs no removal, which is consistent, but TicketFolder's internals (put/find/entries) are not part of the displayed source, so the membership invariant is inferred from displayed behavior rather than directly shown. This does not affect the grade/span correspondence, because the absence of any status filter in listOpen() is fully visible at the span."
+    }
+  ],
+  "scope_statement": "Assessment was limited strictly to the two displayed source files (src/com/desk/model/Ticket.java and src/com/desk/service/DeskQueue.java) and the exact spans given for E01 and E02. I did NOT judge whether other relevant Symbols exist elsewhere in the project scope, and no statement is made about symbols, files, or call paths not displayed here. No new primary labels were generated, no project-wide search was performed, and no retriever ranking, score, or official result was used, requested, or relied upon.",
+  "end_marker": "RESPONSE_END_ET_BL_JA_01"
+}
+```

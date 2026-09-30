@@ -1,0 +1,307 @@
+{
+  "status": "PREPARED / NOT EXECUTED",
+  "source_commit": "1ed215e6a4c4505898207111bbdee720772ca461",
+  "source_revision": "fixture-v1",
+  "generator": "generate_inputs.py",
+  "method_addendum_sha256": "2e276bbcc63a75ce12760d3728894860a9a7328bd040fd21c6ba2ce27c160375",
+  "dataset_id": "v3.1-phase6-dataset-v1",
+  "dataset_hash": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "query_set_version": "v3.1-phase6-queries-v1",
+  "query_set_hash": "5393d520d4935f55a4fd5e2f33d1ae051fc1a0914c2f58b3093fb574d56c54ba",
+  "draft_truth_version": "v3.1-phase6-truth-v1",
+  "draft_truth_hash": "d31161954d6090b7ecfa6fd5e5c66ce1a21975c2b7e680c25c2fc0c66c6bcc87",
+  "project_id": "fixture-java-desk-queue",
+  "fixture_hash": "b511160d6851cfd61bb1dd28b5108db4799de2a9fa7edfbfd9d6a6acb51cbbd8",
+  "entries": [
+    {
+      "query_id": "et-bl-ja-01",
+      "task_type": "bug_localization",
+      "input_path": "inputs/et-bl-ja-01.txt",
+      "input_sha256": "79e88f043ec2a5d3720e8b8d9a6449fd47687393d36e8f259fc87d95820ad10d",
+      "input_bytes": 6320,
+      "input_unicode_codepoints": 5522,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "raw_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "raw_bytes": 534
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_BL_JA_01",
+      "record_path": "records/et-bl-ja-01.json",
+      "record_sha256": "b2d084f17e157e3dbfa332113403caf9c2a4eb0f240b32e42bccf79b73a0f991"
+    },
+    {
+      "query_id": "et-bl-ja-02",
+      "task_type": "bug_localization",
+      "input_path": "inputs/et-bl-ja-02.txt",
+      "input_sha256": "538a7aede8a69ab826220c614e6dfdce43421711f18e19c47be186c6763d5b54",
+      "input_bytes": 6859,
+      "input_unicode_codepoints": 6033,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        },
+        {
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "raw_sha256": "db1f81c6b57c8e54bbc0f75ab3e94db7be161d76c2166e8634d4da5cc50c358a",
+          "raw_bytes": 936
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_BL_JA_02",
+      "record_path": "records/et-bl-ja-02.json",
+      "record_sha256": "0cb8838887d23ecedca7c1ffded68915e1960dd6d17eeeb2564f31c7e0ee07ee"
+    },
+    {
+      "query_id": "et-cf-ja-01",
+      "task_type": "cross_file_understanding",
+      "input_path": "inputs/et-cf-ja-01.txt",
+      "input_sha256": "37df7ba9dba7908e715a8863470878584035b34504299d788b6dafb33f60a249",
+      "input_bytes": 8020,
+      "input_unicode_codepoints": 7100,
+      "evidence_count": 3,
+      "source_file_count": 3,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/audit/DeskAudit.java",
+          "raw_sha256": "8e334589cff72cc1e799dbb3995462908e05791b4b63242f23fc4af8d1c6684d",
+          "raw_bytes": 191
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        },
+        {
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "raw_sha256": "db1f81c6b57c8e54bbc0f75ab3e94db7be161d76c2166e8634d4da5cc50c358a",
+          "raw_bytes": 936
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_CF_JA_01",
+      "record_path": "records/et-cf-ja-01.json",
+      "record_sha256": "ccca0d96f5e9a92230b1e59c3006889aeff579c377373b8f14cab91ec47c93e0"
+    },
+    {
+      "query_id": "et-cf-ja-02",
+      "task_type": "cross_file_understanding",
+      "input_path": "inputs/et-cf-ja-02.txt",
+      "input_sha256": "ae9d6e7ffac5ed57410fe57103378edc21aed87be1cfbeaa6843a3af370c6a46",
+      "input_bytes": 8030,
+      "input_unicode_codepoints": 7072,
+      "evidence_count": 3,
+      "source_file_count": 3,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/DeskClock.java",
+          "raw_sha256": "5befd7b7fb56b4272b34368fe91b590c89864283f3c54a5df497f3cd3130027c",
+          "raw_bytes": 146
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        },
+        {
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "raw_sha256": "db1f81c6b57c8e54bbc0f75ab3e94db7be161d76c2166e8634d4da5cc50c358a",
+          "raw_bytes": 936
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_CF_JA_02",
+      "record_path": "records/et-cf-ja-02.json",
+      "record_sha256": "862d4d31397a416532470f5f027f4371f9ec8bbbcce6483acafef4cee0f5131a"
+    },
+    {
+      "query_id": "et-dq-ja-01",
+      "task_type": "dependency_questions",
+      "input_path": "inputs/et-dq-ja-01.txt",
+      "input_sha256": "4b3b40f196a2a188f75c5998a0c61ce9fae72133373956f63419740908e8504e",
+      "input_bytes": 5915,
+      "input_unicode_codepoints": 5075,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "raw_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "raw_bytes": 534
+        },
+        {
+          "relative_path": "src/com/desk/store/TicketFolder.java",
+          "raw_sha256": "db1f81c6b57c8e54bbc0f75ab3e94db7be161d76c2166e8634d4da5cc50c358a",
+          "raw_bytes": 936
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_DQ_JA_01",
+      "record_path": "records/et-dq-ja-01.json",
+      "record_sha256": "704f34c1c8f8e20791b94c4acf907fa6c9a31e7903fe188b2fa98d14521fedfd"
+    },
+    {
+      "query_id": "et-dq-ja-02",
+      "task_type": "dependency_questions",
+      "input_path": "inputs/et-dq-ja-02.txt",
+      "input_sha256": "d1f59733882cc5fdf085acaa0d5b4f26ae6c288dce292713cd0138390405574d",
+      "input_bytes": 6002,
+      "input_unicode_codepoints": 5184,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/DeskClock.java",
+          "raw_sha256": "5befd7b7fb56b4272b34368fe91b590c89864283f3c54a5df497f3cd3130027c",
+          "raw_bytes": 146
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_DQ_JA_02",
+      "record_path": "records/et-dq-ja-02.json",
+      "record_sha256": "eb26ae7f34f7dcc2a36774bcb546589e4498f2b11f790455a484848297ba1787"
+    },
+    {
+      "query_id": "et-fl-ja-01",
+      "task_type": "feature_localization",
+      "input_path": "inputs/et-fl-ja-01.txt",
+      "input_sha256": "2c6c91f497fcaf6ab975862034482575a6b3843fdf3aa743460cd6529a178d13",
+      "input_bytes": 5967,
+      "input_unicode_codepoints": 5127,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/notify/DeskMail.java",
+          "raw_sha256": "64ea2ca947df8e5b72d5c1509745988d8378c645204cfca333d3259175da33c6",
+          "raw_bytes": 156
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_FL_JA_01",
+      "record_path": "records/et-fl-ja-01.json",
+      "record_sha256": "94199065afa44177a1279edc4be49585ce7e28e7c39f2a85846bd60d68e1a1af"
+    },
+    {
+      "query_id": "et-fl-ja-02",
+      "task_type": "feature_localization",
+      "input_path": "inputs/et-fl-ja-02.txt",
+      "input_sha256": "4534441740756cb240f523231de25706ca570c8948f4f15ef1dc570de51acc17",
+      "input_bytes": 3886,
+      "input_unicode_codepoints": 3198,
+      "evidence_count": 1,
+      "source_file_count": 1,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "raw_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "raw_bytes": 534
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_FL_JA_02",
+      "record_path": "records/et-fl-ja-02.json",
+      "record_sha256": "db526a280fba5de790fafef5ae8154caa457751e27a90ac81717f9484d9da17c"
+    },
+    {
+      "query_id": "et-mt-ja-01",
+      "task_type": "maintenance_tasks",
+      "input_path": "inputs/et-mt-ja-01.txt",
+      "input_sha256": "bacc51f58a4dbe1d7a25b1ae7fcb45fe83ad83574b1dc7947cd7b0261d9f64f1",
+      "input_bytes": 3980,
+      "input_unicode_codepoints": 3290,
+      "evidence_count": 1,
+      "source_file_count": 1,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "raw_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "raw_bytes": 534
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_MT_JA_01",
+      "record_path": "records/et-mt-ja-01.json",
+      "record_sha256": "b277503b6438c22f2ce9ea7d242c7d1fd4fbdf2630feeacac91c18804063c58b"
+    },
+    {
+      "query_id": "et-mt-ja-02",
+      "task_type": "maintenance_tasks",
+      "input_path": "inputs/et-mt-ja-02.txt",
+      "input_sha256": "fa1d6cce7f2ce172af4dc97af3fe7246ee4ab30f6142c00eb32f7608bcc1038e",
+      "input_bytes": 6051,
+      "input_unicode_codepoints": 5211,
+      "evidence_count": 2,
+      "source_file_count": 2,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/notify/DeskMail.java",
+          "raw_sha256": "64ea2ca947df8e5b72d5c1509745988d8378c645204cfca333d3259175da33c6",
+          "raw_bytes": 156
+        },
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_MT_JA_02",
+      "record_path": "records/et-mt-ja-02.json",
+      "record_sha256": "d5932f23cd86340c4aa6700eb83baa96a349e6ce51d7cca493af5f6dc6db927b"
+    },
+    {
+      "query_id": "et-sl-ja-01",
+      "task_type": "symbol_lookup",
+      "input_path": "inputs/et-sl-ja-01.txt",
+      "input_sha256": "f04befd3ab4e944439012ac22eb5771d85ae0ea6ca3688f33eab7ae3d108c47d",
+      "input_bytes": 3838,
+      "input_unicode_codepoints": 3162,
+      "evidence_count": 1,
+      "source_file_count": 1,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/model/Ticket.java",
+          "raw_sha256": "245bfdfdfc6342759c3f1b2a78e0257ccb8d2eefcd031f5e3e1ea9ea9b8a8bb4",
+          "raw_bytes": 534
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_SL_JA_01",
+      "record_path": "records/et-sl-ja-01.json",
+      "record_sha256": "17739db0fda01a0687aa73a73a121faf67dcd5bfb3250b0b1c64152e37e32fc7"
+    },
+    {
+      "query_id": "et-sl-ja-02",
+      "task_type": "symbol_lookup",
+      "input_path": "inputs/et-sl-ja-02.txt",
+      "input_sha256": "ee45fba89ca97267347d353f109b47a4a8920c66f51d29fc8c4200ad0d3c21a8",
+      "input_bytes": 5676,
+      "input_unicode_codepoints": 4846,
+      "evidence_count": 2,
+      "source_file_count": 1,
+      "source_files": [
+        {
+          "relative_path": "src/com/desk/service/DeskQueue.java",
+          "raw_sha256": "b7f4911ee1b478c3a992e04d22a555b10e078e4c20bdbe5d9fe1411c94eab694",
+          "raw_bytes": 1318
+        }
+      ],
+      "terminator": "END_PHASE62_JAVA_EVIDENCE_AUDIT_INPUT_ET_SL_JA_02",
+      "record_path": "records/et-sl-ja-02.json",
+      "record_sha256": "5c7cc13ecb7c7daa9cd01463eb563ce9d00e366cac0915fda65950662d6d85aa"
+    }
+  ]
+}

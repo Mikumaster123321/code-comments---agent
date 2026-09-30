@@ -1,0 +1,130 @@
+{
+  "alias_source": {
+    "reason": null,
+    "status": "available",
+    "value": "Addendum D user-provided platform mapping; not exact backend revision"
+  },
+  "attempt_number": 1,
+  "context_boundary_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/provenance.json",
+    "raw_sha256": "c6af09e15ef81ccf93c9df713b27e2c6f3b5e1f79fa4659fff515d63b6ba6c71"
+  },
+  "dataset_identity": "164994a826fe51936d5fcb012a8d102967c33110787405fd3b0f7972efe8ade7",
+  "ended_at": "2026-09-24T08:56:47.261830+00:00",
+  "evidence_reviews": [
+    {
+      "evidence_id": "E01",
+      "evidence_identity": "fffb0f22a70c7b0e4c91da5c00cd8afef1056c148d1717a33d29248e0d642449",
+      "grade_observation": "{\"grade_assessment\":\"Grade 1（契约/调用路径/预期行为）成立：该方法正是 E02 中 minutesLate 调用 clock.minutesUntil(deadline) 的被调目标，提供时钟差值语义。理由中“为队列的迟到值提供时钟计算”由本 span 加 E02 的调用点共同支持，无夸大。\",\"span_grade_concern\":false}",
+      "reason": "{\"grade_assessment\":\"Grade 1（契约/调用路径/预期行为）成立：该方法正是 E02 中 minutesLate 调用 clock.minutesUntil(deadline) 的被调目标，提供时钟差值语义。理由中“为队列的迟到值提供时钟计算”由本 span 加 E02 的调用点共同支持，无夸大。\",\"observed_behavior\":\"第 6 行内容为 `public int minutesUntil(int deadline) { return deadline - now; }`，返回 deadline 与 now 的整数差，即基于时钟的剩余分钟计算。span [75,143) 恰好覆盖该行（该行起于 offset 75、长 68 字符），与文件声明 bytes=146 的布局一致，身份未混淆。\",\"span_grade_concern\":false}",
+      "source_locations": [
+        "src/com/desk/model/DeskClock.java:L6-L6 [75,143)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E02",
+      "evidence_identity": "823d5b5718d962c5fe8ea25f4c036a854b7939a141adfe7cecb82fde3357440e",
+      "grade_observation": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：此 span 即“查找票据 → 赋予时钟迟到值”这一查询行为的直接实现，理由描述与源码逐句对应，无遗漏或添加。\",\"span_grade_concern\":false}",
+      "reason": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：此 span 即“查找票据 → 赋予时钟迟到值”这一查询行为的直接实现，理由描述与源码逐句对应，无遗漏或添加。\",\"observed_behavior\":\"L40-L44 为 `minutesLate(String id, int deadline)`：先 `Ticket ticket = folder.find(id);`，若为 null 则 `return 0;`，否则 `return -clock.minutesUntil(deadline);`（取负得到迟到分钟数）。span [1127,1315) 长度 188，与 L40-L44 逐字符长度完全吻合，边界精确。\",\"span_grade_concern\":false}",
+      "source_locations": [
+        "src/com/desk/service/DeskQueue.java:L40-L44 [1127,1315)"
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "evidence_id": "E03",
+      "evidence_identity": "4e8eebf80bc772f5c2c32ca341dbd6e5fb1575da508c61f87aa14a7d73469b56",
+      "grade_observation": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：find 正是“stored ticket 如何被找到”的直接实现。理由中“返回副本、不返回数组原对象”的描述与源码一致，属对实现的关键行为刻画，无失实。\",\"span_grade_concern\":false}",
+      "reason": "{\"grade_assessment\":\"Grade 2（直接定位实现/身份）成立：find 正是“stored ticket 如何被找到”的直接实现。理由中“返回副本、不返回数组原对象”的描述与源码一致，属对实现的关键行为刻画，无失实。\",\"observed_behavior\":\"L21-L31 为 `find(String id)`：遍历 entries，按 `stored.id().equals(id)` 命中后 `new Ticket(stored.id(), stored.title())` 新建副本，复制 `note`，若原票非 open 则 `copy.markClosed()`，返回该副本；未命中返回 null。span [563,933) 长度 370，与 L21-L31 逐字符长度完全吻合。\",\"span_grade_concern\":false}",
+      "source_locations": [
+        "src/com/desk/store/TicketFolder.java:L21-L31 [563,933)"
+      ],
+      "verdict": "SUPPORTS"
+    }
+  ],
+  "exact_revision": {
+    "reason": "exact backend revision not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "finish_reason": {
+    "reason": "finish reason not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "ground_truth_id": "gt-et-cf-ja-02",
+  "independent_session_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/provenance.json",
+    "raw_sha256": "c6af09e15ef81ccf93c9df713b27e2c6f3b5e1f79fa4659fff515d63b6ba6c71"
+  },
+  "model_metadata_evidence": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/provenance.json",
+    "raw_sha256": "c6af09e15ef81ccf93c9df713b27e2c6f3b5e1f79fa4659fff515d63b6ba6c71"
+  },
+  "observed_ui_name": "DeepSeek-V4.1-Flash",
+  "overall_verdict": "SUPPORTS",
+  "platform_session_id": {
+    "reason": "unavailable: UI did not expose independent ID",
+    "status": "unavailable",
+    "value": null
+  },
+  "prepared_input_hash": "ae9d6e7ffac5ed57410fe57103378edc21aed87be1cfbeaa6843a3af370c6a46",
+  "preregistration_identity": "ddf93e9b0be6aae76dfbabef5f2dd55b12126252c54504e5bade3aa34150fa74",
+  "provenance_status": "valid",
+  "query_id": "et-cf-ja-02",
+  "query_identity": "55ead735e37c978c8bc1161ea0c0d163ca4395c2f015ff3f437a4c2b518a5904",
+  "raw_reply": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/raw-reply.txt",
+    "raw_sha256": "b78935b156639bbf7be62d32197457439a7306293b07392178a557abceea78d8"
+  },
+  "reference_identity": "d3d5f54f8256b2dadd151f26cd0f1f7674c1c62fa464846fb13bc5c295dc8f04",
+  "reply_complete": true,
+  "reply_limitations": "Complete exportable Final Answer only; provider raw response and standalone Thinking export unavailable.",
+  "resolution_identities": [],
+  "schema_version": "v1",
+  "sent_input": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/sent-input.txt",
+    "raw_sha256": "ae9d6e7ffac5ed57410fe57103378edc21aed87be1cfbeaa6843a3af370c6a46"
+  },
+  "started_at": "2026-09-24T08:47:00+00:00",
+  "supersedes_attempt": null,
+  "timing_limitations": "Model completion time unavailable; ended_at marks captured file timestamp, not precise model completion.",
+  "timing_precision": "submitted minute; filesystem timestamp for capture",
+  "timing_source": "submitted local minute in capture provenance; capture file modification timestamp",
+  "token_usage": {
+    "reason": "token usage not exposed in capture",
+    "status": "unavailable",
+    "value": null
+  },
+  "transcription_capture": {
+    "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/transcription.json",
+    "raw_sha256": "a894147e9cb562a2ed2483f9a85efeaff18fc6fdf46207350354a2e2bbc64404"
+  },
+  "transcription_hash": "a894147e9cb562a2ed2483f9a85efeaff18fc6fdf46207350354a2e2bbc64404",
+  "ui_mode": "cloud",
+  "user_provided_alias": {
+    "reason": null,
+    "status": "available",
+    "value": "DeepSeek-V4.1-Flash"
+  },
+  "visible_final": {
+    "availability": {
+      "reason": null,
+      "status": "available",
+      "value": "complete exportable Final Answer"
+    },
+    "capture": {
+      "artifact_path": "docs/experiments/evidence_audit/executions/cbc90b9feaf2e20fde1441d7268f24251762dc856712fb1974522ef251060d04/raw-reply.txt",
+      "raw_sha256": "b78935b156639bbf7be62d32197457439a7306293b07392178a557abceea78d8"
+    }
+  },
+  "visible_thinking": {
+    "availability": {
+      "reason": "independent Thinking visibility not established; complete standalone Thinking export unavailable; native Copy All can contain analysis-like text",
+      "status": "unavailable",
+      "value": null
+    },
+    "capture": null
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "v1",
+  "target_identity": "76334e61be0bb3a08bafe8c7025d3ce61e67648b1cb150ccdfa7ea822e143323",
+  "disposition": "source_verification",
+  "evidence_identity": "a24ca049190c680dcfb5c45d7b6a577721b3be50133b3d0908fec756ec8c866b",
+  "status": "closed",
+  "reason": "et-bl-ja-01: cited frozen source supports every existing evidence grade and rationale; execution outcome remains CANNOT_ASSESS"
+}

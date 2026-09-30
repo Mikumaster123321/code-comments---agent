@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
+from io import BytesIO, TextIOWrapper
 from pathlib import Path
 
 from .adapters import JavaAdapter, PythonAdapter
@@ -16,6 +17,14 @@ from .graph import (
     ProjectGraphBuilder,
     canonicalize_graph,
 )
+
+
+def decode_source_bytes(content: bytes) -> str:
+    """Decode source bytes with the repository's universal-newline policy."""
+    with TextIOWrapper(
+        BytesIO(content), encoding="utf-8", errors="replace", newline=None
+    ) as source:
+        return source.read()
 
 
 @dataclass(frozen=True)
@@ -237,8 +246,8 @@ class SnapshotBuilder:
                     project_id=scan_result.project.id,
                     relative_path=project_file.relative_path,
                     language=project_file.language,
-                    content=(root / project_file.relative_path).read_text(
-                        encoding="utf-8", errors="replace"
+                    content=decode_source_bytes(
+                        (root / project_file.relative_path).read_bytes()
                     ),
                 )
                 states.extend(
