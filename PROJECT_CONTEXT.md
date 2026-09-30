@@ -6,14 +6,25 @@
 
 ## Current State
 
+- V3.1.0 Final Release Documentation：**READY FOR DEEPSEEK FINAL QA**；
+  Project Intelligence / RAG 的版本元数据已准备为 `3.1.0`，但 release commit、tag
+  与 push 均未创建。最近一次技术 Gate 的专项与完整回归均通过，完整回归
+  `892 passed`。Formal archive commit `c3ee6ec1b7aa28c2539d2fe849d1f25268807677`
+  是当前 HEAD 的祖先；冻结 Formal run / artifact 未改变，归档后仅增加从 artifact
+  确定性导出的论文 CSV 与解读材料。artifact-set canonical identity / file SHA-256 仍为
+  `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3` /
+  `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
+  V3.1 状态：**RELEASE CANDIDATE / READY FOR FINAL RELEASE QA**；V3.2：
+  **NOT STARTED**。
+
 - V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
   **PASS WITH NON-BLOCKING NOTES**，Critical 0、validity-blocking Medium 0，
   Thesis Result Interpretation **ELIGIBLE**；用户提供的 Claude Sonnet 5
   Interpretation 判定为 **ACCEPT — CLAIM-BOUNDED**。正式解读档案依据已冻结
   Formal 报告起草并标注原文未提供；RQ1–RQ4 主表、扩展表、ContextBuilder 表和
   Figure A–E 数据均从 Formal artifact 自动提取并逐项校验。V3.1 experiments
-  **COMPLETE**；当前剩余工作：Thesis materials 审校、Release Gate、v3.1.0
-  release。V3.2 **NOT STARTED**。本轮不修改正式结果或启动发布。
+  **COMPLETE**；发布文档已进入最终 QA 准备状态，release 尚未执行。V3.2
+  **NOT STARTED**。
 
 - V3.1.0 Phase 6.4 Formal RQ1–RQ4 Execution：基于 execution revision
   `2749969cd3a2d4d6e1e8d81160eebd5fb360879b` 与冻结 corpus revision
@@ -49,9 +60,9 @@
 
 - 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。Phase 6.3 前置接线真实 E5 与生产 benchmark 最小烟测 **PASS**，全量回归 **825 passed**；本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure、前置接线记录及 `current_gate.json` 为当前权威索引。
 
-- Current Version: `3.0.1`
+- Current Version: `3.1.0`
 - Current branch: `v3.1.0-dev`
-- V3.1.0: `DEVELOPMENT STARTED`
+- V3.1.0: `RELEASE CANDIDATE / READY FOR DEEPSEEK FINAL QA`
 - V3.1.0 theme: Project Intelligence / RAG
 - V3.1.0 Phase 0.0 — Development Baseline Gate: `COMPLETED`
 - V3.1.0 Phase 0 — Architecture & Research Design: `COMPLETED`
@@ -634,7 +645,8 @@
   clarification only. Deferred audit items are P2: V3.0.0 formal release-gate
   evidence, V3.0.0 Thesis Development Report, and tracked V3.0.1 Thesis
   Development Report; P3: CorpusBuilder optional canonical tie-key hardening
-- Released version metadata remains `3.0.1` until later RC Release Engineering.
+- Historical pre-release state used `3.0.1` metadata until V3.1.0 Release Engineering;
+  current release metadata is `3.1.0`.
 - Previous release: V3.0.1 `RELEASED / FROZEN`
 - V3.0.1: `RELEASED`
 - Status: `V3.0.1 Final / Stable Release`

@@ -1,8 +1,8 @@
 # Code Comments Agent
 
-**当前版本：V3.0.1（`3.0.1`）— Stable Release**
+**当前候选版本：V3.1.0（`3.1.0`）— Ready for Final Release QA**
 
-Code Comments Agent 正在演进为面向项目级代码理解与智能维护的 **LLM-assisted Software Maintenance Platform**。V3.0.1 在 V3 项目级维护核心上增加可选的 Managed AI Access 与 Credits 基础设施，同时完整保留 BYOK。当前版本是正式稳定版。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG，用于项目级代码理解、代码检索、证据构建，以及为后续 LLM / Agent 工作流准备有来源、有预算的上下文。V3.1.0 当前已完成发布文档，等待最终发布 QA；V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -24,6 +24,19 @@ Code Comments Agent 正在演进为面向项目级代码理解与智能维护的
 - **Project Snapshot**：以不可变状态表示文件、符号和项目图，并支持快照比较
 - **Deterministic Analysis Engine**：基于 Snapshot / Graph 执行结构、复杂度和依赖分析；不调用 LLM
 - **Task-scoped Provider isolation**：任务开始时固定 Provider / Client，避免运行时配置变化影响已开始任务
+
+### V3.1.0：Project Intelligence / RAG
+
+- **Symbol-level Project Intelligence**：从项目快照构建不可变 `RetrievalDocument`，以稳定 `SymbolId` 连接检索、图关系和上下文证据
+- **File / Symbol / Chunk retrieval units**：提供可比较的文件、符号和固定字符块实验检索单元
+- **Deterministic BM25**：使用冻结 tokenizer 与确定性排序的词法基线
+- **Real multilingual E5**：通过可选本地适配器支持冻结 revision 的 `intfloat/multilingual-e5-base`
+- **Graph retrieval**：按 `CONTAINS` / `IMPORTS`、方向和 hop 保留可解释 provenance
+- **Incremental indexing**：基于 Snapshot diff 复用未变化文档与语义向量，并用配置和 fingerprint 身份 fail closed
+- **Weighted Hybrid + RRF**：提供加权融合主策略与可选 RRF 比较，保留 lexical、semantic、graph 分量
+- **ContextBuilder**：按确定性顺序、去重和字符预算组装可观测的上下文片段
+- **Benchmark / evidence lifecycle**：冻结 Protocol、Dataset/Reference、Dry Run、Formal artifact 与 hash/identity 链
+- **Formal RQ1–RQ4 evaluation**：完成 English Test 48/48 × 17/17 = 816/816 query-config；结论仅适用于冻结数据、配置和指标，不作“全面提升”主张
 
 ### V3.0.1：Optional Managed AI Access
 
@@ -74,9 +87,16 @@ Trusted Admin Grant -> Credits -> Managed Request -> Reservation
 
 Project Maintenance Core
 Scanner -> Graph -> Snapshot -> Analysis Engine
+
+Project Intelligence / RAG
+Project Source -> Scanner / Snapshot -> Corpus / Symbol
+               -> BM25 / E5 / Graph Expansion
+               -> Weighted Hybrid or RRF
+               -> ContextBuilder -> ContextPackage
+               -> LLM / Maintenance Tasks
 ```
 
-`code_maintenance/` 不依赖 Provider、Credential、Credits 或 Managed Access。Managed Access 可以使用 Credits 与既有 Provider 基础设施；BYOK 路径与 Credits 相互独立。
+`experiments/` 可以依赖 `project_intelligence/` 与 `code_maintenance/`；`project_intelligence/` 可以依赖 `code_maintenance/`；生产模块不反向依赖 `experiments/`。`code_maintenance/` 仍不依赖 Provider、Credential、Credits 或 Managed Access。Managed Access 可以使用 Credits 与既有 Provider 基础设施；BYOK 路径与 Credits 相互独立。
 
 ## Installation
 
@@ -143,7 +163,7 @@ python main.py
 
 ## Testing
 
-当前 V3.0.1 Stable Release 基线：**414 passed**。
+当前 V3.1.0 release-candidate 基线：**892 passed**。
 
 ```bash
 python -m pytest
@@ -161,6 +181,9 @@ code-comments---agent/
 ├── config.py
 ├── llm_service.py
 ├── code_maintenance/       # V3 project maintenance core
+├── project_intelligence/    # V3.1 retrieval, graph, hybrid, context
+├── experiments/             # isolated benchmark/evidence implementation
+├── scripts/                 # offline validation/export entry points
 ├── credits/
 │   ├── domain.py
 │   ├── ledger.py
@@ -181,25 +204,49 @@ code-comments---agent/
     └── release/
 ```
 
-## Not Included in V3.0.1
+## Not Included in V3.1.0
 
 - Admin UI、Authentication / RBAC、Login、Password 或 OAuth
 - Payment、Recharge、`PURCHASE` 或用户 Refund workflow
 - Production SaaS / HTTP backend
-- RAG、Multi-Agent、Router 或 VS Code Integration
+- Multi-Agent runtime / planner / memory / collaboration
+- Multi-Model Router 或 VS Code Integration
+- Vector database、ANN service、远程 embedding service 或随仓库分发的模型缓存
 
 ## Roadmap / Planned
 
 - **V3.0.1 — Managed AI Access & Credits**：Released / Stable Release
 - **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
-- **V3.1 — Project Intelligence / RAG**：Planned，论文主线优先
-- **V3.2 — Controlled Multi-Agent Collaboration**：Planned，论文主线优先
+- **V3.1.0 — Project Intelligence / RAG**：Release Candidate / Ready for Final Release QA
+- **V3.2 — Controlled Multi-Agent Collaboration**：Not Started，下一阶段
 - **V3.3 — Data-driven Multi-Model Router**：Planned
 - **V3.4 — VS Code Integration**：Planned
 
 ## Version History
 
 从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+
+### V3.1.0
+
+**Project Intelligence / RAG — Release Candidate / Ready for Final Release QA（`3.1.0`）**
+
+Phase Summary：
+
+- Phase 0 — Architecture & Research Design
+- Phase 1 — Corpus & Symbol Content Model
+- Phase 2 — Deterministic BM25
+- Phase 3 — Embedding Foundation & Real Local E5 Adapter
+- Phase 4 — Graph Expansion, Index Identity & Incremental Indexing
+- Phase 5 — Weighted Hybrid, RRF & ContextBuilder
+- Phase 6 — Benchmark / Evidence Lifecycle and Formal RQ1–RQ4 Evaluation
+
+Major Updates：Symbol-level project intelligence、File/Symbol/Chunk retrieval units、deterministic BM25、real multilingual E5、Graph retrieval、incremental indexing、Weighted Hybrid + RRF、ContextBuilder，以及可审计的 benchmark/evidence lifecycle。
+
+V3.1 Evaluation 共冻结 72 条 Query：48 条 English Test、12 条 English Dev、12 条 Chinese coverage。正式 RQ1–RQ4 使用 48 条 English Test 与 17 项冻结配置，完成 **816/816 successful query-config pairs**；English Dev 用于发布前 Dry Run，Chinese coverage 不进入 English 主结果。独立结果 QA 为 **PASS WITH NON-BLOCKING NOTES**，正式解读为 **ACCEPT — CLAIM-BOUNDED**。这些是单一冻结仓库与受控 fixtures 上的描述性证据，不代表统计显著性、外部项目普遍优越性或下游 LLM 维护质量。
+
+详细材料：[V3.1 文档索引](docs/release/README.md)、[最终开发报告](docs/development/Development_Report_V3_1_0.md)、[正式结果报告](docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)、[论文写作素材包](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md)与 [Release Notes](docs/release/Release_Notes_V3_1_0.md)。
+
+Tests: **892 passed**。V3.1.0 尚未创建 release commit / tag；V3.2 Multi-Agent Collaboration：**NOT STARTED**。
 
 ### V3.0.1
 
@@ -225,6 +272,8 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
+| V3.1.0 | 待发布 | 大版本候选 | Project Intelligence / RAG |
+| V3.0.1 | 2026-09-20 | 小版本 | Managed AI Access & Credits |
 | V3.0.0 | 2026-09-11 → 2026-09-18 | 大版本 | Project-level Maintenance Core Foundation |
 | V2.4.1 | 2026-08-12 | v2.4.0 小更新 #1 | macOS + 手机端响应式自适应 |
 | V2.4.0 | 2026-08-11 | 大版本 | 多 Provider / 多模型切换 + 运行时 API Key 管理 |
