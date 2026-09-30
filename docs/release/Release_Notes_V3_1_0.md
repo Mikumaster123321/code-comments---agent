@@ -116,7 +116,7 @@ IMPORTS/REVERSE 0.5333/0.6617。
 
 ## Compatibility Notes
 
-- `code_maintenance.__version__` 候选值更新为 `3.1.0`。
+- `code_maintenance.__version__` 的正式发布值为 `3.1.0`。
 - V3.0.1 Gradio、BYOK、Managed Access、Credits、Admin Operations 和 SQLite 数据合同保持兼容。
 - `requirements.txt` 与普通安装路径不变；real E5 使用 `requirements-embedding.txt` 隔离可选环境。
 - 生产核心不需要 Vector DB、ANN service、模型 cache 或远程 embedding service。

@@ -10,7 +10,7 @@ V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 当
 
 - [Repository README](../../README.md) — 项目定位、当前能力、架构、评估摘要与 Version History
 - [V3.1.0 Final Development Report](../development/Development_Report_V3_1_0.md) — Phase 0–6 工程与研究全程总结
-- [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 候选版本亮点、兼容性、限制与迁移说明
+- [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 正式版本亮点、兼容性、限制与迁移说明
 - [V3.1.0 Thesis Materials Package](../development/Thesis_Materials_V3_1_0_Formal_Results.md) — 可直接用于论文的事实、表格、图表计划与 claim boundary
 - [V3.1.1 Scope Freeze](../development/V3_1_1_Workflow_DX_Scope.md) — 六项维护工作及 non-goals
 - [V3.1.1 Development Report](../development/Development_Report_V3_1_1.md) — 实现、测试与兼容性证据
