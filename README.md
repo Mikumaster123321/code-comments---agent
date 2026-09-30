@@ -1,8 +1,10 @@
 # Code Comments Agent
 
-**当前候选版本：V3.1.0（`3.1.0`）— Ready for Final Release QA**
+<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG，用于项目级代码理解、代码检索、证据构建，以及为后续 LLM / Agent 工作流准备有来源、有预算的上下文。V3.1.0 当前已完成发布文档，等待最终发布 QA；V3.2 Multi-Agent Collaboration **尚未开始**。
+**当前候选版本：V3.1.1（`3.1.1`）— Release Candidate**
+
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG。V3.1.1 聚焦 Workflow & Developer Experience Optimization，不改变 retrieval ranking 或冻结 Formal 结果；V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -37,6 +39,16 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - **ContextBuilder**：按确定性顺序、去重和字符预算组装可观测的上下文片段
 - **Benchmark / evidence lifecycle**：冻结 Protocol、Dataset/Reference、Dry Run、Formal artifact 与 hash/identity 链
 - **Formal RQ1–RQ4 evaluation**：完成 English Test 48/48 × 17/17 = 816/816 query-config；结论仅适用于冻结数据、配置和指标，不作“全面提升”主张
+
+### V3.1.1：Workflow & Developer Experience Optimization
+
+- 统一的纯 Python developer command hub 与轻量 Project Intelligence smoke
+- Core、Optional E5、Historical Formal 三类环境的只读诊断
+- 冻结 E5 snapshot 的 offline-first preflight 与显式最小 smoke
+- `llm`、`production`、`experiments`、`full`、`release` 稳定测试 profile
+- V3.1.0 Formal archive、实验 authority 与 deterministic CSV 的只读校验
+- PREPARING / RELEASE_CANDIDATE / RELEASED 显式发布状态和文档一致性门禁
+- `python -O` 下仍生效的关键 validator correctness checks
 
 ### V3.0.1：Optional Managed AI Access
 
@@ -161,11 +173,38 @@ python main.py
 
 默认访问地址为 `http://127.0.0.1:7860`。当前 Gradio UI 没有 Managed Credits 或 Admin 操作入口。
 
-## Testing
+## Developer Workflow
 
-当前 V3.1.0 release-candidate 基线：**892 passed**。
+统一入口从仓库内外 cwd 均可使用，不下载模型、不运行 Formal benchmark，也不执行
+Git 写操作：
 
 ```bash
+python scripts/dev.py --help
+python scripts/dev.py doctor
+python scripts/dev.py project-smoke
+python scripts/dev.py test production
+python scripts/dev.py test experiments
+python scripts/dev.py test full
+python scripts/dev.py model-check
+python scripts/dev.py experiment-validate archive-v3.1.0
+python scripts/dev.py experiment-validate --purpose formal
+python scripts/dev.py release-check --version 3.1.1
+```
+
+`model-check` 默认 offline/read-only/no-download；只有显式 `--smoke` 才使用已有冻结
+cache 嵌入 1 个 query 和 1 个 document。远程 tag 验证也只有在 `release-check`
+显式添加 `--remote` 时才发生。
+
+## Testing
+
+V3.1.0 发布基线为 **892 passed**；V3.1.1 加入 30 项 workflow/release 测试后，
+当前完整回归基线为 **922 passed**。
+
+```bash
+python scripts/dev.py test llm
+python scripts/dev.py test production
+python scripts/dev.py test experiments
+python scripts/dev.py test full
 python -m pytest
 ```
 
@@ -204,7 +243,7 @@ code-comments---agent/
     └── release/
 ```
 
-## Not Included in V3.1.0
+## Not Included in V3.1.x
 
 - Admin UI、Authentication / RBAC、Login、Password 或 OAuth
 - Payment、Recharge、`PURCHASE` 或用户 Refund workflow
@@ -217,8 +256,10 @@ code-comments---agent/
 
 - **V3.0.1 — Managed AI Access & Credits**：Released / Stable Release
 - **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
-- **V3.1.0 — Project Intelligence / RAG**：Release Candidate / Ready for Final Release QA
-- **V3.2 — Controlled Multi-Agent Collaboration**：Not Started，下一阶段
+- **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
+- **V3.1.1 — Workflow & Developer Experience Optimization**：Release Candidate
+- **V3.1.x — Maintenance**：Continues
+- **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
 - **V3.4 — VS Code Integration**：Planned
 
@@ -226,9 +267,22 @@ code-comments---agent/
 
 从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
 
+### V3.1.1
+
+**Workflow & Developer Experience Optimization — Release Candidate（`3.1.1`）**
+
+完成六项冻结维护工作：统一 developer command hub、环境 doctor、offline-first E5
+preflight、稳定 test profiles、只读 experiment/archive validator、release consistency
+gate。关键验证脚本已移除对优化模式下可失效 `assert` 的依赖，Phase 3.2 resource
+metrics 在不支持的平台上明确显示 unavailable。
+
+Tests：workflow/release `30 passed`；production `198 passed`；experiments
+`240 passed`；full 与旧 pytest 入口均为 `922 passed`。本版本无 retrieval semantic、
+ranking、Query/GT/Grade、Formal artifact 或 Formal interpretation 变化。
+
 ### V3.1.0
 
-**Project Intelligence / RAG — Release Candidate / Ready for Final Release QA（`3.1.0`）**
+**Project Intelligence / RAG — Released（`3.1.0`）**
 
 Phase Summary：
 
@@ -246,7 +300,9 @@ V3.1 Evaluation 共冻结 72 条 Query：48 条 English Test、12 条 English De
 
 详细材料：[V3.1 文档索引](docs/release/README.md)、[最终开发报告](docs/development/Development_Report_V3_1_0.md)、[正式结果报告](docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)、[论文写作素材包](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md)与 [Release Notes](docs/release/Release_Notes_V3_1_0.md)。
 
-Tests: **892 passed**。V3.1.0 尚未创建 release commit / tag；V3.2 Multi-Agent Collaboration：**NOT STARTED**。
+Tests: **892 passed**。Release commit：`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`；
+tag：`v3.1.0`；branch 与 tag 已 push 并完成 remote verification。V3.2 Multi-Agent
+Collaboration：**NOT STARTED**。
 
 ### V3.0.1
 
@@ -272,7 +328,8 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
-| V3.1.0 | 待发布 | 大版本候选 | Project Intelligence / RAG |
+| V3.1.1 | 候选 | 维护版本 | Workflow & Developer Experience Optimization |
+| V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
 | V3.0.1 | 2026-09-20 | 小版本 | Managed AI Access & Credits |
 | V3.0.0 | 2026-09-11 → 2026-09-18 | 大版本 | Project-level Maintenance Core Foundation |
 | V2.4.1 | 2026-08-12 | v2.4.0 小更新 #1 | macOS + 手机端响应式自适应 |

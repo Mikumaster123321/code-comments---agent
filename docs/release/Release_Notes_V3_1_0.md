@@ -1,14 +1,15 @@
 # V3.1.0 Release Notes
 
-**Status:** Release Candidate / Ready for DeepSeek Final Release QA
+**Status:** Released
 
 **Version:** `3.1.0`
 
 **Theme:** Project Intelligence / RAG
 
 V3.1.0 在现有项目维护核心、BYOK 与可选 Managed AI Access 之上增加项目级代码
-检索与上下文证据层，并完成冻结 Protocol 下的 Formal RQ1–RQ4 evaluation。本候选版
-尚未创建 release commit / tag，也未 push；本文档不构成 Final Release Gate。
+检索与上下文证据层，并完成冻结 Protocol 下的 Formal RQ1–RQ4 evaluation。正式
+release commit 为 `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag 为 `v3.1.0`；
+branch 与 tag 已 push 并完成 remote verification。
 
 ## Highlights
 
@@ -137,6 +138,5 @@ Access 或 Workspace 数据。若使用 V3.1 real E5，需显式创建可选 emb
 
 ## Next
 
-下一候选主题是 V3.2 **Controlled Multi-Agent Collaboration**，可能研究 Coordinator /
-Planner、Code Understanding、Review、Documentation、Refactor 与 Test / Validation
-Agent。上述能力均未在 V3.1 实现。当前 V3.2：**NOT STARTED**。
+V3.1.x maintenance continues。V3.1.1 首先处理 Workflow & Developer Experience
+Optimization；V3.2 **Controlled Multi-Agent Collaboration** 仍为 **NOT STARTED**。

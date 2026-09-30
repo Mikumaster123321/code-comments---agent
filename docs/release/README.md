@@ -1,8 +1,10 @@
-# V3.1.0 Documentation Index
+# V3.1 Documentation Index
 
-本页是 V3.1.0 Project Intelligence / RAG 的发布、工程、研究与论文材料导航。当前状态：
-**RELEASE DOCUMENTATION READY FOR DEEPSEEK FINAL QA**。本页不表示 release 已批准；
-release commit、tag 与 push 均未创建。V3.2 **NOT STARTED**。
+<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+
+本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
+V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 当前为
+**RELEASE CANDIDATE / READY FOR DEEPSEEK FINAL QA**。V3.2 **NOT STARTED**。
 
 ## Start Here
 
@@ -10,6 +12,10 @@ release commit、tag 与 push 均未创建。V3.2 **NOT STARTED**。
 - [V3.1.0 Final Development Report](../development/Development_Report_V3_1_0.md) — Phase 0–6 工程与研究全程总结
 - [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 候选版本亮点、兼容性、限制与迁移说明
 - [V3.1.0 Thesis Materials Package](../development/Thesis_Materials_V3_1_0_Formal_Results.md) — 可直接用于论文的事实、表格、图表计划与 claim boundary
+- [V3.1.1 Scope Freeze](../development/V3_1_1_Workflow_DX_Scope.md) — 六项维护工作及 non-goals
+- [V3.1.1 Development Report](../development/Development_Report_V3_1_1.md) — 实现、测试与兼容性证据
+- [V3.1.1 Thesis Engineering Materials](../development/Thesis_Materials_V3_1_1_Workflow_DX.md) — workflow reproducibility 工程贡献
+- [V3.1.1 Release Notes](Release_Notes_V3_1_1.md) — 命令、诊断、门禁与限制
 
 ## Architecture and Design
 
@@ -71,8 +77,10 @@ LLM 维护质量声明。
 
 ## Release Boundary
 
-- V3.1.0：Release Candidate / Ready for DeepSeek Final Release QA
-- Release commit：Not Created
-- Tag：Not Created
-- Push：No
+- V3.1.0：RELEASED
+- V3.1.0 release commit：`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`
+- V3.1.0 tag：`v3.1.0`
+- V3.1.0 push / remote verification：Completed
+- V3.1.1：RELEASE CANDIDATE / Ready for DeepSeek Final Release QA
+- V3.1.1 tag / push：Not created / No
 - V3.2 Multi-Agent Collaboration：Not Started

@@ -1,21 +1,32 @@
 # Project Context
 
+<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->
+
 ## Project
 
 毕业设计：《基于大语言模型与多智能体协同的软件代码智能维护系统设计与实现》。项目正从 **Code Comments Agent** 渐进演进为智能软件代码维护系统；现有 Gradio 应用必须持续可用。
 
 ## Current State
 
-- V3.1.0 Final Release Documentation：**READY FOR DEEPSEEK FINAL QA**；
-  Project Intelligence / RAG 的版本元数据已准备为 `3.1.0`，但 release commit、tag
-  与 push 均未创建。最近一次技术 Gate 的专项与完整回归均通过，完整回归
-  `892 passed`。Formal archive commit `c3ee6ec1b7aa28c2539d2fe849d1f25268807677`
+- V3.1.1 Workflow & Developer Experience Optimization：**IMPLEMENTED / RELEASE
+  CANDIDATE**。六项冻结工作均已完成：统一 Python developer command hub、runtime/test
+  doctor、offline-first E5 preflight、稳定 test profiles、只读 experiment/archive
+  validator、release consistency gate。新增 workflow/release 测试 `30 passed`；production
+  `198 passed`；experiments `240 passed`；统一 full 与 legacy full 均为 `922 passed`。
+  当前 host 的普通 pytest 在 plugin initialization 阶段异常，`-p no:debugging` 是通过
+  subprocess probe 得出的环境 workaround，不改变测试语义。Critical 0；
+  validity/release-blocking Medium 0。
+
+- V3.1.0 Project Intelligence / RAG：**RELEASED**。Release commit
+  `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`；branch 与 tag 已 push
+  并完成 remote verification。发布基线完整回归 `892 passed`。Formal archive commit
+  `c3ee6ec1b7aa28c2539d2fe849d1f25268807677`
   是当前 HEAD 的祖先；冻结 Formal run / artifact 未改变，归档后仅增加从 artifact
   确定性导出的论文 CSV 与解读材料。artifact-set canonical identity / file SHA-256 仍为
   `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3` /
   `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
-  V3.1 状态：**RELEASE CANDIDATE / READY FOR FINAL RELEASE QA**；V3.2：
-  **NOT STARTED**。
+  V3.1.1 不改变 retrieval、ranking、Query/GT/Grade、Formal artifact、metrics 或
+  interpretation。V3.2：**NOT STARTED**。
 
 - V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
   **PASS WITH NON-BLOCKING NOTES**，Critical 0、validity-blocking Medium 0，
@@ -23,8 +34,7 @@
   Interpretation 判定为 **ACCEPT — CLAIM-BOUNDED**。正式解读档案依据已冻结
   Formal 报告起草并标注原文未提供；RQ1–RQ4 主表、扩展表、ContextBuilder 表和
   Figure A–E 数据均从 Formal artifact 自动提取并逐项校验。V3.1 experiments
-  **COMPLETE**；发布文档已进入最终 QA 准备状态，release 尚未执行。V3.2
-  **NOT STARTED**。
+  **COMPLETE**；该结果随 V3.1.0 正式发布并保持冻结。V3.2 **NOT STARTED**。
 
 - V3.1.0 Phase 6.4 Formal RQ1–RQ4 Execution：基于 execution revision
   `2749969cd3a2d4d6e1e8d81160eebd5fb360879b` 与冻结 corpus revision
@@ -60,9 +70,17 @@
 
 - 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。Phase 6.3 前置接线真实 E5 与生产 benchmark 最小烟测 **PASS**，全量回归 **825 passed**；本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure、前置接线记录及 `current_gate.json` 为当前权威索引。
 
-- Current Version: `3.1.0`
+- Current Version: `3.1.1`
 - Current branch: `v3.1.0-dev`
-- V3.1.0: `RELEASE CANDIDATE / READY FOR DEEPSEEK FINAL QA`
+- V3.1.1: `IMPLEMENTED / RELEASE CANDIDATE`
+- V3.1.1 theme: Workflow & Developer Experience Optimization
+- V3.1.1 scope: V311-DX-01 through V311-DX-06 `COMPLETE`
+- V3.1.1 tests: workflow/release `30`; production `198`; experiments `240`;
+  full / legacy full `922`
+- V3.1.1 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
+- V3.1.0: `RELEASED`
+- V3.1.0 release commit / tag:
+  `8813e4c2fb0dc07f38c2013d520441bf399dcbc4` / `v3.1.0`
 - V3.1.0 theme: Project Intelligence / RAG
 - V3.1.0 Phase 0.0 — Development Baseline Gate: `COMPLETED`
 - V3.1.0 Phase 0 — Architecture & Research Design: `COMPLETED`
