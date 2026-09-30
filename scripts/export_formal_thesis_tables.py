@@ -44,9 +44,23 @@ CONTEXT = (
 )
 
 
+class ExportValidationError(RuntimeError):
+    """Raised when frozen inputs or committed exports fail validation."""
+
+
+def _require(condition, message):
+    if not condition:
+        raise ExportValidationError(message)
+
+
+def _verify_equal(actual, expected, label):
+    _require(actual == expected, f"{label} mismatch: expected {expected!r}, got {actual!r}")
+
+
 def verified_json(path, expected_sha256):
     raw = (ROOT / path).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == expected_sha256, path
+    actual_sha256 = hashlib.sha256(raw).hexdigest()
+    _verify_equal(actual_sha256, expected_sha256, f"checksum for {path}")
     return json.loads(raw)
 
 
@@ -60,23 +74,32 @@ def csv_text(header, rows):
 
 def export():
     artifact = verified_json(ARTIFACT.relative_to(ROOT), EXPECTED_SHA256)
-    assert canonical_hash(artifact) == EXPECTED_IDENTITY
-    assert artifact["execution_revision"] == EXPECTED_REVISION
-    assert artifact["mode"] == "formal" and artifact["split"] == "english_test"
-    assert artifact["query_count"] == 48 and artifact["config_count"] == 17
-    assert artifact["query_config_pair_count"] == 816
-    assert len(artifact["runs"]) == 17
+    _verify_equal(canonical_hash(artifact), EXPECTED_IDENTITY, "artifact identity")
+    _require(artifact["execution_revision"] == EXPECTED_REVISION,
+             "artifact execution revision mismatch")
+    _require(artifact["mode"] == "formal" and artifact["split"] == "english_test",
+             "artifact mode/split mismatch")
+    _require(artifact["query_count"] == 48 and artifact["config_count"] == 17,
+             "artifact query/config count mismatch")
+    _require(artifact["query_config_pair_count"] == 816,
+             "artifact query-config pair count mismatch")
+    _require(len(artifact["runs"]) == 17, "artifact run count mismatch")
 
     main, extended, figures, context = [], [], [], []
     for rq, configurations in artifact["rq_mapping"].items():
         for configuration in configurations:
             run = next(r for r in artifact["runs"] if r["matrix_run_id"] == configuration)
             aggregate = verified_json(run["aggregate_path"], run["aggregate_sha256"])
-            assert aggregate["matrix_run_id"] == configuration
-            assert aggregate["code_commit"] == EXPECTED_REVISION
-            assert aggregate["denominator_count"] == 48
-            assert aggregate["macro_metrics"] == run["overall"]
-            assert aggregate["strata"] == run["strata"]
+            _require(aggregate["matrix_run_id"] == configuration,
+                     f"aggregate matrix ID mismatch for {configuration}")
+            _require(aggregate["code_commit"] == EXPECTED_REVISION,
+                     f"aggregate revision mismatch for {configuration}")
+            _require(aggregate["denominator_count"] == 48,
+                     f"aggregate denominator mismatch for {configuration}")
+            _require(aggregate["macro_metrics"] == run["overall"],
+                     f"aggregate metric mismatch for {configuration}")
+            _require(aggregate["strata"] == run["strata"],
+                     f"aggregate strata mismatch for {configuration}")
             secondary = str(configuration.startswith("RRF-")).lower()
             metrics = run["overall"]
             main.append((rq, configuration, secondary, metrics["recall_at_5"], metrics["mrr"]))
@@ -93,15 +116,20 @@ def export():
 
             if configuration in ("RQ4-HYBRID-NO-GRAPH", "RQ4-HYBRID-GRAPH"):
                 diagnostic = verified_json(run["context_diagnostic_path"], run["context_diagnostic_sha256"])
-                assert diagnostic["artifact_identity"] == run["context_diagnostic_identity"]
-                assert diagnostic["matrix_run_id"] == configuration
-                assert diagnostic["execution_revision"] == EXPECTED_REVISION
+                _require(diagnostic["artifact_identity"] == run["context_diagnostic_identity"],
+                         f"context diagnostic identity mismatch for {configuration}")
+                _require(diagnostic["matrix_run_id"] == configuration,
+                         f"context diagnostic matrix ID mismatch for {configuration}")
+                _require(diagnostic["execution_revision"] == EXPECTED_REVISION,
+                         f"context diagnostic revision mismatch for {configuration}")
                 summary = diagnostic["summary"]
-                assert summary["query_count"] == 48
+                _require(summary["query_count"] == 48,
+                         f"context diagnostic query count mismatch for {configuration}")
                 context.append((configuration, *(summary[key] for _, key in CONTEXT)))
 
-    assert len(main) == 17 and len(extended) == 17 * 9
-    assert len(context) == 2
+    _require(len(main) == 17 and len(extended) == 17 * 9,
+             "exported Formal table row count mismatch")
+    _require(len(context) == 2, "exported context diagnostic row count mismatch")
     return {
         "Formal_Result_Table_RQ1_RQ4_V3_1_0.csv": csv_text(
             ("RQ", "configuration", "secondary", "Recall@5", "MRR"), main),
@@ -119,14 +147,29 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    for name, content in export().items():
-        path = OUTPUT / name
-        if args.check:
-            assert path.read_text() == content, name
-        else:
-            path.write_text(content)
-        print(f"{'verified' if args.check else 'wrote'} {path.relative_to(ROOT)}")
+    try:
+        for name, content in export().items():
+            path = OUTPUT / name
+            if args.check:
+                actual = path.read_text(encoding="utf-8")
+                _verify_equal(actual, content, f"committed CSV {name}")
+            else:
+                path.write_text(content, encoding="utf-8")
+            print(f"{'verified' if args.check else 'wrote'} {path.relative_to(ROOT)}")
+    except (
+        ExportValidationError,
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        StopIteration,
+    ) as error:
+        print(f"Formal CSV validation failed: {error}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

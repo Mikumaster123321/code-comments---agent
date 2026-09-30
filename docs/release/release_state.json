@@ -1,0 +1,22 @@
+{
+  "schema_version": "v1",
+  "version": "3.1.1",
+  "state": "RELEASE_CANDIDATE",
+  "expected_branch": "v3.1.0-dev",
+  "release_commit": null,
+  "tag": null,
+  "baseline": {
+    "version": "3.1.0",
+    "commit": "8813e4c2fb0dc07f38c2013d520441bf399dcbc4",
+    "tag": "v3.1.0"
+  },
+  "document_sentinel": "<!-- release-state: V3.1.1 RELEASE_CANDIDATE -->",
+  "required_documents": [
+    "README.md",
+    "PROJECT_CONTEXT.md",
+    "docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md",
+    "docs/development/Development_Report_V3_1_1.md",
+    "docs/release/Release_Notes_V3_1_1.md",
+    "docs/release/README.md"
+  ]
+}
