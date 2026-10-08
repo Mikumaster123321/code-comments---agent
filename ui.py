@@ -11,7 +11,7 @@ from processor import (
     NAMING_SAME, NAMING_SUFFIX, NAMING_SUBDIR,
     save_workspace, load_workspace, clear_workspace,
 )
-from i18n import LANGUAGES, t
+from i18n import LANGUAGES, t, user_error_message
 import config as _cfg
 
 # ==================== 自定义 CSS ====================
@@ -311,16 +311,11 @@ CUSTOM_CSS = """
     background: #ffffff !important;
 }
 
-/* ===== 隐藏 Gradio Code 组件原生下载/复制按钮（避免遮挡滚动条）===== */
+/* ===== 隐藏原生下载按钮；保留 Gradio Code 的 Copy 能力 ===== */
 .code-container .gr-code-download,
-.code-container .gr-code-copy,
 .code-container [aria-label*="Download"],
-.code-container [aria-label*="Copy"],
 .code-container [aria-label*="下载"],
-.code-container [aria-label*="复制"],
-.code-container .cm-editor-header button,
-.code-header button.download,
-.code-header button.copy {
+.code-header button.download {
     display: none !important;
 }
 
@@ -768,6 +763,12 @@ def _update_file_types(language: str):
     return gr.update(file_types=[".py"])
 
 
+def _update_style_controls(language: str):
+    """Show only the style selector relevant to the programming language."""
+    is_java = language == "Java"
+    return gr.update(visible=not is_java), gr.update(visible=is_java)
+
+
 def _download_src(state_src):
     """下载注释后的源码"""
     if state_src:
@@ -780,6 +781,26 @@ def _download_md(state_md):
     if state_md:
         return gr.update(value=state_md)
     return gr.update()
+
+
+def _python_style_choices(lang: str):
+    labels = {
+        "中文": ("Google 风格", "NumPy 风格", "reStructuredText"),
+        "English": ("Google style", "NumPy style", "reStructuredText"),
+        "日本語": ("Google スタイル", "NumPy スタイル", "reStructuredText"),
+    }.get(lang, ("Google 风格", "NumPy 风格", "reStructuredText"))
+    values = ("Google 风格", "NumPy 风格", "reStructuredText")
+    return list(zip(labels, values))
+
+
+def _java_style_choices(lang: str):
+    labels = {
+        "中文": ("标准 Javadoc", "简短 Javadoc（原极简模式）"),
+        "English": ("Standard Javadoc", "Short Javadoc (minimal mode)"),
+        "日本語": ("標準 Javadoc", "短い Javadoc（最小モード）"),
+    }.get(lang, ("标准 Javadoc", "简短 Javadoc（原极简模式）"))
+    values = ("标准 Javadoc", "极简行内注释")
+    return list(zip(labels, values))
 
 
 def _apply_ui_language(lang: str):
@@ -823,8 +844,8 @@ def _apply_ui_language(lang: str):
         gr.update(label=t("batch_log_label", lang)),    # 26 batch_log
         # ===== 注释风格新增 =====
         gr.update(value=t("style_section", lang)),      # 27 style_section_md
-        gr.update(label=t("python_style_label", lang)), # 28 python_style
-        gr.update(label=t("java_style_label", lang)),   # 29 java_style
+        gr.update(label=t("python_style_label", lang), choices=_python_style_choices(lang)), # 28 python_style
+        gr.update(label=t("java_style_label", lang), choices=_java_style_choices(lang)),   # 29 java_style
         # ===== Diff 视图新增 =====
         gr.update(label=t("tab_diff", lang)),           # 30 tab_diff
         # ===== 函数/类导航大纲新增（占位：outline_md/docs_toc_md 内容在生成时动态填充，切换语言时保留）=====
@@ -854,6 +875,11 @@ def _apply_ui_language(lang: str):
         # provider_status_md / provider_info_md 内容是动态的，语言切换时保持 gr.update() 占位
         gr.update(),  # 50 provider_status_md
         gr.update(),  # 51 provider_info_md
+        # V3.1.2: label-only updates preserve the independent output language value.
+        gr.update(label=t("output_lang_label", lang), info=t("output_lang_help", lang)),  # 52 output_lang
+        gr.update(label=t("rewrite_existing_label", lang)),  # 53 rewrite_existing
+        gr.update(label=t("provider_advanced_label", lang)),  # 54 provider_advanced
+        gr.update(value=t("provider_setup_help", lang)),  # 55 provider_help_md
     ]
 
 
@@ -872,6 +898,11 @@ def create_ui():
                         choices=LANGUAGES, value=default_lang,
                         label=t("ui_lang_label", default_lang),
                     )
+                    output_lang = gr.Dropdown(
+                        choices=LANGUAGES, value=default_lang,
+                        label="🗣️ Output Language / 输出语言 / 出力言語",
+                        info=t("output_lang_help", default_lang),
+                    )
 
         # ===== 编程语言选择 =====
         with gr.Column(elem_classes="card-section"):
@@ -884,24 +915,33 @@ def create_ui():
         with gr.Column(elem_classes="card-section"):
             style_section_md = gr.Markdown(t("style_section", default_lang))
             with gr.Row():
-                with gr.Column(elem_classes="equal-width", scale=1):
+                with gr.Column(elem_classes="equal-width", scale=1, visible=True) as python_style_column:
                     python_style = gr.Dropdown(
-                        choices=["Google 风格", "NumPy 风格", "reStructuredText"],
+                        choices=_python_style_choices(default_lang),
                         value="Google 风格",
                         label=t("python_style_label", default_lang),
                         allow_custom_value=False,
                     )
-                with gr.Column(elem_classes="equal-width", scale=1):
+                with gr.Column(elem_classes="equal-width", scale=1, visible=False) as java_style_column:
                     java_style = gr.Dropdown(
-                        choices=["标准 Javadoc", "极简行内注释"],
+                        choices=_java_style_choices(default_lang),
                         value="标准 Javadoc",
                         label=t("java_style_label", default_lang),
                         allow_custom_value=False,
                     )
+            rewrite_existing = gr.Checkbox(
+                value=True,
+                label="Rewrite existing comments to selected style / 既有注释风格改写 / 既存コメント書換",
+                info="Off = translation only; on = translation plus style rewrite.",
+            )
 
         # ===== v2.4.0 Provider / 模型切换区 =====
-        with gr.Column(elem_classes="card-section"):
+        with gr.Accordion(
+            t("provider_advanced_label", default_lang), open=False,
+            elem_classes="card-section",
+        ) as provider_advanced:
             provider_section_md = gr.Markdown(t("provider_section", default_lang))
+            provider_help_md = gr.Markdown(t("provider_setup_help", default_lang))
             with gr.Row():
                 # Provider 下拉框
                 provider_dd = gr.Dropdown(
@@ -952,7 +992,10 @@ def create_ui():
                     elem_classes="action-btn",
                 )
             # 状态 / 当前信息显示
-            provider_status_md = gr.Markdown(elem_classes="scrollable-md")
+            provider_status_md = gr.Markdown(
+                value=f"{t('provider_settings_applied', default_lang)} · {t('provider_connectivity_not_verified', default_lang)}",
+                elem_classes="scrollable-md",
+            )
             provider_info_md = gr.Markdown(
                 value=t("current_provider_info", default_lang).format(
                     p=_cfg.get_active_provider(),
@@ -990,7 +1033,7 @@ def create_ui():
             )
             cancel_btn = gr.Button(
                 t("cancel_btn", default_lang), variant="stop", size="lg",
-                elem_classes="action-btn",
+                elem_classes="action-btn", interactive=False,
             )
             preflight_btn = gr.Button(
                 t("preflight_btn", default_lang), variant="secondary", size="lg",
@@ -998,6 +1041,7 @@ def create_ui():
             )
         # 单文件取消标志位
         state_single_cancel = gr.State(None)
+        run_status_md = gr.Markdown(t("status_idle", default_lang))
         # ===== API Key 预检 / Token 用量估算 =====
         preflight_result_md = gr.Markdown(
             label=t("preflight_label", default_lang),
@@ -1033,7 +1077,7 @@ def create_ui():
                     t("batch_cancel_btn", default_lang),
                     variant="stop",
                     size="lg",
-                    elem_classes="action-btn",
+                    elem_classes="action-btn", interactive=False,
                 )
             # ===== v2.3.5 ZIP 输出命名策略 =====
             naming_section_md = gr.Markdown(t("naming_section", default_lang))
@@ -1079,7 +1123,7 @@ def create_ui():
                 tab_annotated = gr.Tab(t("tab_annotated", default_lang), id="annotated_code")
                 with tab_annotated:
                     # 顶部导航大纲（点击大纲链接跳到 tab_docs API 文档对应章节锚点）
-                    outline_md = gr.Markdown(elem_classes="scrollable-md outline-sidebar")
+                    outline_md = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md outline-sidebar")
                     output_code = gr.Code(
                         label=f'{t("output_code_label", default_lang)}  ·  {t("search_hint", default_lang)}',
                         language=None,
@@ -1101,25 +1145,25 @@ def create_ui():
 
                 tab_diff = gr.Tab(t("tab_diff", default_lang), id="code_diff")
                 with tab_diff:
-                    diff_html = gr.HTML()
+                    diff_html = gr.HTML(value=build_split_diff_html("", "", "Python", default_lang))
 
                 tab_docs = gr.Tab(t("tab_docs", default_lang), id="api_docs")
                 with tab_docs:
                     # Tab 顶部独立目录栏（再次展示大纲，点击本 Tab 内部锚点滚动定位）
-                    docs_toc_md = gr.Markdown(elem_classes="scrollable-md docs-toc")
-                    output_docs = gr.Markdown(elem_classes="scrollable-md")
+                    docs_toc_md = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md docs-toc")
+                    output_docs = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md")
 
                 tab_analysis = gr.Tab(t("tab_analysis", default_lang), id="code_analysis")
                 with tab_analysis:
                     quality_title_md = gr.Markdown(t("quality_title", default_lang))
-                    quality_output = gr.Markdown(elem_classes="scrollable-md")
+                    quality_output = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md")
                     annotation_title_md = gr.Markdown(t("annotation_title", default_lang))
-                    annotation_output = gr.Markdown(elem_classes="scrollable-md")
+                    annotation_output = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md")
                     # v2.3.8 代码风格检查区块
                     style_title_md = gr.Markdown(t("style_title", default_lang))
-                    style_output = gr.Markdown(elem_classes="scrollable-md")
+                    style_output = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md")
                     summary_title_md = gr.Markdown(t("summary_title", default_lang))
-                    summary_output = gr.Markdown(elem_classes="scrollable-md")
+                    summary_output = gr.Markdown(value=t("empty_output", default_lang), elem_classes="scrollable-md")
                     analyze_log = gr.Textbox(label=t("analyze_log_label", default_lang))
 
                 tab_log = gr.Tab(t("tab_log", default_lang), id="process_log")
@@ -1135,6 +1179,11 @@ def create_ui():
         # ===== 事件绑定 =====
         file_upload.change(fn=handle_file_upload, inputs=file_upload, outputs=[input_box, language])
         language.change(fn=_update_file_types, inputs=language, outputs=file_upload)
+        language.change(
+            fn=_update_style_controls,
+            inputs=language,
+            outputs=[python_style_column, java_style_column],
+        )
 
         # UI 语言切换 → 更新所有界面文本（顺序与 _apply_ui_language 返回值严格一致）
         ui_lang.change(
@@ -1202,6 +1251,10 @@ def create_ui():
                 apply_provider_btn,    # 49
                 provider_status_md,    # 50
                 provider_info_md,      # 51
+                output_lang,           # 52 (label/info only; value remains independent)
+                rewrite_existing,      # 53
+                provider_advanced,     # 54
+                provider_help_md,      # 55
             ],
         )
 
@@ -1232,7 +1285,10 @@ def create_ui():
         # 改为：直接把 CancelToken 放在闭包，通过 cancel_btn 的点击回调操作它
         # 使用一个更稳妥的方案：把 state_single_cancel 作为 btn.click 的额外 output
         # 在第一次 yield 时返回新的 CancelToken，后续每次 yield None（保持最新 token）
-        def _gen_real(code, plang, ulang, pyst, jvst, cancel_token_state, progress=gr.Progress()):
+        def _gen_real(
+            code, plang, ui_language, output_language, pyst, jvst,
+            rewrite_style, cancel_token_state, progress=gr.Progress(),
+        ):
             """真实的生成器：创建 CancelToken，逐帧 yield。
 
             outputs 结构（11 元组）：
@@ -1245,20 +1301,21 @@ def create_ui():
             # —— 第一帧前：API Key 预检 + 用量估算（不阻塞，6s 超时），失败直接返回不进入生成主流程
             try:
                 ok, pf_md, est_md = _p_mod.preflight_check(
-                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=True,
+                    source_code=code or "", language=plang, ui_lang=ui_language, do_ping=True,
                 )
-            except Exception as _pf_err:
-                ok, pf_md, est_md = False, f"**❌ 预检异常（Preflight Exception）**\n\n> {type(_pf_err).__name__}: {_pf_err}", ""
-            # 失败：只输出错误（不生成，保留现有 outputs 不变 → 首 7 位 None + 大纲 + 预检 + 估算）
+            except Exception:
+                ok = False
+                pf_md = user_error_message("PROVIDER_FAILURE", ui_language)
+                est_md = ""
+            # 当前运行失败时清理旧输出，避免旧成功结果被误认成本轮结果。
             if not ok:
-                # 失败时照样给大纲和估算，让用户能看到（预检失败不代表 AST 解析失败）
-                try:
-                    _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
-                    early_outline = _p_mod.build_outline_markdown(code or "", plang, title=_title)
-                except Exception:
-                    early_outline = ""
-                yield None, None, None, None, None, None, None, early_outline, early_outline, pf_md, est_md
-                return  # 预检失败 → 提前 return，不再触发生成（避免跑到一半 Key 无效白跑）
+                empty = t("empty_output", ui_language)
+                yield (
+                    "", empty, pf_md, None, None, None,
+                    build_split_diff_html("", "", plang, ui_language), empty, empty,
+                    pf_md, est_md, t("status_failure", ui_language), gr.update(interactive=False),
+                )
+                return
 
             # 创建新的 CancelToken（先重置）
             token = CancelToken()
@@ -1271,32 +1328,36 @@ def create_ui():
             # 先在第 0 帧（第一帧）就把大纲渲染出来，用户一开始就能看到函数/类列表
             try:
                 import processor as _p
-                _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
+                _title = t("outline_title", output_language) if output_language else "📋 函数/类导航大纲"
                 early_outline = _p.build_outline_markdown(code or "", plang, title=_title)
             except Exception:
                 early_outline = ""
             # 透传 processor 的生成器，11 元组 outputs（末 2 位是 preflight_md + estimate_md）
             first = True
             for frame in process_code_with_progress(
-                code, incremental=True, language=plang, comment_lang=ulang,
+                code, incremental=True, language=plang, comment_lang=output_language,
                 python_style=pyst, java_style=jvst,
                 cancel_token=token, progress_cb=_cb,
+                rewrite_existing=rewrite_style,
             ):
                 ann, md, log_txt, md_p, src_p = frame
                 if first:
                     first = False
+                    if ann is not None and md_p is not None and src_p is not None:
+                        last_final_frame = frame
+                        last_annotated = ann
                     # 第 1 帧：把 cancel_token 存入 state，大纲先渲染（第 8、9 位）；预检/估算也先填入
-                    yield ann, md, log_txt, md_p, src_p, token, None, early_outline, early_outline, pf_md, est_md
+                    yield ann, md, log_txt, md_p, src_p, token, None, early_outline, early_outline, pf_md, est_md, t("status_running", ui_language), gr.update(interactive=True)
                     continue
                 if ann is not None and md_p is not None and src_p is not None:
                     last_final_frame = frame
                     last_annotated = ann
                 # 中间帧：大纲/预检/估算保持不变（None 继承上一帧不闪烁）
-                yield ann, md, log_txt, md_p, src_p, None, None, None, None, None, None
+                yield ann, md, log_txt, md_p, src_p, None, None, None, None, None, None, None, None
             # 最后：构建 Diff HTML + 最终大纲（再次渲染，语言用最终 comment_lang）+ 最终估算（再算一遍保持一致）
             try:
                 _ok2, pf_md_f, est_md_f = _p_mod.preflight_check(
-                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=False,
+                    source_code=code or "", language=plang, ui_lang=ui_language, do_ping=False,
                 )
                 pf_md_final = pf_md_f if pf_md_f else pf_md
                 est_md_final = est_md_f if est_md_f else est_md
@@ -1304,50 +1365,51 @@ def create_ui():
                 pf_md_final, est_md_final = pf_md, est_md
             if last_final_frame is not None:
                 ann_code = last_final_frame[0]
-                diff = build_split_diff_html(code, ann_code, plang)
+                diff = build_split_diff_html(code, ann_code, plang, output_language)
                 try:
-                    _title = t("outline_title", ulang) if ulang else "📋 函数/类导航大纲"
+                    _title = t("outline_title", output_language) if output_language else "📋 函数/类导航大纲"
                     final_outline = _p.build_outline_markdown(code or "", plang, title=_title)
                 except Exception:
                     final_outline = ""
                 ann, md, log_txt, md_p, src_p = last_final_frame
-                yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline, pf_md_final, est_md_final
+                final_status = t("status_idle", ui_language) if token.is_canceled() else t("status_success", ui_language)
+                yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline, pf_md_final, est_md_final, final_status, gr.update(interactive=False)
             else:
-                # 没产生最终帧（例：空输入 / 取消），把大纲保留之前的 early_outline，估算保持不变
-                yield None, None, None, None, None, None, None, early_outline, early_outline, pf_md_final, est_md_final
+                empty = t("empty_output", ui_language)
+                yield "", empty, "", None, None, None, build_split_diff_html("", "", plang, ui_language), empty, empty, pf_md_final, est_md_final, t("status_failure", ui_language), gr.update(interactive=False)
 
         # ===== 仅估算（不发网络请求）：输入/语言/风格变化时实时刷新 cost_estimate_md =====
-        def _estimate_only(code, plang, ulang, pyst, jvst):
+        def _estimate_only(code, plang, ui_language, pyst, jvst):
             try:
                 import processor as _pp
                 _, _, est = _pp.preflight_check(
-                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=False,
+                    source_code=code or "", language=plang, ui_lang=ui_language, do_ping=False,
                 )
                 return est
-            except Exception as e:
-                return f"> 估算失败（Estimate Error）：{type(e).__name__}: {e}"
+            except Exception:
+                return user_error_message("PROVIDER_FAILURE", ui_language)
 
         # ===== 手动预检按钮：主动发 1-token 心跳 =====
-        def _preflight_manual(code, plang, ulang, pyst, jvst):
+        def _preflight_manual(code, plang, ui_language, pyst, jvst):
             try:
                 import processor as _pp
                 ok, pf, est = _pp.preflight_check(
-                    source_code=code or "", language=plang, ui_lang=ulang, do_ping=True,
+                    source_code=code or "", language=plang, ui_lang=ui_language, do_ping=True,
                 )
                 return pf, est
-            except Exception as e:
+            except Exception:
                 return (
-                    f"**❌ 预检异常（Preflight Exception）**\n\n> {type(e).__name__}: {e}",
-                    _estimate_only(code, plang, ulang, pyst, jvst),
+                    user_error_message("PROVIDER_FAILURE", ui_language),
+                    _estimate_only(code, plang, ui_language, pyst, jvst),
                 )
 
         # 把 btn.click 改成调用生成器（outputs 11 个：末 2 位 preflight_result_md / cost_estimate_md）
         btn.click(
             fn=_gen_real,
-            inputs=[input_box, language, ui_lang, python_style, java_style, state_single_cancel],
+            inputs=[input_box, language, ui_lang, output_lang, python_style, java_style, rewrite_existing, state_single_cancel],
             outputs=[output_code, output_docs, output_log, state_md_path, state_src_path,
                      state_single_cancel, diff_html, outline_md, docs_toc_md,
-                     preflight_result_md, cost_estimate_md],
+                     preflight_result_md, cost_estimate_md, run_status_md, cancel_btn],
         ).then(
             fn=lambda: gr.update(selected="annotated_code"),
             outputs=[tabs],
@@ -1386,10 +1448,10 @@ def create_ui():
             inputs=[state_md_path],
             outputs=[dl_md_btn],
         )
-        # 分析代码（传入 UI 语言作为摘要语言）
+        # 分析与文档展示使用独立 Output Language。
         analyze_btn.click(
-            fn=lambda code, plang, ulang: analyze_code(code, plang, ulang),
-            inputs=[input_box, language, ui_lang],
+            fn=lambda code, plang, output_language: analyze_code(code, plang, output_language),
+            inputs=[input_box, language, output_lang],
             outputs=[quality_output, annotation_output, summary_output, style_output, analyze_log],
         ).then(
             fn=lambda: gr.update(selected="code_analysis"),
@@ -1397,7 +1459,7 @@ def create_ui():
         )
 
         # ===== 批量处理事件绑定（生成器版） =====
-        def _batch_gen_progress(files, ulang, pyst, jvst, naming, cancel_token_state, progress=gr.Progress()):
+        def _batch_gen_progress(files, output_language, pyst, jvst, rewrite_style, naming, cancel_token_state, progress=gr.Progress()):
             """批量生成（生成器），outputs 结构：
             [batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel]
 
@@ -1408,8 +1470,9 @@ def create_ui():
                 progress(ratio, desc=desc)
             first = True
             for log_text, zip_path in process_batch_with_progress(
-                files, comment_lang=ulang, incremental=True,
+                files, comment_lang=output_language, incremental=True,
                 python_style=pyst, java_style=jvst,
+                rewrite_existing=rewrite_style,
                 naming_strategy=naming,
                 cancel_token=token, progress_cb=_cb,
             ):
@@ -1429,7 +1492,7 @@ def create_ui():
 
         batch_gen_btn.click(
             fn=_batch_gen_progress,
-            inputs=[batch_file_upload, ui_lang, python_style, java_style, naming_strategy, state_batch_cancel],
+            inputs=[batch_file_upload, output_lang, python_style, java_style, rewrite_existing, naming_strategy, state_batch_cancel],
             outputs=[batch_log, batch_zip_state, batch_dl_btn, state_batch_cancel],
         )
         batch_cancel_btn.click(
@@ -1444,13 +1507,15 @@ def create_ui():
         )
 
         # ===== v2.3.7 会话持久化：保存 / 恢复 / 清除 =====
-        def _ws_save(src, lang, ulang, pyst, jvst, naming):
+        def _ws_save(src, lang, ulang, output_language, pyst, jvst, rewrite_style, naming):
             data = {
                 "source_code": src,
                 "language": lang,
                 "ui_lang": ulang,
+                "output_lang": output_language,
                 "python_style": pyst,
                 "java_style": jvst,
+                "rewrite_existing": rewrite_style,
                 "naming_strategy": naming,
             }
             ok, msg = save_workspace(data)
@@ -1466,8 +1531,10 @@ def create_ui():
                 data.get("source_code", ""),
                 data.get("language", "Python"),
                 data.get("ui_lang", "中文"),
+                data.get("output_lang", data.get("ui_lang", "中文")),
                 data.get("python_style", "默认"),
                 data.get("java_style", "默认"),
+                data.get("rewrite_existing", True),
                 data.get("naming_strategy", NAMING_SUFFIX),
                 f"\n{msg}\n",
             )
@@ -1480,13 +1547,13 @@ def create_ui():
 
         ws_save_btn.click(
             fn=_ws_save,
-            inputs=[input_box, language, ui_lang, python_style, java_style, naming_strategy],
+            inputs=[input_box, language, ui_lang, output_lang, python_style, java_style, rewrite_existing, naming_strategy],
             outputs=[output_log],
         )
         ws_restore_btn.click(
             fn=_ws_restore,
             inputs=[],
-            outputs=[input_box, language, ui_lang, python_style, java_style, naming_strategy, output_log],
+            outputs=[input_box, language, ui_lang, output_lang, python_style, java_style, rewrite_existing, naming_strategy, output_log],
         )
         ws_clear_btn.click(
             fn=_ws_clear,
@@ -1546,9 +1613,12 @@ def create_ui():
                 custom_model_name=custom_model if custom_model else None,
             )
             if ok:
-                status = t("provider_status_ok", ulang).format(msg=msg)
+                status = (
+                    f"{t('provider_settings_applied', ulang)} · "
+                    f"{t('provider_connectivity_not_verified', ulang)}"
+                )
             else:
-                status = t("provider_status_err", ulang).format(msg=msg)
+                status = user_error_message("PROVIDER_FAILURE", ulang)
             cur_p = _cfg.get_active_provider()
             cur_m = _cfg.get_active_model()
             cur_u = _cfg.get_active_base_url()

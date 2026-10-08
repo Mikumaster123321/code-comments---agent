@@ -149,5 +149,6 @@ tag 前至少检查：
   README 入口和 release index 在本次 closure 中补齐或校正。
 - V3.1.0 Formal artifact identity 与 file SHA-256 保持不变；本次 closure 不重新执行 Formal
   benchmark，也不改变 retrieval、ranking、Query、Ground Truth 或 Grade。
-- V3.1.2：`NOT STARTED`。
+- V3.1.2：`RELEASE_CANDIDATE`；implementation complete，awaiting independent Final QA；
+  tag / push 均未执行。
 - V3.2：`NOT STARTED`。

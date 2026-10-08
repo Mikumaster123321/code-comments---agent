@@ -1,10 +1,10 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.1 RELEASED -->
+<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
 
-**当前版本：V3.1.1（`3.1.1`）— Released**
+**当前版本：V3.1.2（`3.1.2`）— Implementation Complete / Awaiting Final Release QA**
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG。V3.1.1 聚焦 Workflow & Developer Experience Optimization，不改变 retrieval ranking 或冻结 Formal 结果；V3.1.2 与 V3.2 Multi-Agent Collaboration 均 **尚未开始**。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 增加 Project Intelligence / RAG，V3.1.1 完成 Workflow & Developer Experience Optimization。V3.1.2 是已完成实现、等待独立 Final Release QA 的 Language / UX / Output Quality 维护候选版本；它不改变 retrieval ranking 或冻结 Formal 结果。V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -49,6 +49,17 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - V3.1.0 Formal archive、实验 authority 与 deterministic CSV 的只读校验
 - PREPARING / RELEASE_CANDIDATE / RELEASED 显式发布状态和文档一致性门禁
 - `python -O` 下仍生效的关键 validator correctness checks
+
+### V3.1.2：Language / UX / Output Quality
+
+- 独立 UI Language、Output Language 与 Programming Language；切换 UI 不改写输出语言
+- Task-first UI、折叠 Provider advanced settings、语言相关 style 控件与 Idle/Running/Success/Failure 状态
+- 本地输入验证优先于 Provider ping，三语稳定错误码，失败运行清除旧结果
+- 设置已应用与连接已验证分离，明确 API Key 环境回退、Base URL、Azure 与 Custom 约束
+- Python/Java API 文档、Diff、代码分析和 empty state 的中英日结构化展示
+- 固定源码 data delimiter、技术标识保留、translation-only / style-rewrite 明确分流
+- Java minimal 冻结为 short Javadoc；空、不完整或不安全模型响应 fail closed
+- Gradio Code Copy 能力恢复；不新增 review、optimization 或 evidence 语义
 
 ### V3.0.1：Optional Managed AI Access
 
@@ -188,7 +199,7 @@ python scripts/dev.py test full
 python scripts/dev.py model-check
 python scripts/dev.py experiment-validate archive-v3.1.0
 python scripts/dev.py experiment-validate --purpose formal
-python scripts/dev.py release-check --version 3.1.1
+python scripts/dev.py release-check --version 3.1.2
 ```
 
 `model-check` 默认 offline/read-only/no-download；只有显式 `--smoke` 才使用已有冻结
@@ -197,8 +208,8 @@ cache 嵌入 1 个 query 和 1 个 document。远程 tag 验证也只有在 `rel
 
 ## Testing
 
-V3.1.0 发布基线为 **892 passed**；V3.1.1 加入 30 项 workflow/release 测试后，
-当前完整回归基线为 **922 passed**。
+V3.1.0 发布基线为 **892 passed**；V3.1.1 完整回归为 **922 passed**。V3.1.2
+新增 29 项离线 language/UX/output contract 测试，当前完整回归为 **951 passed**。
 
 ```bash
 python scripts/dev.py test llm
@@ -214,6 +225,7 @@ python -m pytest
 
 - **V3.1.0 Project Intelligence / RAG：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_0_Formal_Results.txt) · [Development Report](docs/development/Development_Report_V3_1_0.md) · [Release Notes](docs/release/Release_Notes_V3_1_0.md)
 - **V3.1.1 Workflow & DX：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.txt) · [Development Report](docs/development/Development_Report_V3_1_1.md) · [Release Notes](docs/release/Release_Notes_V3_1_1.md)
+- **V3.1.2 Language / UX / Output Quality：** [Scope Freeze](docs/development/V3_1_2_Language_UX_Output_Quality_Scope.md) · [Prompt Contract](docs/development/V3_1_2_Prompt_Output_Contract.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.txt) · [Development Report](docs/development/Development_Report_V3_1_2.md) · [Release Notes](docs/release/Release_Notes_V3_1_2.md)
 - [V3.1 Documentation Index](docs/release/README.md) · [Permanent Version Documentation Contract](docs/release/Version_Documentation_Contract.md)
 
 ## Directory Structure
@@ -264,7 +276,7 @@ code-comments---agent/
 - **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
 - **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
-- **V3.1.2 — Maintenance**：Not Started
+- **V3.1.2 — Language / UX / Output Quality**：Implementation Complete / Awaiting Final Release QA
 - **V3.1.x — Maintenance**：Continues
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
@@ -273,6 +285,22 @@ code-comments---agent/
 ## Version History
 
 从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+
+### V3.1.2
+
+**Language / UX / Output Quality — Release Candidate（`3.1.2`）**
+
+七项冻结维护工作 V312-UX-01 至 V312-TEST-07 已实现：语言职责拆分、task-first
+information architecture、Provider 状态语义、安全错误/运行状态、现有结构化输出本地化、
+prompt data/output contract 与离线契约测试。Processor 五元组、Provider/Model ID、BYOK、
+ZIP 命名、下载格式和 Python/Java 支持保持兼容。Java minimal 采用与现有 annotator 一致的
+short Javadoc，而不是 `//` inline comment。
+
+Tests：V3.1.2 targeted + LLM contracts `35 passed`；production `198 passed`；experiments
+`240 passed`；full `951 passed`。当前 Anaconda Python 3.13.5 的 Gradio import 仍触发已知
+IPython/rlcompleter host SIGSEGV，因此 create_ui smoke 记录为 HOST LIMITATION，未伪造 PASS。
+Formal execution revision、artifact identity 和 SHA-256 均保持不变。状态为
+**IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；未创建 tag，未 push。
 
 ### V3.1.1
 
@@ -291,7 +319,7 @@ Release commit：`683479da2fd3b72c17cba3f03101bc23e275f40b`；annotated tag：
 `v3.1.1`；最终发布身份记录 HEAD：`0238cc0bd5254ac782aa3981cdc755d5a59c498e`。
 GitHub / Gitee branch 与 tag 已 push 并完成 remote verification。
 
-**V3.1.2：NOT STARTED。**
+**V3.1.2 已进入候选状态；V3.2：NOT STARTED。**
 
 ### V3.1.0
 
@@ -341,6 +369,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
+| V3.1.2 | 2026-10-08 | 候选维护版本 | Language / UX / Output Quality |
 | V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
 | V3.0.1 | 2026-09-20 | 小版本 | Managed AI Access & Credits |

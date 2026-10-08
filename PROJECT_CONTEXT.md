@@ -1,6 +1,6 @@
 # Project Context
 
-<!-- release-state: V3.1.1 RELEASED -->
+<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
 
 ## Project
 
@@ -8,12 +8,30 @@
 
 ## Current State
 
+- V3.1.2 Language / UX / Output Quality：**IMPLEMENTATION COMPLETE / AWAITING FINAL QA**。
+  Branch `v3.1.2-dev` 从 authoritative main
+  `2036cb6c82860b9bf8229ecac0f4d4add420855d` 创建；Scope Freeze commit `139833f`，
+  Prompt Output Contract commits `2192293` / `d12d800`。七项冻结工作 V312-UX-01 至
+  V312-TEST-07 均完成：task-first UI、UI/Output/Programming Language 分离、Provider
+  applied/verified 语义、本地验证优先与安全错误、现有结构化输出三语 presentation、
+  prompt data/output contract、离线合同测试。targeted + LLM contracts `35 passed`，
+  production `198 passed`，experiments `240 passed`，full `951 passed`。当前 Anaconda
+  Python 3.13.5 的 Gradio import 因 IPython/rlcompleter 发生宿主 SIGSEGV，create_ui
+  smoke 记录为 HOST LIMITATION，待推荐 CPython 3.10 Final QA 重测。tag / push 均未执行；
+  lifecycle 为 `RELEASE_CANDIDATE`，不是 RELEASED。V3.2：**NOT STARTED**。
+
+- V3.1.2 文档包已准备：Scope Freeze、Prompt Output Contract、Thesis Materials MD +
+  UTF-8 standalone TXT、Development Report、Pre-Release Notes、README / Version History、
+  PROJECT_CONTEXT 与 release index。下一步是 DeepSeek V4.1 Flash Independent Final
+  Release QA；通过后才允许 reviewed release commit、annotated tag、main sync、GitHub / Gitee
+  publication 与 remote verification。
+
 - V3.1.0 + V3.1.1 Post-Release Documentation Closure：**COMPLETED**。两个版本均已具备
   README / Version History、Thesis Materials MD + UTF-8 TXT、Development Report、
   Release Notes、PROJECT_CONTEXT 与 release index 入口；永久版本文档合同已固化在
   `docs/release/Version_Documentation_Contract.md`。本次闭环仅修改 tracked documentation，
-  不改变 retrieval、ranking、Formal artifact、Query/GT/Grade 或既有 tag。V3.1.2 与
-  V3.2 均为 **NOT STARTED**。
+  不改变 retrieval、ranking、Formal artifact、Query/GT/Grade 或既有 tag。V3.2 为
+  **NOT STARTED**。
 
 - V3.1.1 Workflow & Developer Experience Optimization：**FULLY RELEASED**。Release
   commit C1 为 `683479da2fd3b72c17cba3f03101bc23e275f40b`，annotated tag `v3.1.1`
@@ -36,7 +54,8 @@
   `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3` /
   `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
   V3.1.1 不改变 retrieval、ranking、Query/GT/Grade、Formal artifact、metrics 或
-  interpretation。V3.1.2 与 V3.2：**NOT STARTED**。
+  interpretation。V3.1.2 为 **IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；V3.2：
+  **NOT STARTED**。
 
 - V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
   **PASS WITH NON-BLOCKING NOTES**，Critical 0、validity-blocking Medium 0，
@@ -80,8 +99,8 @@
 
 - 最新 Phase 6.2 状态：**CLOSED**；Reference Approval 与 Closure 已物化验证；Phase 6.3 **ALLOWED BUT NOT STARTED**；Formal RQ1–RQ4 **NOT STARTED**。Phase 6.3 前置接线真实 E5 与生产 benchmark 最小烟测 **PASS**，全量回归 **825 passed**；本节较早阶段条目保留历史状态，以后文 Final Approval Sequencing Fix + Closure、前置接线记录及 `current_gate.json` 为当前权威索引。
 
-- Current Version: `3.1.1`
-- Current branch: `v3.1.0-dev`
+- Current Version: `3.1.2`
+- Current branch: `v3.1.2-dev`
 - V3.1.0 / V3.1.1 documentation closure: `COMPLETED`
 - Version Documentation Contract: `ACTIVE`
 - V3.1.1: `FULLY RELEASED`
@@ -94,7 +113,12 @@
 - V3.1.1 tests: workflow/release `30`; production `198`; experiments `240`;
   full / legacy full `922`
 - V3.1.1 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
-- V3.1.2: `NOT STARTED`
+- V3.1.2: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+- V3.1.2 scope: V312-UX-01 through V312-TEST-07 `COMPLETE`
+- V3.1.2 tests: targeted + LLM contracts `35`; production `198`; experiments `240`; full `951`
+- V3.1.2 Prompt contract: `docs/development/V3_1_2_Prompt_Output_Contract.md`
+- V3.1.2 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
+- V3.1.2 tag / push: `NO / NO`
 - V3.1.0: `RELEASED`
 - V3.1.0 release commit / tag:
   `8813e4c2fb0dc07f38c2013d520441bf399dcbc4` / `v3.1.0`

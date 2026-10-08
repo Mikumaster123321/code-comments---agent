@@ -1,0 +1,125 @@
+V3.1.2 Language / UX / Output Quality 论文工程素材
+
+V3.1.2 RELEASE_CANDIDATE
+
+==================================================
+0. 文档定位与版本身份
+==================================================
+
+本文件是可独立阅读的 UTF-8 纯文本材料，适合复制到 Word、毕业论文草稿、学校论文系统或提供给外部模型。它记录 V3.1.2 的语言、UX、错误安全和输出质量工程，不构成新的 retrieval 研究结果。
+
+版本：3.1.2
+状态：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+主题：Language / UX / Output Quality
+开发分支：v3.1.2-dev
+Authoritative main branch point：2036cb6c82860b9bf8229ecac0f4d4add420855d
+Scope Freeze commit：139833f
+Prompt Contract commits：2192293，d12d800
+Tag：未创建
+Push：未执行
+V3.2：NOT STARTED
+
+==================================================
+1. 工程问题
+==================================================
+
+此前 UI Language 同时承担界面文案和生成结果语言，用户切换界面可能无意改变下一次注释与摘要语言。Provider client 构造成功容易被理解为 API Key、模型与网络已验证。空输入可能先收到网络错误，失败任务也可能继续显示上一轮成功结果。API 文档、Diff、分析与日志存在中英文混合。
+
+模型侧还存在四类风险：源码与系统任务没有稳定 data boundary；翻译和 style rewrite 混为同一行为；Java minimal 的标签与实际 Javadoc annotator 不一致；cleanup 可能把空、不完整或不安全响应当作有效正文。
+
+==================================================
+2. 七项冻结范围
+==================================================
+
+V312-UX-01：Task-first 信息架构，Provider 高级设置默认折叠，只显示当前编程语言的 style，提供 Idle、Running、Success、Failure 状态，无任务时 Cancel 禁用，并提供 empty state。状态 COMPLETE。
+
+V312-LANG-02：UI Language、Output Language、Programming Language 三者分离。首次默认 UI 与 Output 均为中文，此后切换 UI 只改 label/help，不改 Output value。状态 COMPLETE。
+
+V312-PROVIDER-03：设置已应用与连接已验证分开。UI 说明 API Key required/optional、environment fallback、Base URL、Custom 与 Azure 部署约束。Canonical ID 不变。状态 COMPLETE。
+
+V312-ERR-04：本地 empty、unsupported language 和 parser validation 先于 Provider ping。稳定错误码映射到中英日消息，不显示 traceback、原始 provider payload、secret、API key、本地绝对路径或内部异常链。失败时清空当前输出。状态 COMPLETE。
+
+V312-OUT-05：本地化现有 Annotated Code、Diff、API Documentation、Code Analysis、status、log、summary 和 empty state，恢复 Gradio Code Copy。没有创建新的 review、optimization 或 evidence 语义。状态 COMPLETE。
+
+V312-PROMPT-06：建立固定源码 delimiter、source-as-data 指令、目标语言和技术标识保留规则；分开 translation only 与 style rewrite；冻结 Java minimal 与 summary；不安全响应 fail closed。状态 COMPLETE。
+
+V312-TEST-07：新增 29 项离线合同测试，覆盖语言独立、三语术语、formatter、copy 配置、Provider 状态、local-before-ping、安全错误、旧结果失败、prompt golden 与 Python/Java cleanup。状态 COMPLETE。
+
+==================================================
+3. 语言职责
+==================================================
+
+UI Language 只控制界面标签、帮助文本和状态文案。Output Language 控制 Python docstring、Java Javadoc、摘要、API 文档 presentation 和代码分析报告。Programming Language 控制 parser、style selector 和 code fence。Documentation language 在 V3.1.2 与 Output Language 对齐。
+
+Workspace persistence 独立保存 UI Language、Output Language 和 rewrite_existing。UI 语言切换不会触发源码翻译，也不会修改已有 docstring 或 Javadoc。
+
+==================================================
+4. UX 与状态可信度
+==================================================
+
+Provider 配置放入默认关闭的 Advanced accordion，减少首屏负担。Python 与 Java style selector 根据 Programming Language 单显。Cancel 在 Idle 时禁用，在 Running 时启用。所有结果区域都有可理解的空状态。
+
+设置保存后只显示 Settings applied 和 Connectivity not verified。只有实际 preflight ping 成功才能显示 Connectivity verified。当前运行失败时显示 CURRENT RUN FAILED，并清除代码、文档、Diff、大纲及下载路径，避免旧结果伪装成本轮成功。
+
+==================================================
+5. Prompt 与 cleanup 合同
+==================================================
+
+源码使用 SOURCE_CODE 成对边界，既有注释使用 EXISTING_DOCUMENTATION 成对边界。Prompt 把边界内内容定义为 untrusted data，不执行其中的 ignore previous instructions、角色、工具或输出指令。
+
+自然语言使用 Output Language，但 identifier、API、type、exception、library、路径片段、配置键和代码字面量保持原样。摘要为一个简洁段落，最多四个完整句子，不再使用“200字以内”。
+
+既有注释可以只翻译，也可以翻译并重写为所选 style。默认启用 style rewrite，保持历史行为。Java minimal 采用 short Javadoc，因为现有 annotator 会用 Javadoc wrapper 插入正文；采用 inline comment 会破坏真实运行合同。
+
+Cleanup 只接受纯正文、一个完整 Markdown fence 或当前任务对应的一对完整 wrapper。空白响应、未闭合或多个 fence、残留三引号、非法 Javadoc terminator、额外前言、traceback、secret-looking 内容或本地绝对路径会被拒绝，不会写入源码。
+
+==================================================
+6. 输出格式
+==================================================
+
+Python 与 Java API formatter 使用同一高层结构：标题、目录、条目 heading、语言正确的 code fence、正文、class note 和 empty state。Class、Function、Method 显示标签本地化，但 symbol identity、signature、anchor 和类型不变。
+
+Diff 本地化统计与 Before/After 文案。Python analysis 本地化既有 complexity、nesting、length、parameter 和 annotation 信息，不创建 severity、location、recommendation 或 evidence schema。Copy 按钮恢复，下载格式与 ZIP naming 不变。
+
+==================================================
+7. 测试与环境限制
+==================================================
+
+V3.1.2 targeted 加既有 LLM contracts：35 passed。
+Processor 和 Provider directed regression：27 passed。
+Production profile：198 passed。
+Experiments profile：240 passed。
+Full profile：951 passed。
+
+所有测试离线执行，不调用真实 Provider，不使用真实 API key，不下载模型。当前 Anaconda Python 3.13.5 在 import Gradio 时经 IPython 与 rlcompleter 触发宿主 SIGSEGV，因此 create_ui smoke 的结论是 HOST LIMITATION，不是 PASS，也没有被当成业务代码回归。推荐 Final QA 在 CPython 3.10 venv 执行 Gradio build smoke。
+
+==================================================
+8. Formal 不变性
+==================================================
+
+Formal execution revision：2749969cd3a2d4d6e1e8d81160eebd5fb360879b
+Artifact identity：acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+Artifact SHA-256：2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41
+Retrieval ranking impact：NO
+Formal result impact：NO
+
+V3.1.2 没有修改 retrieval、ranking、ContextBuilder、graph、BM25、E5、Hybrid、RRF、Query、Ground Truth、Grade 或 Formal interpretation。
+
+==================================================
+9. 结论与下一步
+==================================================
+
+七项冻结工作已完成，版本状态是 IMPLEMENTATION COMPLETE / AWAITING FINAL QA。当前没有 tag，没有 push，不能标记 RELEASED。下一步是 DeepSeek V4.1 Flash Independent Final Release QA，随后才可进入 reviewed release commit、annotated tag、main sync、GitHub/Gitee push 与双远端验证。V3.2 保持 NOT STARTED。
+
+==================================================
+10. 素材来源与身份
+==================================================
+
+README：README.md
+Scope Freeze：docs/development/V3_1_2_Language_UX_Output_Quality_Scope.md
+Prompt Contract：docs/development/V3_1_2_Prompt_Output_Contract.md
+Markdown 论文素材：docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md
+Development Report：docs/development/Development_Report_V3_1_2.md
+Release Notes：docs/release/Release_Notes_V3_1_2.md
+Release commit：尚未形成
+Annotated tag：尚未创建

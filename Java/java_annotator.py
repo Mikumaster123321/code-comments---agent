@@ -127,7 +127,26 @@ def extract_existing_javadoc(lines: list, start_line: int, end_line: int) -> str
     return '\n'.join(cleaned).strip()
 
 
-def build_java_markdown_docs(doc_entries: list) -> str:
+_DOC_LABELS = {
+    "中文": {
+        "title": "Java API 文档", "toc": "目录", "class": "类", "method": "方法",
+        "empty": "暂无可生成文档的类或方法。",
+        "class_note": "类级文档；方法级详情保留在源代码中",
+    },
+    "English": {
+        "title": "Java API Documentation", "toc": "Table of Contents", "class": "Class", "method": "Method",
+        "empty": "No classes or methods are available for documentation.",
+        "class_note": "Class-level documentation; method-level details are in source code",
+    },
+    "日本語": {
+        "title": "Java API ドキュメント", "toc": "目次", "class": "クラス", "method": "メソッド",
+        "empty": "ドキュメント対象のクラスまたはメソッドはありません。",
+        "class_note": "クラスレベルのドキュメントです。メソッドの詳細はソースコードにあります",
+    },
+}
+
+
+def build_java_markdown_docs(doc_entries: list, presentation_lang: str = "English") -> str:
     """生成 Java API Markdown 文档（顶部带目录 TOC + 每个条目锚点）
 
     Args:
@@ -136,7 +155,8 @@ def build_java_markdown_docs(doc_entries: list) -> str:
     Returns:
         str: Markdown 格式的 Java API 文档（含 TOC 和锚点）
     """
-    md = "# Java API Documentation\n\n"
+    labels = _DOC_LABELS.get(presentation_lang, _DOC_LABELS["English"])
+    md = f"# {labels['title']}\n\n"
     used_ids: set[str] = set()
     for entry in doc_entries:
         slug_id = entry.get("slug_id")
@@ -147,22 +167,24 @@ def build_java_markdown_docs(doc_entries: list) -> str:
             entry["slug_id"] = _slugify(entry["name"], prefix=prefix, used=used_ids)
 
     if doc_entries:
-        md += "## 📑 Table of Contents\n\n"
+        md += f"## 📑 {labels['toc']}\n\n"
         for entry in doc_entries:
-            t = "Class" if entry["type"] == "class" else "Method"
+            t = labels["class"] if entry["type"] == "class" else labels["method"]
             icon = "🧩" if entry["type"] == "class" else "🔧"
             line = f"  *L{entry.get('lineno', '?')}*"
             md += f"- {icon} [`{entry['name']}` ({t})](#{entry['slug_id']}) — {line}\n"
         md += "\n---\n\n"
 
     for entry in doc_entries:
-        type_label = "Class" if entry["type"] == "class" else "Method"
+        type_label = labels["class"] if entry["type"] == "class" else labels["method"]
         icon = "🧩" if entry["type"] == "class" else "🔧"
         line = f"L{entry.get('lineno', '?')}"
         md += f"## {icon} {entry['name']} ({type_label}) — {line} <a id=\"{entry['slug_id']}\"></a>\n\n"
         md += f"```java\n{entry['code']}\n```\n\n"
         md += f"{entry['docstring']}\n\n"
         if entry["type"] == "class":
-            md += "*(Class-level documentation; method-level details are in source code)*\n\n"
+            md += f"*({labels['class_note']})*\n\n"
         md += "---\n\n"
+    if not doc_entries:
+        md += f"> {labels['empty']}\n"
     return md

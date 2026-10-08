@@ -1,5 +1,7 @@
 # V3.1.2 Language / UX / Output Quality Scope Freeze
 
+发布门禁：V3.1.2 RELEASE_CANDIDATE
+
 ## 1. Authority and status
 
 - Version: `3.1.2`

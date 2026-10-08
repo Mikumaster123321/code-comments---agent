@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified, read-only-by-default developer workflow commands for V3.1.1."""
+"""Unified, read-only-by-default developer workflow commands for V3.1.2."""
 
 from __future__ import annotations
 
@@ -23,9 +23,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-BASELINE_VERSION = "3.1.0"
-BASELINE_RELEASE_COMMIT = "8813e4c2fb0dc07f38c2013d520441bf399dcbc4"
-BASELINE_TAG = "v3.1.0"
+BASELINE_VERSION = "3.1.1"
+BASELINE_RELEASE_COMMIT = "683479da2fd3b72c17cba3f03101bc23e275f40b"
+BASELINE_TAG = "v3.1.1"
 FORMAL_EXECUTION_REVISION = "2749969cd3a2d4d6e1e8d81160eebd5fb360879b"
 FORMAL_ARCHIVE_COMMIT = "c3ee6ec1b7aa28c2539d2fe849d1f25268807677"
 FORMAL_ARTIFACT_PATH = (
@@ -993,7 +993,7 @@ def release_check(
             f"release document: {relative_path}",
             "existing tracked file",
             "missing",
-            "create and review the required V3.1.1 release document",
+            f"create and review the required V{version} release document",
         )
         content = path.read_text(encoding="utf-8")
         _require(
@@ -1005,11 +1005,11 @@ def release_check(
         )
     readme = (root / "README.md").read_text(encoding="utf-8")
     _require(
-        "### V3.1.1" in readme,
+        f"### V{version}" in readme,
         "README Version History",
-        "a V3.1.1 version-history heading",
+        f"a V{version} version-history heading",
         "missing",
-        "add the concise V3.1.1 maintenance release entry",
+        f"add the concise V{version} maintenance release entry",
     )
     baseline = state["baseline"]
     _require(
@@ -1023,7 +1023,7 @@ def release_check(
     baseline_target = _git_output(["rev-parse", f"{BASELINE_TAG}^{{}}"], root=root)
     _require(
         baseline_target == BASELINE_RELEASE_COMMIT,
-        "V3.1.0 baseline tag target",
+        f"V{BASELINE_VERSION} baseline tag target",
         BASELINE_RELEASE_COMMIT,
         baseline_target,
         "do not overwrite the released tag; investigate repository history",

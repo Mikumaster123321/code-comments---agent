@@ -46,7 +46,7 @@ from Py.analyzer import analyze_code_quality, check_type_annotations
 from code_maintenance import JavaAdapter, PythonAdapter, SourceFile, Symbol, SymbolId
 from config import MAX_WORKERS
 from config import get_active_llm_provider
-from i18n import LANG_CODE, needs_translation
+from i18n import LANG_CODE, needs_translation, t, user_error_message
 from llm_provider import LLMProvider
 
 
@@ -108,6 +108,18 @@ def _progress_emit(log_lines: list[str], final_5tuple: Optional[tuple]) -> tuple
         # 这里用特殊占位：annotated/md/md_path/src_path 都不覆盖，由 UI 保留最近值
         return None, None, log_text, None, None
     return final_5tuple
+
+
+def _public_error_code(error: BaseException, default: str = "PROVIDER_FAILURE") -> str:
+    """Map an exception to a stable UI-safe code without exposing its message."""
+    name = type(error).__name__
+    if name == "LLMOutputError":
+        return "EMPTY_RESPONSE"
+    if name in {"TimeoutError", "APITimeoutError"}:
+        return "TIMEOUT"
+    if name == "RateLimitError":
+        return "RATE_LIMIT"
+    return default
 
 
 def _shutdown_executor_safe(executor: ThreadPoolExecutor, futures_map: Optional[dict[Future, object]] = None) -> None:
@@ -245,6 +257,7 @@ def _process_python(
     python_style: Optional[str] = None,
     relative_path: Optional[str] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ):
     """Python 代码处理流程：解析 → 并发生成 docstring → 串行插入
 
@@ -267,6 +280,7 @@ def _process_python(
     log = []
     annotated_code = source_code
     doc_entries = []
+    errors: dict[SymbolId, Exception] = {}
 
     # 增量更新模式：跳过已有 docstring 的函数，但需翻译非目标语言的注释
     to_process = []
@@ -299,14 +313,15 @@ def _process_python(
             try:
                 existing = ast.get_docstring(item["node"])
                 translated = translate_docstring(
-                    existing, comment_lang, python_style, llm_provider
+                    existing, comment_lang, python_style, llm_provider,
+                    rewrite_style=rewrite_existing,
                 )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, translated)
                 log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
             except Exception as e:
-                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                log.append(f"✗ {item['name']} [{_public_error_code(e)}]")
                 if existing:
                     item["docstring"] = existing
                     doc_entries.append(item)
@@ -318,8 +333,6 @@ def _process_python(
         t0 = time.time()
 
         results: dict[SymbolId, str] = {}
-        errors: dict[SymbolId, Exception] = {}
-
         def _gen(item):
             """线程任务：调用 LLM 生成 docstring"""
             try:
@@ -337,7 +350,7 @@ def _process_python(
                 name = symbol_lookup[symbol_id].name
                 if err:
                     errors[symbol_id] = err
-                    log.append(f"✗ {name} 生成失败: {err}")
+                    log.append(f"✗ {name} [{_public_error_code(err)}]")
                 else:
                     results[symbol_id] = doc
                     log.append(f"✓ {name} 生成完成")
@@ -356,7 +369,12 @@ def _process_python(
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, doc)
             except SyntaxError as e:
-                log.append(f"✗ {item['name']} 插入失败: {e}")
+                log.append(f"✗ {item['name']} [INVALID_GENERATED_DOCUMENTATION]")
+
+    if errors and not doc_entries:
+        code = next((_public_error_code(error) for error in errors.values()), "PROVIDER_FAILURE")
+        message = user_error_message(code, comment_lang)
+        return "", message, "\n".join(log + [message]), None, None
 
     doc_entries.sort(key=lambda x: x["lineno"])
     # 刷新 doc_entries 中的 code 字段：用最终 annotated_code 重新提取，
@@ -367,7 +385,7 @@ def _process_python(
         )
     except Exception:
         pass
-    markdown_doc = build_markdown_docs(doc_entries)
+    markdown_doc = build_markdown_docs(doc_entries, presentation_lang=comment_lang)
 
     if annotated_code and not annotated_code.startswith('# -*- coding:'):
         annotated_code = '# -*- coding: utf-8 -*-\n' + annotated_code
@@ -391,6 +409,7 @@ def _process_python_with_progress(
     cancel_token: Optional[CancelToken] = None,
     relative_path: Optional[str] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ) -> Iterator[tuple]:
     """Python 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -426,6 +445,7 @@ def _process_python_with_progress(
 
     annotated_code = source_code
     doc_entries: list[dict] = []
+    errors: dict[SymbolId, Exception] = {}
 
     to_process: list[dict] = []
     to_translate: list[dict] = []
@@ -459,14 +479,15 @@ def _process_python_with_progress(
             try:
                 existing = ast.get_docstring(item["node"])
                 translated = translate_docstring(
-                    existing, comment_lang, python_style, llm_provider
+                    existing, comment_lang, python_style, llm_provider,
+                    rewrite_style=rewrite_existing,
                 )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_docstring_into_code(annotated_code, item, translated)
                 log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
             except Exception as e:
-                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                log.append(f"✗ {item['name']} [{_public_error_code(e)}]")
                 if existing:
                     item["docstring"] = existing
                     doc_entries.append(item)
@@ -486,8 +507,6 @@ def _process_python_with_progress(
             t0 = time.time()
 
             results: dict[SymbolId, str] = {}
-            errors: dict[SymbolId, Exception] = {}
-
             def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
                     doc = generate_docstring(
@@ -522,7 +541,7 @@ def _process_python_with_progress(
                     done_count += 1
                     if err:
                         errors[symbol_id] = err
-                        log.append(f"✗ {name} 生成失败: {err}")
+                        log.append(f"✗ {name} [{_public_error_code(err)}]")
                     else:
                         results[symbol_id] = doc
                         log.append(f"✓ {name} 生成完成")
@@ -549,11 +568,17 @@ def _process_python_with_progress(
                     annotated_code = insert_docstring_into_code(annotated_code, item, doc)
                     log.append(f"↳ {item['name']} 注释已插入")
                 except SyntaxError as e:
-                    log.append(f"✗ {item['name']} 插入失败: {e}")
+                    log.append(f"✗ {item['name']} [INVALID_GENERATED_DOCUMENTATION]")
                 yield _progress_emit(log, None)
 
     if cancel_token.is_canceled():
         log.append("⚠️ 任务已取消")
+
+    if errors and not doc_entries:
+        code = next((_public_error_code(error) for error in errors.values()), "PROVIDER_FAILURE")
+        message = user_error_message(code, comment_lang)
+        yield "", message, "\n".join(log + [message]), None, None
+        return
 
     # 阶段 85-95%：构建 Markdown + 刷新 code
     doc_entries.sort(key=lambda x: x["lineno"])
@@ -563,7 +588,7 @@ def _process_python_with_progress(
         )
     except Exception:
         pass
-    markdown_doc = build_markdown_docs(doc_entries)
+    markdown_doc = build_markdown_docs(doc_entries, presentation_lang=comment_lang)
 
     if annotated_code and not annotated_code.startswith('# -*- coding:'):
         annotated_code = '# -*- coding: utf-8 -*-\n' + annotated_code
@@ -590,6 +615,7 @@ def _process_java(
     java_style: Optional[str] = None,
     relative_path: Optional[str] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ):
     """Java 代码处理流程：解析 → 并发生成 Javadoc → 串行插入
 
@@ -612,6 +638,7 @@ def _process_java(
     log = []
     annotated_code = source_code
     doc_entries = []
+    errors: dict[SymbolId, Exception] = {}
     source_lines = source_code.splitlines()
 
     # 增量更新模式：跳过已有 Javadoc 的方法，但需翻译非目标语言的注释
@@ -653,14 +680,15 @@ def _process_java(
                     source_lines, existing_range[0], existing_range[1]
                 )
                 translated = translate_javadoc(
-                    existing_text, comment_lang, java_style, llm_provider
+                    existing_text, comment_lang, java_style, llm_provider,
+                    rewrite_style=rewrite_existing,
                 )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
                 log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
             except Exception as e:
-                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                log.append(f"✗ {item['name']} [{_public_error_code(e)}]")
                 if existing_text:
                     item["docstring"] = existing_text
                     doc_entries.append(item)
@@ -672,8 +700,6 @@ def _process_java(
         t0 = time.time()
 
         results: dict[SymbolId, str] = {}
-        errors: dict[SymbolId, Exception] = {}
-
         def _gen(item):
             """线程任务：调用 LLM 生成 Javadoc"""
             try:
@@ -691,7 +717,7 @@ def _process_java(
                 name = symbol_lookup[symbol_id].name
                 if err:
                     errors[symbol_id] = err
-                    log.append(f"✗ {name} 生成失败: {err}")
+                    log.append(f"✗ {name} [{_public_error_code(err)}]")
                 else:
                     results[symbol_id] = doc
                     log.append(f"✓ {name} 生成完成")
@@ -710,7 +736,12 @@ def _process_java(
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, doc)
             except SyntaxError as e:
-                log.append(f"✗ {item['name']} 插入失败: {e}")
+                log.append(f"✗ {item['name']} [INVALID_GENERATED_DOCUMENTATION]")
+
+    if errors and not doc_entries:
+        code = next((_public_error_code(error) for error in errors.values()), "PROVIDER_FAILURE")
+        message = user_error_message(code, comment_lang)
+        return "", message, "\n".join(log + [message]), None, None
 
     doc_entries.sort(key=lambda x: x["lineno"])
     # 刷新 doc_entries 中的 code 字段：用最终 annotated_code 重新提取，
@@ -721,7 +752,7 @@ def _process_java(
         )
     except Exception:
         pass
-    markdown_doc = build_java_markdown_docs(doc_entries)
+    markdown_doc = build_java_markdown_docs(doc_entries, presentation_lang=comment_lang)
 
     # v2.3.4：注释插入后语法二次校验（大括号 + 可选 javac）
     _verify_java_annotated_code(annotated_code, log)
@@ -745,6 +776,7 @@ def _process_java_with_progress(
     cancel_token: Optional[CancelToken] = None,
     relative_path: Optional[str] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ) -> Iterator[tuple]:
     """Java 代码处理流程（生成器版，带实时进度 & 取消）
 
@@ -775,6 +807,7 @@ def _process_java_with_progress(
 
     annotated_code = source_code
     doc_entries: list[dict] = []
+    errors: dict[SymbolId, Exception] = {}
     source_lines = source_code.splitlines()
 
     to_process: list[dict] = []
@@ -816,14 +849,15 @@ def _process_java_with_progress(
                     source_lines, existing_range[0], existing_range[1]
                 )
                 translated = translate_javadoc(
-                    existing_text, comment_lang, java_style, llm_provider
+                    existing_text, comment_lang, java_style, llm_provider,
+                    rewrite_style=rewrite_existing,
                 )
                 item["docstring"] = translated
                 doc_entries.append(item)
                 annotated_code = insert_javadoc_into_code(annotated_code, item, translated)
                 log.append(f"✓ {item['name']} 注释已翻译为 {comment_lang}")
             except Exception as e:
-                log.append(f"✗ {item['name']} 翻译失败: {e}")
+                log.append(f"✗ {item['name']} [{_public_error_code(e)}]")
                 if existing_text:
                     item["docstring"] = existing_text
                     doc_entries.append(item)
@@ -842,8 +876,6 @@ def _process_java_with_progress(
             t0 = time.time()
 
             results: dict[SymbolId, str] = {}
-            errors: dict[SymbolId, Exception] = {}
-
             def _gen(item: dict) -> tuple[SymbolId, Optional[str], Optional[Exception]]:
                 try:
                     doc = generate_javadoc(
@@ -873,7 +905,7 @@ def _process_java_with_progress(
                     name = symbol_lookup[symbol_id].name
                     if err:
                         errors[symbol_id] = err
-                        log.append(f"✗ {name} 生成失败: {err}")
+                        log.append(f"✗ {name} [{_public_error_code(err)}]")
                     else:
                         results[symbol_id] = doc
                         log.append(f"✓ {name} 生成完成")
@@ -900,11 +932,17 @@ def _process_java_with_progress(
                     annotated_code = insert_javadoc_into_code(annotated_code, item, doc)
                     log.append(f"↳ {item['name']} Javadoc 已插入")
                 except SyntaxError as e:
-                    log.append(f"✗ {item['name']} 插入失败: {e}")
+                    log.append(f"✗ {item['name']} [INVALID_GENERATED_DOCUMENTATION]")
                 yield _progress_emit(log, None)
 
     if cancel_token.is_canceled():
         log.append("⚠️ 任务已取消")
+
+    if errors and not doc_entries:
+        code = next((_public_error_code(error) for error in errors.values()), "PROVIDER_FAILURE")
+        message = user_error_message(code, comment_lang)
+        yield "", message, "\n".join(log + [message]), None, None
+        return
 
     # 阶段 85-95%：构建 Markdown
     doc_entries.sort(key=lambda x: x["lineno"])
@@ -914,7 +952,7 @@ def _process_java_with_progress(
         )
     except Exception:
         pass
-    markdown_doc = build_java_markdown_docs(doc_entries)
+    markdown_doc = build_java_markdown_docs(doc_entries, presentation_lang=comment_lang)
 
     # v2.3.4：注释插入后语法二次校验（大括号 + 可选 javac），并 yield 一次进度
     _verify_java_annotated_code(annotated_code, log)
@@ -936,7 +974,8 @@ def _process_java_with_progress(
 def process_code(source_code: str, incremental: bool = False, language: str = "Python",
                  comment_lang: str = "中文", python_style: Optional[str] = None,
                  java_style: Optional[str] = None, relative_path: Optional[str] = None,
-                 llm_provider: Optional[LLMProvider] = None):
+                 llm_provider: Optional[LLMProvider] = None,
+                 rewrite_existing: bool = True):
     """主处理函数，返回注释后的代码、文档、日志、.md 下载路径、源码下载路径
 
     Args:
@@ -950,23 +989,19 @@ def process_code(source_code: str, incremental: bool = False, language: str = "P
     Returns:
         tuple: (annotated_code, markdown_doc, log_text, md_path, src_path)
     """
-    if not source_code or not source_code.strip():
-        return "", "未输入代码", "日志：无处理对象。", None, None
-
-    # 代码有效性验证
-    if language == "Python" and not _is_valid_python(source_code):
-        return source_code, "代码无效，无法生成注释。", "日志：代码无效（语法解析失败），请检查输入。", None, None
-    if language == "Java" and not _is_valid_java(source_code):
-        return source_code, "代码无效，无法生成注释。", "日志：代码无效（非有效 Java 代码），请检查输入。", None, None
+    error_code = validate_local_input(source_code, language)
+    if error_code:
+        message = user_error_message(error_code, comment_lang)
+        return "", message, message, None, None
 
     if language == "Java":
         return _process_java(
             source_code, incremental, comment_lang, java_style, relative_path,
-            llm_provider or get_active_llm_provider(),
+            llm_provider or get_active_llm_provider(), rewrite_existing,
         )
     return _process_python(
         source_code, incremental, comment_lang, python_style, relative_path,
-        llm_provider or get_active_llm_provider(),
+        llm_provider or get_active_llm_provider(), rewrite_existing,
     )
 
 
@@ -981,6 +1016,7 @@ def process_code_with_progress(
     progress_cb: Optional[Callable[[float, str], None]] = None,
     relative_path: Optional[str] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ) -> Iterator[tuple]:
     """主处理函数（生成器版，带实时进度 + gr.Progress）
 
@@ -996,25 +1032,10 @@ def process_code_with_progress(
     cancel_token = cancel_token or CancelToken()
 
     # 1. 边界：空代码 / 无效代码直接返回（快速路径，不 yield 中间态）
-    if not source_code or not source_code.strip():
-        yield "", "未输入代码", "日志：无处理对象。", None, None
-        return
-
-    if language == "Python" and not _is_valid_python(source_code):
-        yield (
-            source_code,
-            "代码无效，无法生成注释。",
-            "日志：代码无效（语法解析失败），请检查输入。",
-            None, None,
-        )
-        return
-    if language == "Java" and not _is_valid_java(source_code):
-        yield (
-            source_code,
-            "代码无效，无法生成注释。",
-            "日志：代码无效（非有效 Java 代码），请检查输入。",
-            None, None,
-        )
+    error_code = validate_local_input(source_code, language)
+    if error_code:
+        message = user_error_message(error_code, comment_lang)
+        yield "", message, message, None, None
         return
 
     if progress_cb is not None:
@@ -1028,12 +1049,12 @@ def process_code_with_progress(
     inner = (
         _process_java_with_progress(
             source_code, incremental, comment_lang, java_style, cancel_token,
-            relative_path, task_provider,
+            relative_path, task_provider, rewrite_existing,
         )
         if language == "Java"
         else _process_python_with_progress(
             source_code, incremental, comment_lang, python_style, cancel_token,
-            relative_path, task_provider,
+            relative_path, task_provider, rewrite_existing,
         )
     )
 
@@ -1167,6 +1188,19 @@ def _is_valid_java(source_code: str) -> bool:
     return True
 
 
+def validate_local_input(source_code: str, language: str = "Python") -> Optional[str]:
+    """Return a stable local error code, or ``None`` when provider checks may run."""
+    if not source_code or not source_code.strip():
+        return "EMPTY_INPUT"
+    if language not in {"Python", "Java"}:
+        return "UNSUPPORTED_LANGUAGE"
+    if language == "Python" and not _is_valid_python(source_code):
+        return "INVALID_PYTHON"
+    if language == "Java" and not _is_valid_java(source_code):
+        return "INVALID_JAVA"
+    return None
+
+
 def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
     """Java 注释插入后的语法二次校验（v2.3.4 修复测试报告潜在问题）
 
@@ -1184,7 +1218,7 @@ def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
         _validate_braces(annotated_code)
         log.append("✓ 注释后大括号匹配校验通过")
     except SyntaxError as e:
-        log.append(f"⚠️ 注释后大括号匹配失败: {e}（建议检查源码）")
+        log.append("⚠️ [INVALID_JAVA] 注释后代码的大括号校验失败")
 
     # 2. javac 可选语法验证（仅在系统 PATH 中存在 javac 时调用）
     try:
@@ -1212,7 +1246,7 @@ def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
     except subprocess.TimeoutExpired:
         log.append("⚠️ javac 语法校验超时（15s），已跳过")
     except Exception as e:
-        log.append(f"⚠️ javac 语法校验异常: {e}")
+        log.append("⚠️ [JAVA_VALIDATION_UNAVAILABLE] javac 校验未完成")
     finally:
         try:
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -1372,6 +1406,7 @@ def style_lint(source_code: str, language: str = "Python", comment_lang: str = "
             "summary": f"共发现 **{{count}}** 个风格问题：",
             "by_tool": "（检查工具：{tool}）",
             "line": "行",
+            "rule": "规则", "description": "描述", "empty": "无代码可检查", "more": "还有 {count} 条未显示",
         },
         "English": {
             "title": "### 🛑 Code Style Check",
@@ -1379,6 +1414,7 @@ def style_lint(source_code: str, language: str = "Python", comment_lang: str = "
             "summary": f"Found **{{count}}** style issue(s):",
             "by_tool": "(Tool: {tool})",
             "line": "Line",
+            "rule": "Rule", "description": "Description", "empty": "No code to check", "more": "{count} more item(s) not shown",
         },
         "日本語": {
             "title": "### 🛑 コードスタイルチェック",
@@ -1386,12 +1422,13 @@ def style_lint(source_code: str, language: str = "Python", comment_lang: str = "
             "summary": f"**{{count}}** 件のスタイル問題を発見：",
             "by_tool": "（ツール: {tool}）",
             "line": "行",
+            "rule": "ルール", "description": "説明", "empty": "確認するコードがありません", "more": "ほか {count} 件は省略",
         },
     }
     L = tpl.get(comment_lang, tpl["中文"])
 
     if not source_code or not source_code.strip():
-        return f'{L["title"]}\n\nℹ️ 无代码可检查'
+        return f'{L["title"]}\n\nℹ️ {L["empty"]}'
 
     if language == "Java":
         issues = _lint_java_regex(source_code)
@@ -1413,16 +1450,32 @@ def style_lint(source_code: str, language: str = "Python", comment_lang: str = "
     lines_out = [L["title"], ""]
     lines_out.append(L["summary"].format(count=len(issues)) + L["by_tool"].format(tool=tool_name))
     lines_out.append("")
-    lines_out.append("| 规则 | " + L["line"] + " | 描述 | Rule | Line | Description |")
-    lines_out.append("|------|------|------|------|------|-------------|")
+    lines_out.append(f'| {L["rule"]} | {L["line"]} | {L["description"]} |')
+    lines_out.append("|------|------|-------------|")
+
+    descriptions = {
+        "English": {
+            "PYA001": "Line is too long", "PYA002": "Trailing whitespace", "PYA003": "Tab indentation",
+            "GJL001": "Line is too long", "GJL002": "Trailing whitespace", "GJL003": "Tab indentation",
+            "GJL004": "Missing space after comma/semicolon", "GJL005": "Missing space before brace",
+            "GJL006": "Too many consecutive blank lines", "GJL007": "Missing newline at end of file",
+        },
+        "日本語": {
+            "PYA001": "行が長すぎます", "PYA002": "行末の空白", "PYA003": "タブによるインデント",
+            "GJL001": "行が長すぎます", "GJL002": "行末の空白", "GJL003": "タブによるインデント",
+            "GJL004": "カンマ/セミコロン後の空白不足", "GJL005": "波括弧前の空白不足",
+            "GJL006": "連続する空行が多すぎます", "GJL007": "ファイル末尾の改行がありません",
+        },
+    }
 
     # 限制最多 50 条避免过长
     shown = issues[:50]
     for code, lineno, desc in shown:
-        lines_out.append(f"| `{code}` | {lineno} | {desc} | `{code}` | {lineno} | {desc} |")
+        localized_desc = descriptions.get(comment_lang, {}).get(code, desc)
+        lines_out.append(f"| `{code}` | {lineno} | {localized_desc} |")
 
     if len(issues) > 50:
-        lines_out.append(f"\n*... 还有 {len(issues) - 50} 条未显示*")
+        lines_out.append(f'\n*... {L["more"].format(count=len(issues) - 50)}*')
 
     return "\n".join(lines_out)
 
@@ -1461,8 +1514,8 @@ def _analyze_java(
         quality_report += "✅ 大括号匹配正常"
         log.append("✓ 大括号匹配正常")
     except SyntaxError as e:
-        quality_report += f"❌ {e}"
-        log.append(f"✗ 大括号校验失败: {e}")
+        quality_report += f"❌ {user_error_message('INVALID_JAVA', comment_lang)}"
+        log.append("✗ [INVALID_JAVA] 大括号校验失败")
 
     annotation_report = "### 🏷️ 类型注解检查\n\nJava 是静态类型语言，类型声明在编译期检查，无需额外分析。"
 
@@ -1472,16 +1525,17 @@ def _analyze_java(
         style_report = style_lint(source_code, language="Java", comment_lang=comment_lang)
         log.append("✓ 代码风格检查完成")
     except Exception as e:
-        style_report = f"### 🛑 代码风格检查\n\n检查失败: {e}"
-        log.append(f"✗ 代码风格检查失败: {e}")
+        style_report = user_error_message("PROVIDER_FAILURE", comment_lang)
+        log.append("✗ [STYLE_ANALYSIS_FAILED]")
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
         summary = generate_java_summary(source_code, comment_lang, llm_provider)
         log.append("✓ 摘要生成完成")
     except Exception as e:
-        summary = f"摘要生成失败: {e}"
-        log.append(f"✗ 摘要生成失败: {e}")
+        code = _public_error_code(e)
+        summary = user_error_message(code, comment_lang)
+        log.append(f"✗ [{code}] summary generation")
 
     return quality_report, annotation_report, summary, style_report, "\n".join(log)
 
@@ -1502,8 +1556,10 @@ def analyze_code(
     Returns:
         tuple: (quality_report, annotation_report, summary, style_report, log_text)
     """
-    if not source_code or not source_code.strip():
-        return "未输入代码", "未输入代码", "未输入代码", "未输入代码", "日志：无处理对象。"
+    local_error = validate_local_input(source_code, language)
+    if local_error:
+        message = user_error_message(local_error, comment_lang)
+        return message, message, message, message, message
 
     if language == "Java":
         return _analyze_java(
@@ -1512,33 +1568,23 @@ def analyze_code(
             llm_provider or get_active_llm_provider(),
         )
 
-    # Python 代码有效性验证
-    if not _is_valid_python(source_code):
-        return (
-            "### ❌ 代码无效\n\n输入的内容不是有效的 Python 代码，无法进行分析。\n\n请检查语法或粘贴正确的 Python 代码。",
-            "### ❌ 代码无效\n\n请输入有效的 Python 代码。",
-            "代码无效，跳过摘要生成。",
-            "### 🛑 代码风格检查\n\nℹ️ 代码无效，跳过风格检查",
-            "日志：代码无效（语法解析失败），分析前验证未通过。"
-        )
-
     task_provider = llm_provider or get_active_llm_provider()
     log = []
     log.append("=== 代码质量分析 ===")
     try:
-        quality_report = analyze_code_quality(source_code)
+        quality_report = analyze_code_quality(source_code, presentation_lang=comment_lang)
         log.append("✓ 质量分析完成")
     except Exception as e:
-        quality_report = f"分析失败: {e}"
-        log.append(f"✗ 质量分析失败: {e}")
+        quality_report = user_error_message("PROVIDER_FAILURE", comment_lang)
+        log.append(f"✗ quality analysis: {type(e).__name__}")
 
     log.append("=== 类型注解检查 ===")
     try:
-        annotation_report = check_type_annotations(source_code)
+        annotation_report = check_type_annotations(source_code, presentation_lang=comment_lang)
         log.append("✓ 类型注解检查完成")
     except Exception as e:
-        annotation_report = f"检查失败: {e}"
-        log.append(f"✗ 类型注解检查失败: {e}")
+        annotation_report = user_error_message("PROVIDER_FAILURE", comment_lang)
+        log.append(f"✗ annotation analysis: {type(e).__name__}")
 
     # v2.3.8 代码风格检查
     log.append("=== 代码风格检查 ===")
@@ -1546,8 +1592,8 @@ def analyze_code(
         style_report = style_lint(source_code, language="Python", comment_lang=comment_lang)
         log.append("✓ 代码风格检查完成")
     except Exception as e:
-        style_report = f"### 🛑 代码风格检查\n\n检查失败: {e}"
-        log.append(f"✗ 代码风格检查失败: {e}")
+        style_report = user_error_message("PROVIDER_FAILURE", comment_lang)
+        log.append(f"✗ style analysis: {type(e).__name__}")
 
     log.append("=== 代码摘要生成（调用 LLM）===")
     try:
@@ -1558,8 +1604,9 @@ def analyze_code(
         )
         log.append("✓ 摘要生成完成")
     except Exception as e:
-        summary = f"摘要生成失败: {e}"
-        log.append(f"✗ 摘要生成失败: {e}")
+        code = "EMPTY_RESPONSE" if type(e).__name__ == "LLMOutputError" else "PROVIDER_FAILURE"
+        summary = user_error_message(code, comment_lang)
+        log.append(f"✗ summary generation: {type(e).__name__}")
 
     return quality_report, annotation_report, summary, style_report, "\n".join(log)
 
@@ -1736,6 +1783,7 @@ def process_batch_files(
     java_style: Optional[str] = None,
     naming_strategy: str = NAMING_SUFFIX,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ) -> tuple[str, Optional[str]]:
     """批量处理上传的多个文件或 ZIP 压缩包
 
@@ -1777,7 +1825,7 @@ def process_batch_files(
         for item in raw_list:
             src_path = _resolve_upload_path(item)
             if not src_path or not os.path.isfile(src_path):
-                log.append(f"[跳过] 无法解析文件路径: {item!r}")
+                log.append("[FILE_PATH_INVALID] 跳过一个无法解析的上传项")
                 continue
             name = os.path.basename(src_path)
             ext = os.path.splitext(name)[1].lower()
@@ -1793,8 +1841,8 @@ def process_batch_files(
                     file_records.extend(collected)
                 except zipfile.BadZipFile:
                     log.append(f"[错误] {name} 不是有效的 zip 文件")
-                except Exception as e:
-                    log.append(f"[错误] 解压 {name} 失败: {e}")
+                except Exception:
+                    log.append(f"[ARCHIVE_READ_FAILED] 无法解压 {name}")
             elif ext in ALLOWED_SRC_EXTS:
                 # 单文件：先复制到 stage，延迟决定 rel_path（放到 nonzip_sources，之后根据公共父级决定）
                 staged = os.path.join(extract_stage, f"file_{idx:02d}_{name}")
@@ -1870,8 +1918,8 @@ def process_batch_files(
                 try:
                     with open(abs_path, "r", encoding="gbk") as f:
                         code = f.read()
-                except Exception as e:
-                    log.append(f"  ✗ 读取失败: {e}")
+                except Exception:
+                    log.append("  ✗ [FILE_READ_FAILED]")
                     fail += 1
                     continue
             language = "Java" if abs_path.lower().endswith(".java") else "Python"
@@ -1880,9 +1928,10 @@ def process_batch_files(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
                     llm_provider=task_provider,
+                    rewrite_existing=rewrite_existing,
                 )
-            except Exception as e:
-                log.append(f"  ✗ process_code 异常: {e}")
+            except Exception:
+                log.append("  ✗ [PROCESSING_FAILED]")
                 fail += 1
                 continue
             # 输出保持相对路径结构
@@ -1891,8 +1940,8 @@ def process_batch_files(
             try:
                 with open(out_file, "w", encoding="utf-8") as f:
                     f.write(annotated)
-            except Exception as e:
-                log.append(f"  ✗ 写出失败: {e}")
+            except Exception:
+                log.append("  ✗ [FILE_WRITE_FAILED]")
                 fail += 1
                 continue
             # 聚合 Markdown（按文件分节）
@@ -1914,8 +1963,8 @@ def process_batch_files(
         aggregate_md = "\n\n".join(aggregate_docs) if aggregate_docs else None
         try:
             zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md, naming_strategy)
-        except Exception as e:
-            log.append(f"[错误] 打包 zip 失败: {e}")
+        except Exception:
+            log.append("[PACKAGE_FAILED] 无法创建结果 ZIP")
             return "\n".join(log), None
         log.append(f"[完成] 结果已打包: {os.path.basename(zip_path)}")
         return "\n".join(log), zip_path
@@ -1937,6 +1986,7 @@ def process_batch_with_progress(
     cancel_token: Optional[CancelToken] = None,
     progress_cb: Optional[Callable[[float, str], None]] = None,
     llm_provider: Optional[LLMProvider] = None,
+    rewrite_existing: bool = True,
 ) -> Iterator[tuple[str, Optional[str]]]:
     """批量处理（生成器版，带实时进度 + 取消 + gr.Progress）
 
@@ -1976,7 +2026,7 @@ def process_batch_with_progress(
         for item in raw_list:
             src_path = _resolve_upload_path(item)
             if not src_path or not os.path.isfile(src_path):
-                log.append(f"[跳过] 无法解析文件路径: {item!r}")
+                log.append("[FILE_PATH_INVALID] 跳过一个无法解析的上传项")
                 continue
             name = os.path.basename(src_path)
             ext = os.path.splitext(name)[1].lower()
@@ -1992,8 +2042,8 @@ def process_batch_with_progress(
                     file_records.extend(collected)
                 except zipfile.BadZipFile:
                     log.append(f"[错误] {name} 不是有效的 zip 文件")
-                except Exception as e:
-                    log.append(f"[错误] 解压 {name} 失败: {e}")
+                except Exception:
+                    log.append(f"[ARCHIVE_READ_FAILED] 无法解压 {name}")
             elif ext in ALLOWED_SRC_EXTS:
                 staged = os.path.join(extract_stage, f"file_{idx:02d}_{name}")
                 idx += 1
@@ -2074,13 +2124,13 @@ def process_batch_with_progress(
                 try:
                     with open(abs_path, "r", encoding="gbk") as f:
                         code = f.read()
-                except Exception as e:
-                    log.append(f"  ✗ 读取失败: {e}")
+                except Exception:
+                    log.append("  ✗ [FILE_READ_FAILED]")
                     fail += 1
                     yield "\n".join(log), None
                     continue
-            except Exception as e:
-                log.append(f"  ✗ 读取失败: {e}")
+            except Exception:
+                log.append("  ✗ [FILE_READ_FAILED]")
                 fail += 1
                 yield "\n".join(log), None
                 continue
@@ -2090,9 +2140,10 @@ def process_batch_with_progress(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
                     llm_provider=task_provider,
+                    rewrite_existing=rewrite_existing,
                 )
-            except Exception as e:
-                log.append(f"  ✗ process_code 异常: {e}")
+            except Exception:
+                log.append("  ✗ [PROCESSING_FAILED]")
                 fail += 1
                 yield "\n".join(log), None
                 continue
@@ -2101,8 +2152,8 @@ def process_batch_with_progress(
                 os.makedirs(os.path.dirname(out_file), exist_ok=True)
                 with open(out_file, "w", encoding="utf-8") as f:
                     f.write(annotated)
-            except Exception as e:
-                log.append(f"  ✗ 写出失败: {e}")
+            except Exception:
+                log.append("  ✗ [FILE_WRITE_FAILED]")
                 fail += 1
                 yield "\n".join(log), None
                 continue
@@ -2134,8 +2185,8 @@ def process_batch_with_progress(
         aggregate_md = "\n\n".join(aggregate_docs) if aggregate_docs else None
         try:
             zip_path = _build_batch_zip(output_stage, "\n".join(log), aggregate_md, naming_strategy)
-        except Exception as e:
-            log.append(f"[错误] 打包 zip 失败: {e}")
+        except Exception:
+            log.append("[PACKAGE_FAILED] 无法创建结果 ZIP")
             yield "\n".join(log), None
             return
         log.append(f"[完成] 结果已打包: {os.path.basename(zip_path)}")
@@ -2157,7 +2208,12 @@ def _diff_lang_class(language: str) -> str:
     return "language-python" if language == "Python" else "language-java"
 
 
-def build_split_diff_html(original_code: str, annotated_code: str, language: str = "Python") -> str:
+def build_split_diff_html(
+    original_code: str,
+    annotated_code: str,
+    language: str = "Python",
+    presentation_lang: str = "中文",
+) -> str:
     """生成并排 Split Diff（GitHub 风格）HTML：左 Before / 右 After，新增行绿底，删除行红底。
 
     Args:
@@ -2168,8 +2224,14 @@ def build_split_diff_html(original_code: str, annotated_code: str, language: str
     Returns:
         str: 可直接交给 gr.HTML 渲染的完整 HTML 片段
     """
+    labels_by_lang = {
+        "中文": {"empty": "未输入代码，没有差异可展示。", "stats": "+{i} 插入 / -{d} 删除 / {e} 未变", "same": "未检测到代码差异", "title": "Diff 视图", "before": "注释前原始代码", "after": "注释后代码"},
+        "English": {"empty": "No code was provided; there is no diff to display.", "stats": "+{i} inserted / -{d} deleted / {e} unchanged", "same": "No code differences detected", "title": "Diff View", "before": "Before: original code", "after": "After: annotated code"},
+        "日本語": {"empty": "コードが入力されていないため、差分はありません。", "stats": "+{i} 追加 / -{d} 削除 / {e} 変更なし", "same": "コード差分はありません", "title": "差分ビュー", "before": "変更前：元のコード", "after": "変更後：コメント付きコード"},
+    }
+    labels = labels_by_lang.get(presentation_lang, labels_by_lang["中文"])
     if not original_code and not annotated_code:
-        return '<div class="diff-empty">未输入代码，没有差异可展示。</div>'
+        return f'<div class="diff-empty">{labels["empty"]}</div>'
 
     before_lines = original_code.splitlines(keepends=False) if original_code else []
     after_lines = annotated_code.splitlines(keepends=False) if annotated_code else []
@@ -2192,7 +2254,7 @@ def build_split_diff_html(original_code: str, annotated_code: str, language: str
             delete_count += (_i2 - _i1)
             insert_count += (_j2 - _j1)
 
-    diff_stats = f"+{insert_count} 插入 / -{delete_count} 删除 / {equal_count} 未变"
+    diff_stats = labels["stats"].format(i=insert_count, d=delete_count, e=equal_count)
 
     # 生成行
     before_no = 1
@@ -2268,7 +2330,7 @@ def build_split_diff_html(original_code: str, annotated_code: str, language: str
                     after_no += 1
 
     if insert_count == 0 and delete_count == 0:
-        diff_stats += "  ✅ 未检测到代码差异"
+        diff_stats += f"  ✅ {labels['same']}"
 
     rows_html = "\n".join(rows_html_parts)
 
@@ -2322,12 +2384,12 @@ def build_split_diff_html(original_code: str, annotated_code: str, language: str
     .diff-empty {{ padding: 20px; color: #57606a; text-align: center; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; }}
   </style>
   <div class="diff-header">
-    <div>🔍 Diff 视图（Before / After）</div>
+    <div>🔍 {labels['title']}（Before / After）</div>
     <div class="diff-stats">{diff_stats}</div>
   </div>
   <div class="diff-cols-head">
-    <div class="before">⬅ Before：注释前原始代码（{language}）</div>
-    <div class="after">➡ After：注释后代码（{language}）</div>
+    <div class="before">⬅ {labels['before']}（{language}）</div>
+    <div class="after">➡ {labels['after']}（{language}）</div>
   </div>
   <div class="diff-table-wrap">
     <table class="diff-table">
@@ -2587,36 +2649,49 @@ def preflight_check(
     """
     ui_lang_key = ui_lang if ui_lang in _I18N_PREFLIGHT else "中文"
     tpl = _I18N_PREFLIGHT[ui_lang_key]
-    task_provider = llm_provider or get_active_llm_provider()
+    # —— A. 本地验证必须先于 provider 构造、ping 或其他网络行为 ——
+    local_error = validate_local_input(source_code, language)
+    if local_error:
+        pf_md = f"**{tpl['failed']}**\n\n> {user_error_message(local_error, ui_lang_key)}"
+        est_md = f"> {tpl['no_code']}" if local_error == "EMPTY_INPUT" else ""
+        return False, pf_md, est_md
 
-    # —— A. API Key 预检（do_ping=True 时才调用网络）——
-    if do_ping:
-        ok, msg = ping_api_key(provider=task_provider)
-    else:
-        ok, msg = True, ""
-    if not msg:
-        pf_md = f"**{tpl['ok']}**"
-    else:
-        if ok:
-            pf_md = f"**{tpl['ok']}** — _{msg}_"
-        else:
-            pf_md = f"**{tpl['failed']}**\n\n> {msg}"
-
-    # —— B. 代码分析 + 估算（无代码 / 语法异常 / 0 条目 → 快速返回）——
-    if not source_code:
-        est_md = f"> {tpl['no_code']}"
-        return ok, pf_md, est_md
     try:
         if language == "Java":
             items = get_java_functions(source_code)
         else:
             items = get_defined_functions(source_code)
     except Exception:
-        items = []
+        local_error = "INVALID_JAVA" if language == "Java" else "INVALID_PYTHON"
+        pf_md = f"**{tpl['failed']}**\n\n> {user_error_message(local_error, ui_lang_key)}"
+        return False, pf_md, ""
     n_items = len(items)
     if n_items <= 0:
         est_md = f"> {tpl['no_items']}"
-        return ok, pf_md, est_md
+        return True, f"**{tpl['ok']}**", est_md
+
+    # —— B. 仅对确实需要 LLM 的有效输入执行 provider ping ——
+    task_provider = llm_provider or get_active_llm_provider()
+    if do_ping:
+        ok, raw_message = ping_api_key(provider=task_provider)
+        if ok:
+            pf_md = f"**{t('provider_connectivity_verified', ui_lang_key)}**"
+        else:
+            lowered = (raw_message or "").lower()
+            if "401" in lowered or "auth" in lowered or "api key" in lowered:
+                error_code = "AUTHENTICATION"
+            elif "rate" in lowered or "429" in lowered:
+                error_code = "RATE_LIMIT"
+            elif "timeout" in lowered or "timed out" in lowered:
+                error_code = "TIMEOUT"
+            else:
+                error_code = "PROVIDER_FAILURE"
+            pf_md = f"**{tpl['failed']}**\n\n> {user_error_message(error_code, ui_lang_key)}"
+    else:
+        ok = True
+        pf_md = f"**{tpl['ok']}**"
+
+    # —— C. 代码分析 + 估算 ——
     n_funcs = sum(1 for x in items if x.get("type") != "class")
     n_classes = sum(1 for x in items if x.get("type") == "class")
     total_tok, in_tok, out_tok, cost = estimate_tokens_cost(
@@ -2681,8 +2756,8 @@ def save_workspace(data: dict, path: Optional[str] = None) -> tuple[bool, str]:
             _json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp_out, path)  # 原子替换
         return True, f"✅ 会话已保存（{len(filtered)} 项 → {os.path.basename(path)}）"
-    except Exception as e:
-        return False, f"❌ 保存失败：{type(e).__name__}: {e}"
+    except Exception:
+        return False, "❌ [WORKSPACE_SAVE_FAILED] 工作区保存失败，请重试。"
 
 
 def load_workspace(path: Optional[str] = None) -> tuple[bool, str, dict]:
@@ -2702,8 +2777,8 @@ def load_workspace(path: Optional[str] = None) -> tuple[bool, str, dict]:
         return False, "❌ 会话文件编码错误", {}
     except _json.JSONDecodeError:
         return False, "❌ 会话文件已损坏（JSON 解析失败）", {}
-    except Exception as e:
-        return False, f"❌ 恢复失败：{type(e).__name__}: {e}", {}
+    except Exception:
+        return False, "❌ [WORKSPACE_RESTORE_FAILED] 工作区恢复失败，请重新保存。", {}
 
 
 def clear_workspace(path: Optional[str] = None) -> tuple[bool, str]:
@@ -2713,5 +2788,5 @@ def clear_workspace(path: Optional[str] = None) -> tuple[bool, str]:
             os.remove(path)
             return True, "✅ 已清除已保存的会话"
         return True, "ℹ️ 会话文件不存在，无需清除"
-    except Exception as e:
-        return False, f"❌ 清除失败：{type(e).__name__}: {e}"
+    except Exception:
+        return False, "❌ [WORKSPACE_CLEAR_FAILED] 工作区清除失败，请重试。"

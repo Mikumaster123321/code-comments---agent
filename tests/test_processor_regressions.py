@@ -78,7 +78,7 @@ class Second:
         lambda item, *_args: f"Documentation for {item['qualified_name']}",
     )
 
-    _, markdown, _ = _cleanup_result(processor.process_code(source))
+    _, markdown, _ = _cleanup_result(processor.process_code(source, comment_lang="English"))
     method_sections = _markdown_sections(markdown, "## 🔧 run (Function)")
 
     assert len(method_sections) == 2
@@ -106,7 +106,7 @@ class Example {
     monkeypatch.setattr(processor, "generate_javadoc", generate)
 
     annotated, markdown, _ = _cleanup_result(
-        processor.process_code(source, language="Java")
+        processor.process_code(source, language="Java", comment_lang="English")
     )
     method_sections = _markdown_sections(markdown, "## 🔧 foo (Method)")
 
@@ -130,7 +130,7 @@ def test_single_line_java_overload_results_do_not_collide(monkeypatch):
     )
 
     annotated, markdown, _ = _cleanup_result(
-        processor.process_code(source, language="Java")
+        processor.process_code(source, language="Java", comment_lang="English")
     )
     method_sections = _markdown_sections(markdown, "## 🔧 foo (Method)")
 

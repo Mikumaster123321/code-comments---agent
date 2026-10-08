@@ -18,6 +18,56 @@ LANG_NAME = {
     "日本語": "Japanese",
 }
 
+# V3.1.2: stable user-facing failures.  Messages intentionally never interpolate
+# provider payloads, exception text, secrets, or filesystem paths.
+USER_ERROR_MESSAGES = {
+    "EMPTY_INPUT": {
+        "中文": "请输入代码后再试；此问题无需重试网络连接。",
+        "English": "Enter code and try again; no network retry is needed.",
+        "日本語": "コードを入力して再試行してください。ネットワークの再試行は不要です。",
+    },
+    "INVALID_PYTHON": {
+        "中文": "Python 代码无法解析。请修正语法后重试。",
+        "English": "The Python code could not be parsed. Fix the syntax and try again.",
+        "日本語": "Python コードを解析できません。構文を修正して再試行してください。",
+    },
+    "INVALID_JAVA": {
+        "中文": "Java 代码无法解析。请检查声明和大括号后重试。",
+        "English": "The Java code could not be parsed. Check declarations and braces, then try again.",
+        "日本語": "Java コードを解析できません。宣言と波括弧を確認して再試行してください。",
+    },
+    "UNSUPPORTED_LANGUAGE": {
+        "中文": "不支持所选编程语言。请选择 Python 或 Java。",
+        "English": "The selected programming language is not supported. Choose Python or Java.",
+        "日本語": "選択したプログラミング言語は未対応です。Python または Java を選択してください。",
+    },
+    "AUTHENTICATION": {
+        "中文": "Provider 身份验证失败。请检查 API Key 来源和权限后重试。",
+        "English": "Provider authentication failed. Check the API key source and permissions, then retry.",
+        "日本語": "プロバイダー認証に失敗しました。API Key の取得元と権限を確認して再試行してください。",
+    },
+    "RATE_LIMIT": {
+        "中文": "Provider 当前限流。请稍后重试。",
+        "English": "The provider is rate limiting requests. Retry later.",
+        "日本語": "プロバイダーのレート制限中です。時間をおいて再試行してください。",
+    },
+    "TIMEOUT": {
+        "中文": "Provider 连接超时。请检查网络或 Base URL 后重试。",
+        "English": "The provider connection timed out. Check the network or Base URL, then retry.",
+        "日本語": "プロバイダー接続がタイムアウトしました。ネットワークまたは Base URL を確認して再試行してください。",
+    },
+    "EMPTY_RESPONSE": {
+        "中文": "模型返回了空或不安全的内容。可重试；若持续发生，请更换模型。",
+        "English": "The model returned empty or unsafe content. Retry, or choose another model if it persists.",
+        "日本語": "モデルが空または安全でない内容を返しました。再試行し、続く場合は別のモデルを選択してください。",
+    },
+    "PROVIDER_FAILURE": {
+        "中文": "Provider 请求失败。请核对设置并重试；详细诊断仅保留在开发端。",
+        "English": "The provider request failed. Check the settings and retry; diagnostics remain developer-side.",
+        "日本語": "プロバイダー要求に失敗しました。設定を確認して再試行してください。詳細診断は開発側にのみ保持されます。",
+    },
+}
+
 # ===== UI 文本翻译字典 =====
 TRANSLATIONS = {
     # 页面标题
@@ -42,6 +92,71 @@ TRANSLATIONS = {
         "中文": "🌐 界面语言",
         "English": "🌐 UI Language",
         "日本語": "🌐 言語",
+    },
+    "output_lang_label": {
+        "中文": "🗣️ 输出语言",
+        "English": "🗣️ Output Language",
+        "日本語": "🗣️ 出力言語",
+    },
+    "output_lang_help": {
+        "中文": "控制生成的注释、摘要和 API 文档语言；切换界面语言不会改变此值。",
+        "English": "Controls comments, summaries, and API docs. Changing the UI language does not change this value.",
+        "日本語": "コメント、要約、API ドキュメントの言語です。UI 言語を変更してもこの値は変わりません。",
+    },
+    "rewrite_existing_label": {
+        "中文": "将既有注释改写为所选风格（关闭时仅翻译）",
+        "English": "Rewrite existing comments to the selected style (off: translation only)",
+        "日本語": "既存コメントを選択スタイルに書き換える（オフ：翻訳のみ）",
+    },
+    "provider_advanced_label": {
+        "中文": "高级：Provider 与模型设置",
+        "English": "Advanced: Provider and model settings",
+        "日本語": "詳細：プロバイダーとモデル設定",
+    },
+    "provider_setup_help": {
+        "中文": "API Key：托管配置可选，BYOK/Custom 通常必填；留空时使用环境变量回退。Base URL 仅 Azure/Custom 需要，Azure 还需匹配部署名。应用设置不会验证连通性。",
+        "English": "API key: optional for managed configuration, usually required for BYOK/Custom; blank uses the environment fallback. Base URL is for Azure/Custom, and Azure also requires a matching deployment name. Applying settings does not verify connectivity.",
+        "日本語": "API Key：管理設定では任意、BYOK/Custom では通常必須です。空欄時は環境変数にフォールバックします。Base URL は Azure/Custom 用で、Azure では一致するデプロイ名も必要です。設定適用だけでは接続を検証しません。",
+    },
+    "provider_settings_applied": {
+        "中文": "✅ 设置已应用",
+        "English": "✅ Settings applied",
+        "日本語": "✅ 設定を適用しました",
+    },
+    "provider_connectivity_not_verified": {
+        "中文": "连接尚未验证；请运行预检。",
+        "English": "Connectivity not verified; run preflight.",
+        "日本語": "接続は未検証です。事前検証を実行してください。",
+    },
+    "provider_connectivity_verified": {
+        "中文": "✅ Provider 连接已验证",
+        "English": "✅ Provider Connectivity verified",
+        "日本語": "✅ プロバイダー接続を検証しました",
+    },
+    "status_idle": {
+        "中文": "**状态：Idle** — 输入代码后开始任务。",
+        "English": "**Status: Idle** — Enter code to start a task.",
+        "日本語": "**状態：Idle** — コードを入力してタスクを開始します。",
+    },
+    "status_running": {
+        "中文": "**状态：Running** — 正在处理当前任务。",
+        "English": "**Status: Running** — Processing the current task.",
+        "日本語": "**状態：Running** — 現在のタスクを処理中です。",
+    },
+    "status_success": {
+        "中文": "**状态：Success** — 当前任务已完成。",
+        "English": "**Status: Success** — The current task completed.",
+        "日本語": "**状態：Success** — 現在のタスクが完了しました。",
+    },
+    "status_failure": {
+        "中文": "**状态：Failure** — CURRENT RUN FAILED；已清理本轮输出。",
+        "English": "**Status: Failure** — CURRENT RUN FAILED; outputs from this run were cleared.",
+        "日本語": "**状態：Failure** — CURRENT RUN FAILED。今回の出力を消去しました。",
+    },
+    "empty_output": {
+        "中文": "尚无输出。运行生成任务后将在此显示结果。",
+        "English": "No output yet. Run generation to display a result here.",
+        "日本語": "出力はまだありません。生成を実行するとここに結果が表示されます。",
     },
     # 编程语言
     "prog_lang_label": {
@@ -379,6 +494,13 @@ def t(key: str, lang: str) -> str:
     if not entry:
         return key
     return entry.get(lang, entry.get("中文", key))
+
+
+def user_error_message(code: str, lang: str = "中文", _detail: str | None = None) -> str:
+    """Return a stable localized error without echoing untrusted diagnostics."""
+    language = lang if lang in LANGUAGES else "中文"
+    entry = USER_ERROR_MESSAGES.get(code, USER_ERROR_MESSAGES["PROVIDER_FAILURE"])
+    return f"[{code}] {entry[language]}"
 
 
 def needs_translation(text: str, target_lang: str) -> bool:

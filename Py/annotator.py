@@ -27,7 +27,26 @@ def _slugify(name: str, prefix: str = "", used: set | None = None) -> str:
     return final
 
 
-def build_markdown_docs(doc_entries: list) -> str:
+_DOC_LABELS = {
+    "中文": {
+        "title": "API 文档", "toc": "目录", "class": "类", "function": "函数",
+        "empty": "暂无可生成文档的函数或类。",
+        "class_note": "类级文档；方法级详情保留在源代码中",
+    },
+    "English": {
+        "title": "API Documentation", "toc": "Table of Contents", "class": "Class", "function": "Function",
+        "empty": "No functions or classes are available for documentation.",
+        "class_note": "Class-level documentation; method-level details are in source code",
+    },
+    "日本語": {
+        "title": "API ドキュメント", "toc": "目次", "class": "クラス", "function": "関数",
+        "empty": "ドキュメント対象の関数またはクラスはありません。",
+        "class_note": "クラスレベルのドキュメントです。メソッドの詳細はソースコードにあります",
+    },
+}
+
+
+def build_markdown_docs(doc_entries: list, presentation_lang: str = "English") -> str:
     """生成 Markdown API 文档（顶部带目录 TOC，每个条目有锚点）
 
     Args:
@@ -36,7 +55,8 @@ def build_markdown_docs(doc_entries: list) -> str:
     Returns:
         str: Markdown 格式的 API 文档（含 TOC 和锚点）
     """
-    md = "# API Documentation\n\n"
+    labels = _DOC_LABELS.get(presentation_lang, _DOC_LABELS["English"])
+    md = f"# {labels['title']}\n\n"
     used_ids: set[str] = set()
     # 1. 先遍历一遍，给每个条目分配唯一 slug_id
     for entry in doc_entries:
@@ -50,9 +70,9 @@ def build_markdown_docs(doc_entries: list) -> str:
     # 2. 顶部 Table of Contents 目录
     has_entries = bool(doc_entries)
     if has_entries:
-        md += "## 📑 Table of Contents\n\n"
+        md += f"## 📑 {labels['toc']}\n\n"
         for entry in doc_entries:
-            t = "Class" if entry["type"] == "class" else "Function"
+            t = labels["class"] if entry["type"] == "class" else labels["function"]
             icon = "🧩" if entry["type"] == "class" else "🔧"
             line = f"  *L{entry.get('lineno', '?')}*"
             md += f"- {icon} [`{entry['name']}` ({t})](#{entry['slug_id']}) — {line}\n"
@@ -60,15 +80,17 @@ def build_markdown_docs(doc_entries: list) -> str:
 
     # 3. 各条目详情（每个 heading 后追加 <a id="..."></a> 锚点）
     for entry in doc_entries:
-        type_label = "Class" if entry["type"] == "class" else "Function"
+        type_label = labels["class"] if entry["type"] == "class" else labels["function"]
         icon = "🧩" if entry["type"] == "class" else "🔧"
         line = f"L{entry.get('lineno', '?')}"
         md += f"## {icon} {entry['name']} ({type_label}) — {line} <a id=\"{entry['slug_id']}\"></a>\n\n"
         md += f"```python\n{entry['code']}\n```\n\n"
         md += f"{entry['docstring']}\n\n"
         if entry["type"] == "class":
-            md += "*(Class-level documentation; method-level details are in source code)*\n\n"
+            md += f"*({labels['class_note']})*\n\n"
         md += "---\n\n"
+    if not doc_entries:
+        md += f"> {labels['empty']}\n"
     return md
 
 
@@ -142,4 +164,3 @@ def insert_docstring_into_code(source: str, item: dict, docstring: str) -> str:
         raise SyntaxError(f"插入 docstring 后语法错误，已跳过: {item['name']}")
 
     return result
-
