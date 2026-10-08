@@ -1,14 +1,15 @@
 # V3.1.0 Release Notes
 
-**Status:** Release Candidate / Ready for DeepSeek Final Release QA
+**Status:** Released
 
 **Version:** `3.1.0`
 
 **Theme:** Project Intelligence / RAG
 
 V3.1.0 在现有项目维护核心、BYOK 与可选 Managed AI Access 之上增加项目级代码
-检索与上下文证据层，并完成冻结 Protocol 下的 Formal RQ1–RQ4 evaluation。本候选版
-尚未创建 release commit / tag，也未 push；本文档不构成 Final Release Gate。
+检索与上下文证据层，并完成冻结 Protocol 下的 Formal RQ1–RQ4 evaluation。正式
+release commit 为 `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag 为 `v3.1.0`；
+branch 与 tag 已 push 并完成 remote verification。
 
 ## Highlights
 
@@ -115,7 +116,7 @@ IMPORTS/REVERSE 0.5333/0.6617。
 
 ## Compatibility Notes
 
-- `code_maintenance.__version__` 候选值更新为 `3.1.0`。
+- `code_maintenance.__version__` 的正式发布值为 `3.1.0`。
 - V3.0.1 Gradio、BYOK、Managed Access、Credits、Admin Operations 和 SQLite 数据合同保持兼容。
 - `requirements.txt` 与普通安装路径不变；real E5 使用 `requirements-embedding.txt` 隔离可选环境。
 - 生产核心不需要 Vector DB、ANN service、模型 cache 或远程 embedding service。
@@ -133,10 +134,9 @@ Access 或 Workspace 数据。若使用 V3.1 real E5，需显式创建可选 emb
 - [Final Development Report](../development/Development_Report_V3_1_0.md)
 - [Experiment Evidence Index](../experiments/README.md)
 - [Formal Results Report](../development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)
-- [Thesis Materials Package](../development/Thesis_Materials_V3_1_0_Formal_Results.md)
+- Thesis Materials：[MD](../development/Thesis_Materials_V3_1_0_Formal_Results.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_0_Formal_Results.txt)
 
 ## Next
 
-下一候选主题是 V3.2 **Controlled Multi-Agent Collaboration**，可能研究 Coordinator /
-Planner、Code Understanding、Review、Documentation、Refactor 与 Test / Validation
-Agent。上述能力均未在 V3.1 实现。当前 V3.2：**NOT STARTED**。
+V3.1.1 Workflow & Developer Experience Optimization 已 **FULLY RELEASED**；V3.1.2
+Maintenance 与 V3.2 **Controlled Multi-Agent Collaboration** 均为 **NOT STARTED**。

@@ -1,5 +1,7 @@
 # V3.1.0 Final Development Report
 
+<!-- release-state: V3.1.0 RELEASED -->
+
 ## 1. Executive Summary
 
 V3.1.0 的主题是 **Project Intelligence / RAG**。本版本在 V3.0.1 的项目维护核心、
@@ -8,9 +10,9 @@ BYOK 与可选 Managed AI Access 基础上，完成项目级语料、词法/语�
 在冻结 English Test 上完成，独立结果 QA 为 **PASS WITH NON-BLOCKING NOTES**，
 解释判定为 **ACCEPT — CLAIM-BOUNDED**。
 
-当前状态是 **RELEASE CANDIDATE / READY FOR DEEPSEEK FINAL RELEASE QA**。版本元数据
-已准备为 `3.1.0`，但本报告不构成 Final Release Gate；release commit、tag 和 push 均
-未创建。V3.2 Multi-Agent Collaboration **NOT STARTED**。
+当前状态是 **RELEASED**。Release commit 为
+`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，annotated tag 为 `v3.1.0`；branch 与
+tag 已 push 并完成 remote verification。V3.1.2 与 V3.2 均 **NOT STARTED**。
 
 ## 2. Version Goal and Scope
 
@@ -304,9 +306,9 @@ V3.1 生产功能、实验执行、Formal artifact、独立 QA 和 claim-bounded
 一致性校核。冻结 Formal run、artifact set、metrics、Query、GT、Grade、Evidence、
 DryRunReceipt、Reference Approval 和 Phase 6.2 Closure 不在本轮修改范围内。
 
-本轮目标状态：**RELEASE DOCUMENTATION READY FOR DEEPSEEK FINAL QA**。这不是
-release approval；下一步由 DeepSeek V4.1 Flash 执行 Final Release QA，并在通过后
-按用户授权处理 release commit/tag/push。
+Final Release QA 已完成并通过；V3.1.0 已正式发布。本次后续文档闭环只补齐 UTF-8 TXT
+论文素材、导航与永久版本文档合同，不移动 tag、不重写发布历史，也不修改冻结 Formal
+run、artifact 或结果。
 
 ## 22. Next Version
 
@@ -314,4 +316,5 @@ V3.2 未来主题是 **Controlled Multi-Agent Collaboration**。可能的研究�
 Coordinator / Planner、Code Understanding Agent、Review Agent、Documentation Agent、
 Refactor Agent 与 Test / Validation Agent，但这些都不是 V3.1 已实现能力。
 
-当前状态：V3.1.0 **READY FOR DEEPSEEK FINAL RELEASE QA**；V3.2 **NOT STARTED**。
+当前状态：V3.1.0 **RELEASED**；V3.1.1 **FULLY RELEASED**；V3.1.2 与 V3.2 均
+**NOT STARTED**。

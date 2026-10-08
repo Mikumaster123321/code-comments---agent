@@ -1,0 +1,383 @@
+V3.1.0 Project Intelligence / RAG 论文写作素材
+
+==================================================
+0. 文档定位与版本身份
+==================================================
+
+本文件是 V3.1.0 的纯文本论文素材，面向 Word、论文草稿、学校论文系统和外部模型使用，
+不是最终毕业论文。材料只整理仓库中已跟踪的权威文档与冻结实验资料，不新增实验结果，
+不修改 Query、Ground Truth、Grade、ranking 或 Formal artifact。
+
+版本：3.1.0
+状态：RELEASED
+主题：Project Intelligence / RAG
+Release commit：8813e4c2fb0dc07f38c2013d520441bf399dcbc4
+Annotated tag：v3.1.0
+Formal result archive commit：c3ee6ec1b7aa28c2539d2fe849d1f25268807677
+Formal execution revision：2749969cd3a2d4d6e1e8d81160eebd5fb360879b
+Formal artifact-set canonical identity：acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+Formal artifact-set file SHA-256：2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41
+Independent Formal Results QA：PASS WITH NON-BLOCKING NOTES
+Critical / validity-blocking Medium：0 / 0
+Formal interpretation：ACCEPT — CLAIM-BOUNDED
+
+==================================================
+1. V3.0.1 baseline
+==================================================
+
+V3.0.1 提供项目级软件维护基础与 AI access infrastructure，包括 Project Scanner、
+Project Graph、Project Snapshot、Analysis Engine、Provider/BYOK、可选 Managed AI
+Access、Credits、Usage Metering 和 Admin Operations。V3.1.0 在这一基础上新增
+Project Intelligence / RAG，而不是替换原有 Gradio、BYOK、Managed Access 或 Credits
+路径。V3.1 Phase 0 进入时的完整回归基线为 414 passed，offline LLM contract smoke 为
+6 passed。
+
+==================================================
+2. V3.1.0 目标与研究边界
+==================================================
+
+V3.1.0 的目标是把项目源代码转换为带稳定身份、可检索、可追踪的项目级证据，组合
+词法、语义和图结构信号，并在显式预算内构建供维护任务消费的上下文。核心研究问题
+覆盖检索单元、BM25 与 real E5、图信号和融合策略。增量索引与 ContextBuilder 提供
+工程和诊断证据。
+
+本版本没有实现 Multi-Agent runtime、Planner、Agent memory、handoff、Multi-Model
+Router、VS Code Integration、Vector DB、ANN service 或远程 embedding service，也没有
+评估端到端 autonomous maintenance quality。
+
+==================================================
+3. 系统架构
+==================================================
+
+逻辑处理链如下：
+
+Project Source
+  → ProjectScanner / ProjectGraph / ProjectSnapshot
+  → CorpusBuilder / stable SymbolId / RetrievalDocument
+  → BM25 + real multilingual E5 + bounded Graph expansion
+  → Weighted Hybrid 主策略或 RRF 次级对照
+  → ContextBuilder
+  → immutable ContextPackage
+  → future LLM / maintenance-task consumer
+
+生产依赖方向冻结为：
+
+experiments → project_intelligence → code_maintenance
+
+code_maintenance 管理项目状态与稳定身份；project_intelligence 管理生产检索、融合、
+索引和上下文合同；experiments 负责实验配置、指标、runner、schema、eligibility 和
+evidence artifact。生产模块不反向依赖实验实现。
+
+==================================================
+4. Corpus、Snapshot 与 Stable SymbolId
+==================================================
+
+CorpusBuilder 从 authoritative ProjectSnapshot 与既有语言 Adapter 生成不可变、
+source-backed 的 RetrievalDocument。构建时重新计算文件内容哈希；如果实际文件与
+Snapshot 不一致，则 fail closed，避免在过期快照上生成语料。
+
+V3.1.0 复用 V3 已冻结的 Stable SymbolId，没有建立第二套 retrieval-only identity。
+同一 SymbolId 贯穿 Snapshot、Corpus、Graph、RetrievalHit 和 Context evidence，使代码
+实体能够在结构关系、排名结果与上下文证据间确定性关联。content hash 用于新鲜度校验，
+但不是普通 SymbolId 的组成部分。
+
+==================================================
+5. File、Symbol 与 Chunk 检索单元
+==================================================
+
+Symbol 是生产主检索单元，直接承接稳定身份、qualified name、signature、source text、
+imports 和 metadata。File 与固定字符 Chunk 是实验层对照单元，用于 RQ1 的受控比较。
+三种单元共享同一冻结 Query、Reference、指标和 BM25 条件，但相关性映射粒度并不完全
+等价。尤其是 File 使用 coarse-grained relevance mapping，因此较高 File Recall@5 不能
+外推为更精确的 symbol localization 或更好的下游维护质量。
+
+==================================================
+6. Deterministic BM25
+==================================================
+
+BM25 是标准库、内存式、确定性的词法基线。其 tokenizer 为 code-lexical-v1，参数为
+k1=1.5、b=0.75。公平输入合同规定：每个文档只使用一份 qualified_name 加一份
+source_text。实现覆盖 document frequency、IDF、文档长度归一化、空 Query、未知 term、
+输入顺序独立和确定性 tie-breaking。
+
+==================================================
+7. Real multilingual E5
+==================================================
+
+语义检索使用 intfloat/multilingual-e5-base，冻结 revision 为
+d128750597153bb5987e10b1c3493a34e5a4502a，向量维度为 768。适配器固定 query/passage
+prefix、attention-mask-aware mean pooling、L2 normalization、CPU float32 baseline 与
+credential-free fingerprint。transformers 4.56.2 和 torch 2.8.0 位于隔离的可选
+Python 3.12.14 环境；模型权重和 cache 不进入仓库。测试用 fake provider 只验证合同与
+确定性，不支持语义质量结论。
+
+==================================================
+8. Graph retrieval：CONTAINS / IMPORTS
+==================================================
+
+Graph expansion 只读冻结 ProjectGraph 中的 CONTAINS 和 IMPORTS 关系。每个候选保留
+seed、relation、direction、hop 和 node identity。FORWARD 表示 edge.source 到
+edge.target，REVERSE 表示相反方向。扩展具有 hop、关系白名单、per-seed、全局节点预算、
+cycle 和 duplicate 约束。
+
+RQ3 主比较是 Graph OFF 与 Graph ON；方向消融分别保留 CONTAINS/FORWARD、
+CONTAINS/REVERSE、IMPORTS/FORWARD 和 IMPORTS/REVERSE。方向属于 retrieval
+provenance，不是新的 Graph relation，不能把依赖方与被依赖方合并成无方向信号。
+
+==================================================
+9. Incremental indexing
+==================================================
+
+RetrievalIndexIdentity 绑定 project ID、Snapshot content hash、retrieval config hash 和
+可选 embedding fingerprint。Snapshot diff 中的 added、removed、changed、unchanged
+分别对应 add、delete、replace、reuse；未变化文档的语义向量不会重新调用 Provider。
+全量重建等价性测试覆盖文档身份、BM25、exact semantic ranking、metadata 和 index
+identity。已有性能记录仅是工程证据，不是 Formal RQ1–RQ4 结果，也不支持生产 SLA。
+
+==================================================
+10. Weighted Hybrid 与 RRF
+==================================================
+
+Weighted Hybrid 以稳定文档身份合并 lexical、semantic 与 graph 候选，保留分量得分、
+权重和 provenance，是 RQ3/RQ4 的预注册主融合策略。RRF 使用分支排名与固定 rrf_k
+进行融合，只是 secondary robustness comparison。RRF 数值不能替代 Weighted 主比较，
+也不能与 Weighted 结果合成单一 winner。
+
+==================================================
+11. ContextBuilder
+==================================================
+
+ContextBuilder 与 retrieval ranking 分离。它按确定性顺序去重并组装 source-backed
+snippet，保留 Hybrid rank 和 Graph adjacency，执行显式字符预算与 oversized snippet
+截断，并返回 budget、truncation、rendered evidence 和 provenance metadata。不可变
+ContextPackage 可供未来 LLM 或维护任务消费，但本版本不拥有 prompt、Agent plan 或
+端到端维护质量判断。
+
+==================================================
+12. Benchmark construction 与 Dataset composition
+==================================================
+
+[表1] 冻结数据集组成
+
+项目                         数量 / 状态                  用途
+Frozen Query                 72                           48 English Test + 12 English Dev + 12 Chinese coverage
+English Test                 48                           Formal RQ1–RQ4；Python 36、Java 12
+English Dev                  12                           Phase 6.3 Dry Run；不进入 Formal 主结果
+Chinese coverage             12                           独立中文覆盖；不进入 English 主结果
+Task types                   6                            BL、CF、DQ、FL、MT、SL，各 8 条 English Test
+Drafted Ground Truth         72 / 72                      specification-anchored single-judge silver reference
+Evidence                     134                          Grade 2 为 72；Grade 1 为 62
+Java audit                   12 executed                  10 structured SUPPORTS；2 经冻结源码 resolution 处理
+Formal configs               17 / 17                      RQ1–RQ4 主配置与 secondary RRF
+Formal query-config pairs    816 / 816                    48 English Test × 17 configs，全部 success
+
+数据由单一冻结 self-repository commit 与版本化 Python/Java controlled fixtures 组成。
+Self-repository 只纳入冻结提交中 tracked 的 Python 与 Java 文件；未跟踪文件、cache、
+模型和生成结果均被排除。该设计同时提供真实跨文件结构与受控边界案例，但不是多仓库
+外部泛化样本。
+
+==================================================
+13. Reference / evidence lifecycle
+==================================================
+
+Ground Truth 是 specification-anchored single-judge silver reference，绑定 evidence
+span、grade、rationale、source hash 与 Reference lifecycle。Phase 6.2 的 Approval、
+Decision、Closure 和 Documentation Decision 在实验执行前物化并校验。没有第二位人类
+标注者，也没有 human inter-annotator agreement（IAA）。
+
+实验生命周期为：冻结 Protocol 和 Addenda → 冻结 Dataset / Query / Ground Truth →
+Reference Approval 与 Closure → English Dev Dry Run → DryRunReceiptV2 → Formal
+eligibility → English Test Formal execution → artifact archive → deterministic export 与
+interpretation。artifact identity、文件 SHA-256、execution/archive ancestry 和路径均由
+只读验证器检查。
+
+==================================================
+14. Dry Run
+==================================================
+
+Phase 6.3 在 12 条 English Dev Query 上运行全部 17 项冻结配置，完成 204 / 204 个
+query-config，全部 success。17 项完整确定性复跑没有不一致；English Test 和 Chinese
+execution 均为 0。Dry Run artifact-set identity 为
+08f753fe7e9cb24e29a38baa5057005203f09524d0d94a48c4fbd98c19c8715b，
+DryRunReceiptV2 identity 为
+8383eb1c0e45ca68927cecc5170a18a0ae56cc62dcbf2e5b3ff53448073fff3e。
+
+==================================================
+15. Formal RQ1–RQ4 定义与执行
+==================================================
+
+RQ1 — Retrieval Unit：在相同词法条件下比较 File、Symbol、Chunk。
+RQ2 — Retrieval Strategy：在 Symbol 单元且 Graph OFF 条件下比较 BM25 与 real E5。
+RQ3 — Graph Signal：比较 Weighted Hybrid 的 Graph OFF / ON，并进行 relation-direction 消融。
+RQ4 — Hybrid Retrieval：比较 Lexical、Embedding、Weighted Hybrid no graph / graph；RRF 为次级稳健性证据。
+
+Formal execution 使用 48 条 English Test Query 和 17 项冻结配置，共 816 / 816 个
+唯一 query-config，全部 success，failed、invalid、degraded 均为 0。English Dev 与
+Chinese 在 Formal execution 中均为 0。8 个代表配置、384 条 Query 的 ranking、score、
+metric 和 identity 确定性比较 mismatch 为 0；RQ4 diagnostic serialization mismatch
+也为 0。
+
+==================================================
+16. Formal results
+==================================================
+
+[表2] RQ1–RQ4 Formal 主结果
+
+RQ    Configuration              Recall@5    MRR       地位
+RQ1   File                       0.8906      0.7364    primary
+RQ1   Symbol                     0.5368      0.6130    primary
+RQ1   Chunk                      0.5836      0.6274    primary
+RQ2   BM25                       0.5368      0.6130    primary
+RQ2   E5                         0.5057      0.7311    primary
+RQ3   Graph OFF                  0.5333      0.6617    primary
+RQ3   Graph ON                   0.5524      0.6971    primary
+RQ3   CONTAINS/FORWARD           0.5316      0.6600    direction ablation
+RQ3   CONTAINS/REVERSE           0.5542      0.7086    direction ablation
+RQ3   IMPORTS/FORWARD            0.5333      0.6617    direction ablation
+RQ3   IMPORTS/REVERSE            0.5333      0.6617    direction ablation
+RQ4   Lexical                    0.5368      0.6130    primary
+RQ4   Embedding                  0.5057      0.7311    primary
+RQ4   Hybrid no graph            0.5333      0.6617    primary
+RQ4   Hybrid graph               0.5524      0.6971    primary
+RQ4   RRF no graph               0.5490      0.7365    secondary robustness
+RQ4   RRF graph                  0.5451      0.6978    secondary robustness
+
+==================================================
+17. Formal result interpretation
+==================================================
+
+RQ1：File、Symbol、Chunk 的 Recall@5 / MRR 分别为 0.8906 / 0.7364、
+0.5368 / 0.6130、0.5836 / 0.6274。File 的相关性映射更粗，因此其较高覆盖只能作为
+冻结 benchmark 中的描述性结果，不能证明更精确的 symbol localization。
+
+RQ2：E5 相对 BM25 的 Recall@5 差值为 -0.0311，MRR 差值为 +0.1181。两个主指标
+方向不同，必须并列报告，不能构造单一 winner。
+
+RQ3：Graph ON 相对 OFF 的 Recall@5 / MRR 差值为 +0.0191 / +0.0354。
+CONTAINS/REVERSE 为 0.5542 / 0.7086；IMPORTS 两个方向在这两个总体指标上与
+Graph OFF 相同。结果只提示配置与方向依赖性，不证明因果机制，也不证明 IMPORTS
+普遍无效。
+
+RQ4：Weighted Hybrid graph 相对 no graph 为 +0.0191 / +0.0354。Secondary RRF
+graph 相对 no graph 为 -0.0038 / -0.0387。两个融合方法观察到的方向不同，说明图信号
+结果依赖融合方式；RRF 不替代预注册的 Weighted 主比较。
+
+综合解释：冻结结果同时包含正向、负向和相同数值。可以表述为“检索粒度、语义信号、
+图方向和融合方式与观察到的 Recall@5 / MRR trade-off 相关”，不能表述为 significant、
+best、winner、全面优于或跨项目普遍规律。
+
+==================================================
+18. ContextBuilder diagnostics
+==================================================
+
+[表3] Weighted Hybrid ContextBuilder 诊断
+
+诊断项                                  Hybrid no graph       Hybrid graph
+budget used / total                     272990 / 384000       321821 / 384000
+budget utilization                      0.7109                0.8381
+GT evidence rendered / total            101 / 165             124 / 165
+snippet count                           425                   533
+truncated packages                      20                    24
+graph-only rendered snippets            0                     166
+retained but unrendered graph provenance 0                     386
+
+Graph 配置多渲染 23 个 GT evidence，同时多使用 48831 个字符并多出现 4 个 package
+truncation。这些诊断描述上下文渲染，不参与 ranking、Recall 或 MRR，也没有测量下游
+LLM 维护质量。
+
+==================================================
+19. Independent QA
+==================================================
+
+Independent Formal Results QA 为 PASS WITH NON-BLOCKING NOTES，Critical 为 0，
+validity-blocking Medium 为 0；Thesis Result Interpretation 为 ELIGIBLE，正式解读判定为
+ACCEPT — CLAIM-BOUNDED。仓库保存的是 reviewer 结论元数据，不包含可单独归档的逐字
+reviewer 原文，因此本文件的解释依据冻结报告和确定性 CSV 整理，不冒充 reviewer 原话。
+
+V3.1.0 发布基线完整回归为 892 passed。正式结果归档后的 experiments 专项为
+240 passed。上述测试结果是工程与归档完整性证据，不是统计独立实验重复。
+
+==================================================
+20. Threats to validity
+==================================================
+
+1. Formal English Test 只有 48 条，数据来自 single frozen repository + controlled fixtures，
+   没有外部多仓库泛化验证。
+2. Reference 是 specification-anchored single-judge silver reference，没有第二位人类
+   标注者或 human IAA。
+3. Python 为 36 条，Java 为 12 条；limited Java audit 不能外推为全部 Ground Truth
+   已被独立验证。
+4. Chinese 12 条只作为单独 coverage，不进入 English 主结果，不能从 English 数值推断
+   中文效果。
+5. File 使用 coarse-grained relevance mapping，跨单元比较必须保留相关性粒度差异。
+6. 不完整未判定池可能影响绝对指标，结论必须以冻结 Reference 为边界。
+7. 只验证一个冻结 E5 模型和单一 CPU float32 环境，没有跨模型或跨硬件复现。
+8. 没有 preregistered significance test；deterministic rerun 不等于统计独立重复样本。
+
+==================================================
+21. Known limitations 与禁止外推
+==================================================
+
+Retrieval quality 不等于 downstream maintenance quality；ContextBuilder diagnostics 也不
+等于任务成功率。Grade-2-only 次级敏感性分析和 30 次 timing protocol 没有执行，因此
+不作 latency、scalability 或 SLA claim。结果只适用于冻结 Query、Reference、语料、
+配置、模型 revision 和指标，不得使用 significant、best、winner、全面优于等措辞。
+
+==================================================
+22. Engineering contribution
+==================================================
+
+V3.1.0 的工程贡献包括：基于 Stable SymbolId 的项目级检索语料；确定性 BM25 与冻结
+real E5；有界、可追踪的 Graph expansion；带身份验证和向量复用的增量索引；可解释的
+Weighted Hybrid 与 secondary RRF；在字符预算内生成可追踪证据的 ContextBuilder；以及
+从 Protocol、Reference、Dry Run 到 Formal artifact 的可审计生命周期。
+
+==================================================
+23. Research contribution
+==================================================
+
+V3.1.0 使用冻结的 72 条 Query 设计、48 条 English Test、17 项 Formal 配置和两项
+主指标，对检索单元、检索策略、图信号和融合方式进行了受控、claim-bounded 的描述性
+比较。研究贡献是面向软件维护场景的系统性集成、实验合同和可审计证据链，而不是发明
+新的 BM25、embedding、图算法或统计显著性结论。
+
+==================================================
+24. V3.1.0 总结与后续维护版本衔接
+==================================================
+
+V3.1.0 已完成并发布 Project Intelligence / RAG，建立从 ProjectSnapshot 到
+ContextPackage 的稳定边界，并完成冻结 Formal RQ1–RQ4 评估。后续 V3.1.1 是
+Workflow & Developer Experience Optimization 维护版本，增强命令入口、环境诊断、
+测试复现、实验追溯和发布一致性，不改变 V3.1.0 retrieval、ranking 或 Formal 结果。
+V3.1.2 与 V3.2 均为 NOT STARTED；V3.2 未来可能研究 Controlled Multi-Agent
+Collaboration，但不是 V3.1.0 已实现能力。
+
+==================================================
+25. 素材来源与身份
+==================================================
+
+关键来源路径：
+
+README.md
+PROJECT_CONTEXT.md
+docs/development/Development_Report_V3_1_0.md
+docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md
+docs/development/Thesis_Materials_V3_1_0_Formal_Results.md
+docs/release/Release_Notes_V3_1_0.md
+docs/release/README.md
+docs/experiments/Experiment_Protocol_V3_1_0.md
+docs/experiments/Dataset_Query_GroundTruth_Specification_V3_1_0.md
+docs/experiments/Reference_Lifecycle_Engineering_Specification_V3_1_0.md
+docs/experiments/Formal_Results_Interpretation_V3_1_0.md
+docs/experiments/Formal_Result_Table_RQ1_RQ4_V3_1_0.csv
+docs/experiments/Formal_Result_Extended_RQ1_RQ4_V3_1_0.csv
+docs/experiments/Formal_ContextBuilder_Diagnostics_V3_1_0.csv
+docs/experiments/audits/phase64_formal_english_test/artifact_set.json
+
+关键发布与冻结身份：
+
+V3.1.0 release commit：8813e4c2fb0dc07f38c2013d520441bf399dcbc4
+V3.1.0 annotated tag：v3.1.0
+Formal result archive commit：c3ee6ec1b7aa28c2539d2fe849d1f25268807677
+Formal artifact-set canonical identity：acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+Formal artifact-set file SHA-256：2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41

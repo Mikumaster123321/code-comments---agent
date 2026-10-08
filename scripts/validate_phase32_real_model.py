@@ -16,11 +16,15 @@ from __future__ import annotations
 import argparse
 import math
 import platform
-import resource
 import statistics
 import sys
 import time
 from pathlib import Path
+
+try:
+    import resource
+except ImportError:  # pragma: no cover - exercised through a platform simulation test
+    resource = None
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -28,10 +32,21 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 
-def _rss_mb() -> float:
+def _rss_mb() -> float | None:
+    if resource is None:
+        return None
     value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     # macOS reports bytes; Linux reports KiB.
     return float(value) / (1024 * 1024 if sys.platform == "darwin" else 1024)
+
+
+def _require(condition: bool, message: str) -> None:
+    if not condition:
+        raise RuntimeError(message)
+
+
+def _rss_text(value: float | None) -> str:
+    return "unavailable" if value is None else f"{value:.1f}"
 
 
 def _percentile(values: list[int], fraction: float) -> int:
@@ -84,7 +99,12 @@ def main() -> int:
     provider.load()
     cold_seconds = time.perf_counter() - cold_start
     after = _rss_mb()
-    print(f"cold_load_seconds={cold_seconds:.3f} rss_before_mb={before:.1f} rss_after_mb={after:.1f}")
+    print(
+        f"cold_load_seconds={cold_seconds:.3f} "
+        f"rss_before_mb={_rss_text(before)} rss_after_mb={_rss_text(after)}"
+    )
+    if resource is None:
+        print("resource_metrics=unavailable")
 
     # Real tokenizer boundary evidence: counts include the model's special tokens.
     boundary = {}
@@ -119,10 +139,14 @@ def main() -> int:
     query_vector = provider.embed_query(texts[0])
     warm_seconds = time.perf_counter() - warm_start
     documents = provider.embed_documents(texts)
-    assert len(query_vector) == PRIMARY_MODEL_DIMENSION
-    assert all(len(vector) == PRIMARY_MODEL_DIMENSION for vector in documents)
-    assert all(math.isfinite(value) for value in query_vector)
-    assert abs(math.sqrt(math.fsum(value * value for value in query_vector.values)) - 1.0) < 1e-5
+    _require(len(query_vector) == PRIMARY_MODEL_DIMENSION,
+             "query vector dimension does not match the frozen model")
+    _require(all(len(vector) == PRIMARY_MODEL_DIMENSION for vector in documents),
+             "document vector dimension does not match the frozen model")
+    _require(all(math.isfinite(value) for value in query_vector),
+             "query vector contains non-finite values")
+    _require(abs(math.sqrt(math.fsum(value * value for value in query_vector.values)) - 1.0) < 1e-5,
+             "query vector is not L2-normalized")
     print(f"warm_query_seconds={warm_seconds:.3f} vector_dimension={len(query_vector)}")
 
     long_probe = "a " * 2000
@@ -131,9 +155,11 @@ def main() -> int:
     diagnostic_after_query = provider.diagnose(long_probe, kind="document")
     provider.embed_documents(("diagnostic document", "another document"))
     diagnostic_after_documents = provider.diagnose(long_probe, kind="document")
-    assert diagnostic_before == diagnostic_after_query == diagnostic_after_documents
+    _require(diagnostic_before == diagnostic_after_query == diagnostic_after_documents,
+             "diagnostic output changed after unrelated embedding calls")
     long_vectors = provider.embed_documents((long_probe,))
-    assert provider.last_diagnostics[0] == diagnostic_before
+    _require(provider.last_diagnostics[0] == diagnostic_before,
+             "last diagnostic does not match the embedded long document")
     print(
         "diagnostic_history_stable=True "
         f"long_total={diagnostic_before.total_token_count} "
@@ -186,7 +212,10 @@ def main() -> int:
     index_start = time.perf_counter()
     index = SemanticIndex(corpus, provider)
     index_seconds = time.perf_counter() - index_start
-    print(f"corpus_embedding_seconds={index_seconds:.3f} rss_peak_mb={_rss_mb():.1f}")
+    print(
+        f"corpus_embedding_seconds={index_seconds:.3f} "
+        f"rss_peak_mb={_rss_text(_rss_mb())}"
+    )
 
     for query in (
         "credit ledger",

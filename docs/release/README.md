@@ -1,15 +1,22 @@
-# V3.1.0 Documentation Index
+# V3.1 Documentation Index
 
-本页是 V3.1.0 Project Intelligence / RAG 的发布、工程、研究与论文材料导航。当前状态：
-**RELEASE DOCUMENTATION READY FOR DEEPSEEK FINAL QA**。本页不表示 release 已批准；
-release commit、tag 与 push 均未创建。V3.2 **NOT STARTED**。
+<!-- release-state: V3.1.1 RELEASED -->
+
+本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
+V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
+（**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 与 V3.2 均 **NOT STARTED**。
 
 ## Start Here
 
 - [Repository README](../../README.md) — 项目定位、当前能力、架构、评估摘要与 Version History
 - [V3.1.0 Final Development Report](../development/Development_Report_V3_1_0.md) — Phase 0–6 工程与研究全程总结
-- [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 候选版本亮点、兼容性、限制与迁移说明
-- [V3.1.0 Thesis Materials Package](../development/Thesis_Materials_V3_1_0_Formal_Results.md) — 可直接用于论文的事实、表格、图表计划与 claim boundary
+- [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 正式版本亮点、兼容性、限制与迁移说明
+- V3.1.0 Thesis Materials：[MD](../development/Thesis_Materials_V3_1_0_Formal_Results.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_0_Formal_Results.txt) — 论文事实、结果解释与 claim boundary
+- [V3.1.1 Scope Freeze](../development/V3_1_1_Workflow_DX_Scope.md) — 六项维护工作及 non-goals
+- [V3.1.1 Development Report](../development/Development_Report_V3_1_1.md) — 实现、测试与兼容性证据
+- V3.1.1 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_1_Workflow_DX.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_1_Workflow_DX.txt) — workflow reproducibility 工程贡献
+- [V3.1.1 Release Notes](Release_Notes_V3_1_1.md) — 命令、诊断、门禁与限制
+- [Permanent Version Documentation Contract](Version_Documentation_Contract.md) — 每个 major/minor/patch 版本的双格式论文素材、文档、tag、双远端发布与验证硬门禁
 
 ## Architecture and Design
 
@@ -71,8 +78,15 @@ LLM 维护质量声明。
 
 ## Release Boundary
 
-- V3.1.0：Release Candidate / Ready for DeepSeek Final Release QA
-- Release commit：Not Created
-- Tag：Not Created
-- Push：No
+- V3.1.0：RELEASED
+- V3.1.0 release commit：`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`
+- V3.1.0 tag：`v3.1.0`
+- V3.1.0 push / remote verification：Completed
+- V3.1.1：RELEASED
+- V3.1.1 release commit：`683479da2fd3b72c17cba3f03101bc23e275f40b`
+- V3.1.1 final release-record HEAD：`0238cc0bd5254ac782aa3981cdc755d5a59c498e`
+- V3.1.1 tag：`v3.1.1`
+- V3.1.1 push / remote verification：Completed（GitHub / Gitee branch and tag）
+- V3.1.0 / V3.1.1 documentation closure：Completed
+- V3.1.2 Maintenance：Not Started
 - V3.2 Multi-Agent Collaboration：Not Started
