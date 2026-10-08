@@ -1,16 +1,16 @@
 # V3.1.2 Development Report
 
-<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.2 RELEASED -->
 
 ## 1. Summary
 
 - **Version:** 3.1.2
 - **Theme:** Language / UX / Output Quality
-- **Status:** IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- **Status:** RELEASED
 - **Branch / point:** `v3.1.2-dev` from `2036cb6c82860b9bf8229ecac0f4d4add420855d`
 - **Scope Freeze:** `139833f`
 - **Prompt Contract:** `2192293`, completed by `d12d800`
-- **Tag / push:** NO / NO
+- **Tag / push:** `v3.1.2` / Pending（本轮仅本地 finalize）
 - **V3.2:** NOT STARTED
 
 V3.1.2 is an engineering, UX/HCI, and model-output-quality maintenance release. It does not alter retrieval or frozen Formal results.
@@ -27,7 +27,7 @@ The pre-implementation audit verdict was **READY FOR SCOPE FREEZE**, P0 = 0, bas
 - Output: localized Python/Java API docs, Diff, Python quality/type analysis, style table headings, status and empty presentation.
 - Prompt: stable source/doc delimiters, untrusted-data instruction, target language plus technical-name preservation, bounded language-neutral summary, translation/rewrite split, short-Javadoc contract.
 - Cleanup: fail closed on empty, invalid fence, residual quote/comment wrapper, extra preface, traceback, secret-looking value, absolute path and control text.
-- Workflow: release metadata advanced to 3.1.2 RELEASE_CANDIDATE; baseline tag is immutable V3.1.1.
+- Workflow: release metadata finalized from 3.1.2 RELEASE_CANDIDATE to RELEASED; baseline tag is immutable V3.1.1.
 
 ## 4. UX/HCI contribution
 
@@ -64,8 +64,8 @@ All prompt changes follow [V3_1_2_Prompt_Output_Contract.md](V3_1_2_Prompt_Outpu
 
 ## 9. Known environment issue
 
-On the current Anaconda Python 3.13.5 host, importing Gradio enters IPython/rlcompleter and terminates with SIGSEGV. This reproduces before UI construction and is recorded as **HOST LIMITATION**. Business-code compilation, source-level UI contracts and all 951 repository tests pass. Final QA should run `create_ui` in the recommended CPython 3.10 venv; this report does not claim a fabricated smoke PASS.
+On the current Anaconda Python 3.13.5 host, importing Gradio enters IPython/rlcompleter and terminates with SIGSEGV. This reproduces before UI construction and is recorded as **HOST LIMITATION**. Business-code compilation, source-level UI contracts and all 951 repository tests pass. Independent Final Release QA subsequently ran `create_ui` under CPython 3.10.20 with gradio 6.27.0, where the Gradio build smoke passed (`Blocks`, 106 blocks).
 
 ## 10. Release readiness
 
-Implementation and the pre-release documentation package are complete. The lifecycle remains RELEASE_CANDIDATE because independent Final Release QA, reviewed release commit, annotated tag, main synchronization, GitHub/Gitee publication and remote target verification have not occurred.
+Implementation, independent Final Release QA and the documentation package are complete. The lifecycle is RELEASED with annotated tag `v3.1.2`. The reviewed release commit, main synchronization and GitHub/Gitee publication are recorded with remote target verification Pending（本轮仅本地 finalize）.

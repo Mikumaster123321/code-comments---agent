@@ -1,18 +1,19 @@
 # V3.1.2 Language / UX / Output Quality 论文工程素材
 
-V3.1.2 RELEASE_CANDIDATE
+<!-- release-state: V3.1.2 RELEASED -->
 
 ## 1. 文档定位
 
 本文整理 V3.1.2 的语言职责、交互信息架构、错误安全与模型输出合同，可用于毕业论文工程章节、HCI/UX 讨论和维护版本案例分析。它不是新的 retrieval 实验结果，不改变 V3.1.0 RQ1–RQ4、Query、Ground Truth、Grade、ranking semantics 或 Formal artifact。
 
 - 版本：`3.1.2`
-- 状态：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- 状态：RELEASED
 - 开发分支：`v3.1.2-dev`
 - authoritative main branch point：`2036cb6c82860b9bf8229ecac0f4d4add420855d`
 - Scope Freeze commit：`139833f`
 - Prompt Contract commits：`2192293`、`d12d800`
-- tag / push：均未执行
+- annotated tag：`v3.1.2`（指向 release commit）
+- push / remote verification：Pending（本轮仅本地 finalize）
 - V3.2：NOT STARTED
 
 ## 2. 问题背景与研究意义
@@ -69,7 +70,7 @@ Processor 公共五元组不变；新增 `rewrite_existing` 仅为末尾可选�
 | Experiments profile | 240 passed |
 | Full profile | 951 passed |
 
-测试全部离线，不调用真实 Provider、不使用真实 API key、不下载模型。当前 Anaconda Python 3.13.5 在 import Gradio 时经 IPython / rlcompleter 触发宿主 SIGSEGV；因此 create_ui smoke 标记为 HOST LIMITATION，未伪造 PASS。Python syntax compile 与不导入 Gradio 的 UI source contract 均通过。
+测试全部离线，不调用真实 Provider、不使用真实 API key、不下载模型。当前 Anaconda Python 3.13.5 在 import Gradio 时经 IPython / rlcompleter 触发宿主 SIGSEGV，该环境记为 HOST LIMITATION，不是业务代码回归。Independent Final Release QA 在 CPython 3.10.20（gradio 6.27.0）下执行 `create_ui` build smoke，结果 **PASSED**（`Blocks`，106 blocks）。Python syntax compile 与不导入 Gradio 的 UI source contract 均通过。
 
 ## 9. Formal immutability
 
@@ -81,7 +82,7 @@ Processor 公共五元组不变；新增 `rewrite_existing` 仅为末尾可选�
 
 ## 10. 限制与后续门禁
 
-本版本没有新增 Code Review、Optimization/Refactoring、Project Intelligence/Evidence surface，也没有创建新的 severity/location/recommendation/evidence 语义。Final QA 仍需独立复核三语人工矩阵、推荐 CPython 3.10 环境的 Gradio build smoke、文档一致性和候选 release gate。完成前不得标记 RELEASED，不得创建 tag 或 push。
+本版本没有新增 Code Review、Optimization/Refactoring、Project Intelligence/Evidence surface，也没有创建新的 severity/location/recommendation/evidence 语义。Independent Final Release QA 已复核三语人工矩阵、CPython 3.10.20 环境的 Gradio build smoke（PASSED）、文档一致性与 release gate，并给出结论 `V3.1.2 FINAL RELEASE QA: PASS`。本版本已标记 RELEASED 并创建 annotated tag `v3.1.2`；GitHub/Gitee 远端分支与 tag 发布及远端目标校验仍为 Pending（本轮仅本地 finalize）。
 
 ## 11. 素材来源
 

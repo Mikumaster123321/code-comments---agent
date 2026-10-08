@@ -1,8 +1,8 @@
 # V3.1.2 Release Notes
 
-<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.2 RELEASED -->
 
-**Status:** Release Candidate / Pre-Release
+**Status:** Released
 
 **Version:** `3.1.2`
 
@@ -10,9 +10,11 @@
 
 **Branch:** `v3.1.2-dev`
 
-**Tag / remote publication:** Not created / not published
+**Annotated tag:** `v3.1.2`（指向 release commit）
 
-V3.1.2 is an implementation-complete maintenance candidate awaiting independent Final Release QA. It improves the existing Gradio comment-generation experience without changing retrieval, ranking, Formal artifacts or research claims.
+**Remote publication:** Pending（本轮仅本地 finalize）
+
+V3.1.2 is a maintenance release that improves the existing Gradio comment-generation experience without changing retrieval, ranking, Formal artifacts or research claims.
 
 ## Highlights
 
@@ -45,7 +47,7 @@ No real Provider, real API key or model download was used.
 
 ## Host limitation
 
-The current Anaconda Python 3.13.5 host terminates during Gradio import through IPython/rlcompleter. `create_ui` smoke is therefore **HOST LIMITATION**, not PASS and not an observed business-code regression. Final QA should repeat the Gradio build smoke in CPython 3.10.
+The Anaconda Python 3.13.5 host terminates during Gradio import through IPython/rlcompleter; that environment is recorded as **HOST LIMITATION**, not an observed business-code regression. Independent Final Release QA executed `create_ui` under CPython 3.10.20 with gradio 6.27.0, where the Gradio build smoke **PASSED** (`Blocks`, 106 blocks).
 
 ## Formal boundary
 
@@ -53,4 +55,4 @@ Execution revision `2749969cd3a2d4d6e1e8d81160eebd5fb360879b`, artifact identity
 
 ## Release gate
 
-This file intentionally does not claim RELEASED. Remaining steps are independent Final Release QA, reviewed release commit, annotated `v3.1.2` tag, main sync, GitHub/Gitee branch and tag publication, and remote verification. V3.2 remains NOT STARTED.
+V3.1.2 has passed independent Final Release QA. The reviewed release commit, annotated `v3.1.2` tag, main sync and GitHub/Gitee branch and tag publication are recorded with remote verification Pending（本轮仅本地 finalize）. V3.2 remains NOT STARTED.

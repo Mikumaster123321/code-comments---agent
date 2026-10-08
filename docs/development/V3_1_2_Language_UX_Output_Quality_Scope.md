@@ -1,6 +1,6 @@
 # V3.1.2 Language / UX / Output Quality Scope Freeze
 
-发布门禁：V3.1.2 RELEASE_CANDIDATE
+发布门禁：V3.1.2 RELEASED
 
 ## 1. Authority and status
 
@@ -162,8 +162,9 @@ Markdown and independently readable UTF-8 TXT Thesis Materials, Development Repo
 pre-release Release Notes, PROJECT_CONTEXT, and the documentation/release index. The
 permanent contract in `docs/release/Version_Documentation_Contract.md` remains binding.
 
-This implementation phase creates no tag and performs no push. A formal release still
-requires documentation consistency QA, independent Final Release QA, a reviewed
-release commit, annotated tag, GitHub/Gitee branch and tag publication, and remote
-target verification. Until then the maximum allowed status is:
-`IMPLEMENTATION COMPLETE / AWAITING FINAL RELEASE QA`.
+The implementation phase created no tag and performed no push. The subsequent formal
+release added documentation consistency QA, independent Final Release QA, a reviewed
+release commit and the annotated `v3.1.2` tag; GitHub/Gitee branch and tag publication
+with remote target verification remain Pending（本轮仅本地 finalize）. The status is now
+`RELEASED`; the earlier `IMPLEMENTATION COMPLETE / AWAITING FINAL RELEASE QA` ceiling is
+satisfied.

@@ -149,6 +149,7 @@ tag 前至少检查：
   README 入口和 release index 在本次 closure 中补齐或校正。
 - V3.1.0 Formal artifact identity 与 file SHA-256 保持不变；本次 closure 不重新执行 Formal
   benchmark，也不改变 retrieval、ranking、Query、Ground Truth 或 Grade。
-- V3.1.2：`RELEASE_CANDIDATE`；implementation complete，awaiting independent Final QA；
-  tag / push 均未执行。
+- V3.1.2：`RELEASED`；annotated tag `v3.1.2` 指向 C1 release commit；release identity
+  记录于 `docs/release/release_state.json`（C2 写入 C1 SHA）；GitHub/Gitee push 与双远端
+  目标校验 Pending（本轮仅本地 finalize）。
 - V3.2：`NOT STARTED`。

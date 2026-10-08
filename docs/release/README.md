@@ -1,11 +1,11 @@
 # V3.1 Documentation Index
 
-<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.2 RELEASED -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
 V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
-（**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已完成实现，
-当前为 **RELEASE_CANDIDATE / AWAITING FINAL QA**；V3.2 **NOT STARTED**。
+（**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已正式发布
+（**RELEASED**，tag `v3.1.2`）；V3.2 **NOT STARTED**。
 
 ## Start Here
 
@@ -21,7 +21,7 @@ V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已
 - [V3.1.2 Prompt Output Contract](../development/V3_1_2_Prompt_Output_Contract.md) — 模型输入边界、语言、translation/rewrite 与 cleanup 合同
 - [V3.1.2 Development Report](../development/Development_Report_V3_1_2.md) — 实现、兼容性、测试与 host limitation
 - V3.1.2 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.txt)
-- [V3.1.2 Release Notes](Release_Notes_V3_1_2.md) — Release Candidate 功能、边界与剩余门禁
+- [V3.1.2 Release Notes](Release_Notes_V3_1_2.md) — 发布功能、边界与限制
 - [Permanent Version Documentation Contract](Version_Documentation_Contract.md) — 每个 major/minor/patch 版本的双格式论文素材、文档、tag、双远端发布与验证硬门禁
 
 ## Architecture and Design
@@ -94,8 +94,9 @@ LLM 维护质量声明。
 - V3.1.1 tag：`v3.1.1`
 - V3.1.1 push / remote verification：Completed（GitHub / Gitee branch and tag）
 - V3.1.0 / V3.1.1 documentation closure：Completed
-- V3.1.2 Language / UX / Output Quality：Implementation Complete / Awaiting Final QA
+- V3.1.2 Language / UX / Output Quality：RELEASED
 - V3.1.2 tests：targeted + LLM contracts 35；production 198；experiments 240；full 951
 - V3.1.2 branch / branch point：`v3.1.2-dev` / `2036cb6c82860b9bf8229ecac0f4d4add420855d`
-- V3.1.2 tag / push：Not created / Not published
+- V3.1.2 tag：`v3.1.2`
+- V3.1.2 push / remote verification：Pending（本轮仅本地 finalize）
 - V3.2 Multi-Agent Collaboration：Not Started

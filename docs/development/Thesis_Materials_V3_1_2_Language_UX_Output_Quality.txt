@@ -1,6 +1,6 @@
 V3.1.2 Language / UX / Output Quality 论文工程素材
 
-V3.1.2 RELEASE_CANDIDATE
+V3.1.2 RELEASED
 
 ==================================================
 0. 文档定位与版本身份
@@ -9,14 +9,14 @@ V3.1.2 RELEASE_CANDIDATE
 本文件是可独立阅读的 UTF-8 纯文本材料，适合复制到 Word、毕业论文草稿、学校论文系统或提供给外部模型。它记录 V3.1.2 的语言、UX、错误安全和输出质量工程，不构成新的 retrieval 研究结果。
 
 版本：3.1.2
-状态：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+状态：RELEASED
 主题：Language / UX / Output Quality
 开发分支：v3.1.2-dev
 Authoritative main branch point：2036cb6c82860b9bf8229ecac0f4d4add420855d
 Scope Freeze commit：139833f
 Prompt Contract commits：2192293，d12d800
-Tag：未创建
-Push：未执行
+Annotated tag：v3.1.2（指向 release commit）
+Push / remote verification：Pending（本轮仅本地 finalize）
 V3.2：NOT STARTED
 
 ==================================================
@@ -91,7 +91,7 @@ Production profile：198 passed。
 Experiments profile：240 passed。
 Full profile：951 passed。
 
-所有测试离线执行，不调用真实 Provider，不使用真实 API key，不下载模型。当前 Anaconda Python 3.13.5 在 import Gradio 时经 IPython 与 rlcompleter 触发宿主 SIGSEGV，因此 create_ui smoke 的结论是 HOST LIMITATION，不是 PASS，也没有被当成业务代码回归。推荐 Final QA 在 CPython 3.10 venv 执行 Gradio build smoke。
+所有测试离线执行，不调用真实 Provider，不使用真实 API key，不下载模型。当前 Anaconda Python 3.13.5 在 import Gradio 时经 IPython 与 rlcompleter 触发宿主 SIGSEGV，该环境记为 HOST LIMITATION，不是业务代码回归。Independent Final Release QA 在 CPython 3.10.20（gradio 6.27.0）下执行 create_ui build smoke，结果 PASSED（Blocks，106 blocks）。
 
 ==================================================
 8. Formal 不变性
@@ -109,7 +109,7 @@ V3.1.2 没有修改 retrieval、ranking、ContextBuilder、graph、BM25、E5、H
 9. 结论与下一步
 ==================================================
 
-七项冻结工作已完成，版本状态是 IMPLEMENTATION COMPLETE / AWAITING FINAL QA。当前没有 tag，没有 push，不能标记 RELEASED。下一步是 DeepSeek V4.1 Flash Independent Final Release QA，随后才可进入 reviewed release commit、annotated tag、main sync、GitHub/Gitee push 与双远端验证。V3.2 保持 NOT STARTED。
+七项冻结工作已完成。Independent Final Release QA 已复核三语人工矩阵、CPython 3.10.20 环境的 Gradio build smoke（PASSED）、文档一致性与 release gate，并给出结论 V3.1.2 FINAL RELEASE QA: PASS。版本状态是 RELEASED，已创建 annotated tag v3.1.2；下一步是 reviewed release commit、annotated tag、main sync、GitHub/Gitee push 与双远端验证（本轮仅本地 finalize，远端发布与校验为 Pending）。V3.2 保持 NOT STARTED。
 
 ==================================================
 10. 素材来源与身份
@@ -121,5 +121,5 @@ Prompt Contract：docs/development/V3_1_2_Prompt_Output_Contract.md
 Markdown 论文素材：docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md
 Development Report：docs/development/Development_Report_V3_1_2.md
 Release Notes：docs/release/Release_Notes_V3_1_2.md
-Release commit：尚未形成
-Annotated tag：尚未创建
+Release commit：见 docs/release/release_state.json（C1 finalize commit）
+Annotated tag：v3.1.2

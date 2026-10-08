@@ -1,16 +1,16 @@
 {
   "schema_version": "v1",
   "version": "3.1.2",
-  "state": "RELEASE_CANDIDATE",
+  "state": "RELEASED",
   "expected_branch": "v3.1.2-dev",
   "release_commit": null,
-  "tag": null,
+  "tag": "v3.1.2",
   "baseline": {
     "version": "3.1.1",
     "commit": "683479da2fd3b72c17cba3f03101bc23e275f40b",
     "tag": "v3.1.1"
   },
-  "document_sentinel": "V3.1.2 RELEASE_CANDIDATE",
+  "document_sentinel": "V3.1.2 RELEASED",
   "required_documents": [
     "README.md",
     "PROJECT_CONTEXT.md",

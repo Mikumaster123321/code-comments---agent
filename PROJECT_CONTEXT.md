@@ -1,6 +1,6 @@
 # Project Context
 
-<!-- release-state: V3.1.2 RELEASE_CANDIDATE -->
+<!-- release-state: V3.1.2 RELEASED -->
 
 ## Project
 
@@ -8,7 +8,7 @@
 
 ## Current State
 
-- V3.1.2 Language / UX / Output Quality：**IMPLEMENTATION COMPLETE / AWAITING FINAL QA**。
+- V3.1.2 Language / UX / Output Quality：**RELEASED**。
   Branch `v3.1.2-dev` 从 authoritative main
   `2036cb6c82860b9bf8229ecac0f4d4add420855d` 创建；Scope Freeze commit `139833f`，
   Prompt Output Contract commits `2192293` / `d12d800`。七项冻结工作 V312-UX-01 至
@@ -17,8 +17,10 @@
   prompt data/output contract、离线合同测试。targeted + LLM contracts `35 passed`，
   production `198 passed`，experiments `240 passed`，full `951 passed`。当前 Anaconda
   Python 3.13.5 的 Gradio import 因 IPython/rlcompleter 发生宿主 SIGSEGV，create_ui
-  smoke 记录为 HOST LIMITATION，待推荐 CPython 3.10 Final QA 重测。tag / push 均未执行；
-  lifecycle 为 `RELEASE_CANDIDATE`，不是 RELEASED。V3.2：**NOT STARTED**。
+  smoke 记录为宿主 HOST LIMITATION；Independent Final Release QA 已在 CPython 3.10.20
+  （gradio 6.27.0）下重测 create_ui build smoke，结果为 PASSED（`Blocks`，106 blocks）。
+  lifecycle 为 `RELEASED`；annotated tag `v3.1.2`，发布身份记录见
+  `docs/release/release_state.json`。V3.2：**NOT STARTED**。
 
 - V3.1.2 文档包已准备：Scope Freeze、Prompt Output Contract、Thesis Materials MD +
   UTF-8 standalone TXT、Development Report、Pre-Release Notes、README / Version History、
@@ -54,7 +56,7 @@
   `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3` /
   `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
   V3.1.1 不改变 retrieval、ranking、Query/GT/Grade、Formal artifact、metrics 或
-  interpretation。V3.1.2 为 **IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；V3.2：
+  interpretation。V3.1.2 为 **RELEASED**；V3.2：
   **NOT STARTED**。
 
 - V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
@@ -113,12 +115,12 @@
 - V3.1.1 tests: workflow/release `30`; production `198`; experiments `240`;
   full / legacy full `922`
 - V3.1.1 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
-- V3.1.2: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+- V3.1.2: `RELEASED`
 - V3.1.2 scope: V312-UX-01 through V312-TEST-07 `COMPLETE`
 - V3.1.2 tests: targeted + LLM contracts `35`; production `198`; experiments `240`; full `951`
 - V3.1.2 Prompt contract: `docs/development/V3_1_2_Prompt_Output_Contract.md`
 - V3.1.2 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
-- V3.1.2 tag / push: `NO / NO`
+- V3.1.2 tag: `v3.1.2`
 - V3.1.0: `RELEASED`
 - V3.1.0 release commit / tag:
   `8813e4c2fb0dc07f38c2013d520441bf399dcbc4` / `v3.1.0`

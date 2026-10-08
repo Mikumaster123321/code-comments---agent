@@ -1,7 +1,7 @@
 # V3.1.2 Prompt Output Contract
 
 状态：FROZEN  
-发布门禁：V3.1.2 RELEASE_CANDIDATE
+发布门禁：V3.1.2 RELEASED
 适用版本：V3.1.2  
 适用范围：docstring、Javadoc、代码摘要、既有注释翻译/改写，以及 LLM 响应清理  
 生效前提：本契约必须先于任何 V3.1.2 prompt 实现变更进入 Git 历史。
