@@ -3,7 +3,7 @@
   "version": "3.1.2",
   "state": "RELEASED",
   "expected_branch": "v3.1.2-dev",
-  "release_commit": null,
+  "release_commit": "247bbfc1f849b929a00b32b09ada5e060ceef9d9",
   "tag": "v3.1.2",
   "baseline": {
     "version": "3.1.1",
