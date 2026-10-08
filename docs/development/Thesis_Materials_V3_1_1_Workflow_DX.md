@@ -76,6 +76,7 @@ offline-first、read-only-by-default、failure-explicit 的可复现维护工作
 
 ## 11. Verification facts
 
+- Offline LLM contract smoke：6 passed
 - Workflow/release tests：30 passed
 - Production profile：198 passed
 - Experiments profile：240 passed
@@ -91,3 +92,14 @@ offline-first、read-only-by-default、failure-explicit 的可复现维护工作
 - release remote validation 是显式 opt-in，离线默认门禁不证明远端状态。
 - 稳定 profile 反映当前仓库结构；未来测试重组仍需审查单一映射。
 - V3.1.1 不提供新的数据集、统计检验、外部有效性或 downstream LLM quality 证据。
+
+## 13. Release and source identity
+
+V3.1.1 已 **FULLY RELEASED**。Release commit C1 为
+`683479da2fd3b72c17cba3f03101bc23e275f40b`；annotated tag `v3.1.1` 指向 C1；
+final release-record HEAD C2 为 `0238cc0bd5254ac782aa3981cdc755d5a59c498e`。GitHub / Gitee
+branch 与 tag 均已 push 并完成 remote verification。本次 post-release documentation
+closure 不移动既有 tag，也不改变 V3.1.0 Formal 结果。UTF-8 纯文本配套材料见
+[Thesis_Materials_V3_1_1_Workflow_DX.txt](Thesis_Materials_V3_1_1_Workflow_DX.txt)。
+
+V3.1.2 与 V3.2 均 **NOT STARTED**。

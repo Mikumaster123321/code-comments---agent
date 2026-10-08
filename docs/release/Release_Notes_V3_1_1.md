@@ -8,6 +8,14 @@
 
 **Theme:** Workflow & Developer Experience Optimization
 
+**Release commit C1:** `683479da2fd3b72c17cba3f03101bc23e275f40b`
+
+**Final release-record HEAD C2:** `0238cc0bd5254ac782aa3981cdc755d5a59c498e`
+
+**Annotated tag:** `v3.1.1`（指向 C1）
+
+**Remote publication:** GitHub / Gitee branch and tag verified
+
 V3.1.1 是已发布 V3.1.0 之上的维护版本，集中改善开发命令、环境诊断、测试入口、
 冻结实验追溯和发布一致性。它不改变 Project Intelligence retrieval semantics 或 ranking。
 
@@ -102,4 +110,4 @@ V3.1.0 Formal results 完全不变：
 
 ## Next maintenance version
 
-V3.1.x maintenance continues。V3.2 **NOT STARTED**；本版本不启动 Multi-Agent 工作。
+V3.1.2 Maintenance 与 V3.2 均 **NOT STARTED**；本版本不启动 Multi-Agent 工作。

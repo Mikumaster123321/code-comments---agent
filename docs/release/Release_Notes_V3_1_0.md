@@ -134,9 +134,9 @@ Access 或 Workspace 数据。若使用 V3.1 real E5，需显式创建可选 emb
 - [Final Development Report](../development/Development_Report_V3_1_0.md)
 - [Experiment Evidence Index](../experiments/README.md)
 - [Formal Results Report](../development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)
-- [Thesis Materials Package](../development/Thesis_Materials_V3_1_0_Formal_Results.md)
+- Thesis Materials：[MD](../development/Thesis_Materials_V3_1_0_Formal_Results.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_0_Formal_Results.txt)
 
 ## Next
 
-V3.1.x maintenance continues。V3.1.1 首先处理 Workflow & Developer Experience
-Optimization；V3.2 **Controlled Multi-Agent Collaboration** 仍为 **NOT STARTED**。
+V3.1.1 Workflow & Developer Experience Optimization 已 **FULLY RELEASED**；V3.1.2
+Maintenance 与 V3.2 **Controlled Multi-Agent Collaboration** 均为 **NOT STARTED**。

@@ -8,7 +8,18 @@
 
 ## Current State
 
-- V3.1.1 Workflow & Developer Experience Optimization：**RELEASED**。六项冻结工作均已完成：统一 Python developer command hub、runtime/test
+- V3.1.0 + V3.1.1 Post-Release Documentation Closure：**COMPLETED**。两个版本均已具备
+  README / Version History、Thesis Materials MD + UTF-8 TXT、Development Report、
+  Release Notes、PROJECT_CONTEXT 与 release index 入口；永久版本文档合同已固化在
+  `docs/release/Version_Documentation_Contract.md`。本次闭环仅修改 tracked documentation，
+  不改变 retrieval、ranking、Formal artifact、Query/GT/Grade 或既有 tag。V3.1.2 与
+  V3.2 均为 **NOT STARTED**。
+
+- V3.1.1 Workflow & Developer Experience Optimization：**FULLY RELEASED**。Release
+  commit C1 为 `683479da2fd3b72c17cba3f03101bc23e275f40b`，annotated tag `v3.1.1`
+  指向 C1，final release-record HEAD C2 为
+  `0238cc0bd5254ac782aa3981cdc755d5a59c498e`；GitHub / Gitee branch 与 tag 已 push
+  并完成 remote verification。六项冻结工作均已完成：统一 Python developer command hub、runtime/test
   doctor、offline-first E5 preflight、稳定 test profiles、只读 experiment/archive
   validator、release consistency gate。新增 workflow/release 测试 `30 passed`；production
   `198 passed`；experiments `240 passed`；统一 full 与 legacy full 均为 `922 passed`。
@@ -25,7 +36,7 @@
   `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3` /
   `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`。
   V3.1.1 不改变 retrieval、ranking、Query/GT/Grade、Formal artifact、metrics 或
-  interpretation。V3.2：**NOT STARTED**。
+  interpretation。V3.1.2 与 V3.2：**NOT STARTED**。
 
 - V3.1.0 Formal Results Interpretation 与论文实验素材准备：Formal Results QA
   **PASS WITH NON-BLOCKING NOTES**，Critical 0、validity-blocking Medium 0，
@@ -71,12 +82,19 @@
 
 - Current Version: `3.1.1`
 - Current branch: `v3.1.0-dev`
-- V3.1.1: `RELEASED`
+- V3.1.0 / V3.1.1 documentation closure: `COMPLETED`
+- Version Documentation Contract: `ACTIVE`
+- V3.1.1: `FULLY RELEASED`
+- V3.1.1 release commit / tag:
+  `683479da2fd3b72c17cba3f03101bc23e275f40b` / `v3.1.1`
+- V3.1.1 final release-record HEAD: `0238cc0bd5254ac782aa3981cdc755d5a59c498e`
+- V3.1.1 GitHub / Gitee branch and tag publication: `VERIFIED`
 - V3.1.1 theme: Workflow & Developer Experience Optimization
 - V3.1.1 scope: V311-DX-01 through V311-DX-06 `COMPLETE`
 - V3.1.1 tests: workflow/release `30`; production `198`; experiments `240`;
   full / legacy full `922`
 - V3.1.1 Formal impact: `NONE`; V3.1.0 identity/SHA unchanged
+- V3.1.2: `NOT STARTED`
 - V3.1.0: `RELEASED`
 - V3.1.0 release commit / tag:
   `8813e4c2fb0dc07f38c2013d520441bf399dcbc4` / `v3.1.0`

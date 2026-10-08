@@ -1,5 +1,7 @@
 # V3.1.0 Project Intelligence / RAG 论文写作素材包
 
+<!-- release-state: V3.1.0 RELEASED -->
+
 ## 0. 文档定位与冻结身份
 
 本文件是可直接用于论文写作的 **V3.1 事实、表格、图表与论证边界素材包**，不是
@@ -351,12 +353,13 @@ Code Understanding Agent、Review Agent、Documentation Agent、Refactor Agent �
 Test / Validation Agent，但这些均是未来候选方向，**不是 V3.1 已实现能力**。
 
 若 V3.2 启动，应把 retrieval ranking、rendered evidence 与实际维护任务质量分别记录，
-并为端到端输出建立新的任务集、人工判定和 Gate。当前状态：V3.1.0 发布文档已准备，
-等待 DeepSeek Final Release QA；V3.2 **NOT STARTED**。
+并为端到端输出建立新的任务集、人工判定和 Gate。当前状态：V3.1.0 **RELEASED**；
+V3.1.1 **FULLY RELEASED**；V3.1.2 与 V3.2 均 **NOT STARTED**。
 
 ## 23. 复核入口
 
 - 数据与实验总索引：[V3.1 Experiment Evidence Index](../experiments/README.md)
 - 发布文档总索引：[V3.1 Documentation Index](../release/README.md)
 - CSV 确定性导出脚本：[export_formal_thesis_tables.py](../../scripts/export_formal_thesis_tables.py)（`--check`）
-- 当前 release 状态：Release Candidate / Ready for Final Release QA；尚未 commit、tag 或 push
+- UTF-8 纯文本配套材料：[Thesis_Materials_V3_1_0_Formal_Results.txt](Thesis_Materials_V3_1_0_Formal_Results.txt)
+- 当前 release 状态：`RELEASED`；release commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`；annotated tag `v3.1.0`；branch / tag 已 push 并完成 remote verification

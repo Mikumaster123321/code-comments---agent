@@ -4,7 +4,7 @@
 
 **当前版本：V3.1.1（`3.1.1`）— Released**
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG。V3.1.1 聚焦 Workflow & Developer Experience Optimization，不改变 retrieval ranking 或冻结 Formal 结果；V3.2 Multi-Agent Collaboration **尚未开始**。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 在既有项目维护核心、BYOK 与可选 Managed AI Access 之上增加 Project Intelligence / RAG。V3.1.1 聚焦 Workflow & Developer Experience Optimization，不改变 retrieval ranking 或冻结 Formal 结果；V3.1.2 与 V3.2 Multi-Agent Collaboration 均 **尚未开始**。
 
 ## Available Features
 
@@ -210,6 +210,12 @@ python -m pytest
 
 `python -m pytest -p no:debugging` 仅是已记录的 Anaconda Python 3.13.5 主机专用 workaround，不是标准测试命令。测试不会调用真实 LLM Provider，也不需要真实 API Key。
 
+## Documentation / Thesis Materials
+
+- **V3.1.0 Project Intelligence / RAG：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_0_Formal_Results.txt) · [Development Report](docs/development/Development_Report_V3_1_0.md) · [Release Notes](docs/release/Release_Notes_V3_1_0.md)
+- **V3.1.1 Workflow & DX：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.txt) · [Development Report](docs/development/Development_Report_V3_1_1.md) · [Release Notes](docs/release/Release_Notes_V3_1_1.md)
+- [V3.1 Documentation Index](docs/release/README.md) · [Permanent Version Documentation Contract](docs/release/Version_Documentation_Contract.md)
+
 ## Directory Structure
 
 ```text
@@ -258,6 +264,7 @@ code-comments---agent/
 - **V3.0.2 — Commercial infrastructure enhancement track**：Deferred / optional；Admin UI、Payment interface、Recharge、Auth / RBAC 均未实现
 - **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
+- **V3.1.2 — Maintenance**：Not Started
 - **V3.1.x — Maintenance**：Continues
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
@@ -280,6 +287,12 @@ Tests：workflow/release `30 passed`；production `198 passed`；experiments
 `240 passed`；full 与旧 pytest 入口均为 `922 passed`。本版本无 retrieval semantic、
 ranking、Query/GT/Grade、Formal artifact 或 Formal interpretation 变化。
 
+Release commit：`683479da2fd3b72c17cba3f03101bc23e275f40b`；annotated tag：
+`v3.1.1`；最终发布身份记录 HEAD：`0238cc0bd5254ac782aa3981cdc755d5a59c498e`。
+GitHub / Gitee branch 与 tag 已 push 并完成 remote verification。
+
+**V3.1.2：NOT STARTED。**
+
 ### V3.1.0
 
 **Project Intelligence / RAG — Released（`3.1.0`）**
@@ -298,7 +311,7 @@ Major Updates：Symbol-level project intelligence、File/Symbol/Chunk retrieval 
 
 V3.1 Evaluation 共冻结 72 条 Query：48 条 English Test、12 条 English Dev、12 条 Chinese coverage。正式 RQ1–RQ4 使用 48 条 English Test 与 17 项冻结配置，完成 **816/816 successful query-config pairs**；English Dev 用于发布前 Dry Run，Chinese coverage 不进入 English 主结果。独立结果 QA 为 **PASS WITH NON-BLOCKING NOTES**，正式解读为 **ACCEPT — CLAIM-BOUNDED**。这些是单一冻结仓库与受控 fixtures 上的描述性证据，不代表统计显著性、外部项目普遍优越性或下游 LLM 维护质量。
 
-详细材料：[V3.1 文档索引](docs/release/README.md)、[最终开发报告](docs/development/Development_Report_V3_1_0.md)、[正式结果报告](docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)、[论文写作素材包](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md)与 [Release Notes](docs/release/Release_Notes_V3_1_0.md)。
+详细材料：[V3.1 文档索引](docs/release/README.md)、[最终开发报告](docs/development/Development_Report_V3_1_0.md)、[正式结果报告](docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md)、论文写作素材 [MD](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md) / [TXT](docs/development/Thesis_Materials_V3_1_0_Formal_Results.txt) 与 [Release Notes](docs/release/Release_Notes_V3_1_0.md)。
 
 Tests: **892 passed**。Release commit：`8813e4c2fb0dc07f38c2013d520441bf399dcbc4`；
 tag：`v3.1.0`；branch 与 tag 已 push 并完成 remote verification。V3.2 Multi-Agent

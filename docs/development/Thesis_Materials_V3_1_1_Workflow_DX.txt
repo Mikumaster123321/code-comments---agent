@@ -1,0 +1,282 @@
+V3.1.1 Workflow & Developer Experience 论文工程素材
+
+==================================================
+0. 文档定位与版本身份
+==================================================
+
+本文件是 V3.1.1 的纯文本论文工程素材，适合复制到 Word、论文草稿、学校论文系统或
+提供给外部模型。它不是最终毕业论文，也不是新的 retrieval research result。
+
+版本：3.1.1
+状态：FULLY RELEASED
+主题：Workflow & Developer Experience Optimization
+Release commit C1：683479da2fd3b72c17cba3f03101bc23e275f40b
+Final release-record HEAD C2：0238cc0bd5254ac782aa3981cdc755d5a59c498e
+Annotated tag：v3.1.1
+Tag target：683479da2fd3b72c17cba3f03101bc23e275f40b
+V3.1.0 released baseline：8813e4c2fb0dc07f38c2013d520441bf399dcbc4，tag v3.1.0
+
+Release commit 与后续 final HEAD 可以不同。V3.1.1 的 annotated tag 指向 release
+commit C1，C1 是 C2 以及本次 post-release documentation closure 后续 HEAD 的祖先。
+本次闭环不移动或重建 v3.1.0、v3.1.1 tag。
+
+==================================================
+1. V3.1.1 版本定位
+==================================================
+
+V3.1.1 是 V3.1.0 正式发布后的工程维护版本。其贡献是提高开发、验证和发布流程的
+可复现性、可诊断性、可维护性与可审计性，而不是改变检索算法或产生新的 Formal
+研究结果。V3.1.0 的 Query、Ground Truth、Grade、17 项配置、ranking semantics、
+Formal runs、metrics、artifact 和 interpretation 全部保持冻结。
+
+==================================================
+2. 为什么在 V3.1.0 后增加维护版本
+==================================================
+
+V3.1.0 已完成 Project Intelligence / RAG 和 Formal RQ1–RQ4，但发布后工程审计发现：
+开发命令入口分散；Core 与 optional E5 环境边界不够直观；普通 pytest 的 host-specific
+plugin crash 需要人工辨别；Formal archive 与发布文档缺少统一只读门禁；部分关键
+validator 使用在 python -O 下可能失效的 assert。这些问题不改变 retrieval 结果，却会
+增加环境迁移、实验复核和维护发布中的操作歧义。因此 V3.1.1 将 workflow 本身纳入
+可测试的软件质量边界。
+
+==================================================
+3. Workflow / DX audit 背景
+==================================================
+
+审计以 offline-first、read-only-by-default、failure-explicit 为设计原则。工具必须从
+仓库内外工作目录稳定定位项目，默认不联网、不下载模型、不运行 Formal benchmark，
+不执行 stage、commit、tag、push 或历史重写。失败信息应明确指出 What failed、Expected、
+Actual 和 Safe recovery，避免把环境问题误判为算法或测试回归。
+
+==================================================
+4. DX-01 — Unified Python developer command hub
+==================================================
+
+scripts/dev.py 提供纯 Python、repository-root aware 的统一入口，覆盖帮助、doctor、
+project smoke、稳定测试 profile、E5 preflight、experiment/archive validation 和
+release consistency check。子进程使用参数数组，不使用 shell=True，并保留底层 pytest
+exit code。原有 python -m pytest、独立验证脚本和 python main.py 继续有效。
+
+==================================================
+5. DX-02 — Runtime and test-environment doctor
+==================================================
+
+doctor 把运行环境分为 Core runtime、Optional E5 runtime 和 Historical Formal runtime。
+它报告 Python executable、version、implementation、platform、依赖可用性、Git branch
+和 HEAD。credential-like 环境变量只显示 set / unset，不输出 secret 值。
+
+普通 pytest 通过独立子进程探测。当前 Anaconda Python 3.13.5 host 在 pytest debugging
+plugin initialization 处发生 signal 11；只有实际观察到该异常时，doctor 才建议
+-p no:debugging，并明确说明这是 host workaround，不改变测试语义或收集范围。
+
+==================================================
+6. DX-03 — Offline-first E5 preflight
+==================================================
+
+model-check 固定检查 intfloat/multilingual-e5-base revision
+d128750597153bb5987e10b1c3493a34e5a4502a、768 维与冻结依赖版本。它只检查显式路径或
+标准本地 cache，不扫描整机、不在仓库中创建 cache、也不下载模型。检查覆盖 snapshot、
+必要文件、dangling symlink、repository identity、resolved revision 和 cache location。
+
+只有显式指定 --smoke 才使用已有冻结 cache 嵌入 1 个 query 与 1 个 document，并验证
+finite、dimension 和 L2 behavior。E5 preflight 不替代完整 Phase 3.2 corpus、performance
+或 truncation validation。
+
+==================================================
+7. DX-04 — Stable test profiles
+==================================================
+
+llm、production、experiments、full 和 release 五类 profile 在 scripts/dev.py 的单一
+source of truth 中定义，避免 README、CI 和临时命令分别维护测试列表。pytest 参数继续
+透传，底层 exit code 原样返回。
+
+V3.1.0 的 198 / 240 / 892 是历史基线。V3.1.1 增加 30 项 workflow/release 测试后，
+full baseline 为 922；没有通过排除新测试来维持旧数字。直接 python -m pytest 仍受支持。
+
+==================================================
+8. DX-05 — Experiment / archive validator
+==================================================
+
+experiment-validate archive-v3.1.0 复用既有 RepositoryAuthority、canonical identity、
+typed receipt 与 deterministic CSV checker，验证 execution/archive ancestry、artifact
+SHA-256、canonical identity、17 configs、48 English Test queries、816 query-config
+pairs、run/evidence checksum、DryRun receipt 与 protected Formal path immutability。
+
+该命令不写 artifact 或 receipt，不运行 benchmark，不重新计算 retrieval ranking。
+purpose preflight 继续以既有 authority validator 为 Source of Truth；command hub 只补充
+Expected、Actual 和 Safe recovery，不复制或改变 frozen failure schema。
+
+==================================================
+9. DX-06 — Release consistency gate
+==================================================
+
+docs/release/release_state.json 用最小机器可读元数据表示 PREPARING、
+RELEASE_CANDIDATE 和 RELEASED。release-check 只读核对 branch / HEAD、working tree、
+protected-path staging、代码版本、稳定文档 sentinel、V3.1.0 baseline tag、V3.1.1 tag
+state 与 Formal archive。
+
+默认检查完全离线。只有显式使用 --remote 才通过 git ls-remote 读取已配置远端的 tag
+状态。release-check 从不 stage、commit、tag、push、fetch、重写文档或修改 Git 历史。
+
+==================================================
+10. python -O validator hardening
+==================================================
+
+Formal CSV checker 与 Phase 3.2 real-model validator 的 correctness gate 从 assert 改为
+显式条件与异常。python -O 因而不会跳过错误 artifact checksum、canonical identity、
+CSV 或 model metadata 校验，也不会在失败后错误输出 verified。针对 corrupt checksum、
+identity、CSV 和 model metadata 的优化模式测试均确认错误输入会被拒绝。
+
+POSIX resource 不可用时，RSS metrics 明确标记为 unavailable；其他验证步骤仍继续执行，
+避免把可选平台指标错误升级为整个验证流程不可用。
+
+==================================================
+11. Environment diagnostics 与安全边界
+==================================================
+
+环境诊断明确区分 Core、Optional E5 和 Historical Formal 三类需求，避免要求普通开发环境
+安装全部历史实验依赖。诊断只暴露必要的版本与可用性信息，不输出 Credential，不下载
+模型，不创建仓库内缓存。host-specific pytest workaround 通过运行时 probe 决定，不硬编码
+操作系统、Python distribution 或 debugger 原因。
+
+==================================================
+12. Test reproducibility
+==================================================
+
+稳定 profile、repository-root-aware 启动、参数数组、明确 exit code 和 host workaround
+共同减少了“同一测试因入口或工作目录不同而表现不一致”的风险。CI 使用统一 full profile，
+但原有入口继续兼容。测试数字作为发布 evidence 记录，不被硬编码为未来版本必须保持的
+阈值。
+
+[表1] V3.1.1 正式测试证据
+
+Validation                                      Result
+Offline LLM contract smoke                      6 passed
+Workflow / release tests                        30 passed
+Production profile                              198 passed
+Experiments profile                             240 passed
+Full profile                                    922 passed
+Legacy full pytest with host workaround         922 passed
+Formal CSV check under normal Python            PASS
+Formal / archive validation under python -O     PASS
+Corrupt validation inputs under python -O       Rejected
+
+==================================================
+13. Experiment traceability
+==================================================
+
+V3.1.1 把 V3.1.0 的冻结实验历史作为可验证的发布依赖，而不是重新生成的结果。
+只读 archive validator 将 Git ancestry、artifact-set file SHA-256、canonical identity、
+run/evidence checksum、配置和 Query 覆盖以及 deterministic CSV 连接为一条可审计证据链。
+这提升了研究软件的 traceability，并保持 Formal artifact bytes 与解释边界不变。
+
+==================================================
+14. Release consistency 与永久文档合同衔接
+==================================================
+
+V3.1.1 的 release gate 将版本元数据、文档 sentinel、tag target 和冻结 Formal archive
+纳入同一只读检查。本次 post-release documentation closure 进一步把每个正式版本必须
+同时具备 README、Version History、Thesis Materials MD、Thesis Materials TXT、
+Development Report、Release Notes、PROJECT_CONTEXT、文档索引、Release QA、annotated
+tag、GitHub/Gitee branch/tag push 与 remote verification 的要求固化为版本文档合同。
+
+从后续版本开始，TXT thesis materials、README、Development Report 或 Release Notes
+任一缺失均为 RELEASE BLOCKER；要求的正式远端没有完成 push 与验证时，状态只能是
+REMOTE PUBLICATION INCOMPLETE，不能标记为 RELEASED。
+
+==================================================
+15. Backward compatibility
+==================================================
+
+V3.1.1 没有 breaking migration，也没有新增 core dependency。python main.py、
+python -m pytest、targeted pytest 和原独立验证入口继续有效。UI、processor、provider、
+retrieval production API、artifact schema、experiment protocol、Query、Ground Truth、
+Grade 和 ranking semantics 均未改变。
+
+==================================================
+16. Formal immutability
+==================================================
+
+V3.1.0 Formal execution revision：2749969cd3a2d4d6e1e8d81160eebd5fb360879b
+V3.1.0 Formal archive commit：c3ee6ec1b7aa28c2539d2fe849d1f25268807677
+Artifact-set canonical identity：acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+Artifact-set file SHA-256：2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41
+Scope：17 configs、48 English Test queries、816 query-config pairs
+
+V3.1.1 没有重跑 Formal，没有修改 protected Formal path，没有重新计算 ranking，也没有
+新增或修改 retrieval claim。V3.1.0 Formal artifacts 为 UNCHANGED。
+
+==================================================
+17. Engineering contribution
+==================================================
+
+V3.1.1 的工程贡献是：为带有冻结实验历史的软件代码智能维护系统构建一套
+offline-first、read-only-by-default、failure-explicit 的可复现维护工作流，并通过自动
+测试将环境诊断、测试复现、实验追溯、优化模式 correctness 与发布一致性纳入软件质量
+边界。贡献重点是 Engineering Contribution、Reproducibility、Maintainability、
+Experimental Traceability、Developer Workflow 和 Release Robustness，而不是检索效果。
+
+==================================================
+18. 论文可使用表述
+==================================================
+
+可用于正文的表述：
+
+“在完成 Project Intelligence / RAG 的冻结实验后，本研究进一步将研究软件的开发与
+发布流程建模为可测试对象。维护版本提供统一命令入口、分层环境诊断、offline-first
+模型预检、稳定测试 profile、冻结实验归档验证和发布一致性门禁，从而降低环境迁移与
+结果复核中的操作歧义。该工作增强了系统的可复现性、可维护性和实验可追溯性，但不构成
+新的检索效果结论。”
+
+“通过将 validator 中依赖 assert 的 correctness check 改为显式异常，关键归档、CSV 与
+模型元数据校验在 python -O 下仍然生效；该变化属于验证可靠性 hardening，不改变
+V3.1.0 的 Formal artifact 或 ranking semantics。”
+
+==================================================
+19. Limitations
+==================================================
+
+1. E5 preflight 不能替代完整 Phase 3.2 performance、corpus 和 truncation validation。
+2. 显式 smoke 依赖用户已经准备且版本精确匹配的本地 cache；本版本不下载或修复 cache。
+3. 默认 release gate 不访问远端；远端状态需要显式 --remote 与可用网络。
+4. 当前 host 的 pytest plugin initialization 异常仍需环境 workaround；本版本诊断并提示，
+   但不修改第三方环境。
+5. 稳定 test profile 反映当前仓库结构；未来测试重组仍需审查单一映射。
+6. 本版本不提供新数据集、统计检验、外部有效性或 downstream LLM quality 证据。
+
+==================================================
+20. 与后续维护版本关系
+==================================================
+
+V3.1.1 已 FULLY RELEASED，并通过本次 post-release documentation closure 补齐双格式
+论文素材与永久版本文档合同。V3.1.2 为 NOT STARTED；任何后续维护版本都必须在 tag
+和 push 前完成合同要求的全部文档与 Release QA。V3.2 为 NOT STARTED；本版本不启动
+Controlled Multi-Agent Collaboration。
+
+==================================================
+21. 素材来源与身份
+==================================================
+
+关键来源路径：
+
+README.md
+PROJECT_CONTEXT.md
+docs/development/V3_1_1_Workflow_DX_Scope.md
+docs/development/Development_Report_V3_1_1.md
+docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md
+docs/release/Release_Notes_V3_1_1.md
+docs/release/README.md
+docs/release/release_state.json
+docs/release/Version_Documentation_Contract.md
+docs/development/Development_Report_V3_1_0_Phase_6_4_Formal_RQ1_RQ4_Results.md
+docs/experiments/audits/phase64_formal_english_test/artifact_set.json
+
+关键发布与冻结身份：
+
+V3.1.1 release commit C1：683479da2fd3b72c17cba3f03101bc23e275f40b
+V3.1.1 final release-record HEAD C2：0238cc0bd5254ac782aa3981cdc755d5a59c498e
+V3.1.1 annotated tag：v3.1.1
+V3.1.1 tag target：683479da2fd3b72c17cba3f03101bc23e275f40b
+V3.1.0 artifact-set canonical identity：acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+V3.1.0 artifact-set file SHA-256：2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41

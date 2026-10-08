@@ -12,6 +12,11 @@
   `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`, tag `v3.1.0`
 - **Scope freeze:** `eaf74c1` (`docs(v3.1.1): freeze workflow and dx scope`)
 - **Implementation:** `e1de983` (`feat(v3.1.1): add developer workflow tooling`)
+- **Release commit C1:** `683479da2fd3b72c17cba3f03101bc23e275f40b`
+- **Final release-record HEAD C2:** `0238cc0bd5254ac782aa3981cdc755d5a59c498e`
+- **Annotated tag:** `v3.1.1`（指向 C1）
+- **Remote publication:** GitHub / Gitee branch and tag verified
+- **V3.1.2:** NOT STARTED
 - **V3.2:** NOT STARTED
 
 V3.1.1 实现六项已冻结 DX 工作，不修改 retrieval、ranking、benchmark protocol 或
@@ -111,9 +116,11 @@ Post-check 继续得到：
 - 当前 core 环境未安装冻结 optional E5 dependencies/cache，因此真实 `--smoke` 未执行；
   fake runtimes 覆盖了 preflight failure boundaries，历史 real-model evidence 保持不变。
 - 默认 release gate 不验证 remote；`--remote` 需要网络可用。
-- DeepSeek Final Release QA、V3.1.1 tag 与 push 不属于本轮。
+- 默认 release gate 不证明远端状态；V3.1.1 发布时已通过单独的 GitHub / Gitee branch
+  与 annotated-tag target verification 建立远端发布证据。
 
 ## 10. Release readiness
 
 实现与文档已进入 RELEASED。Critical 0；validity/release-blocking Medium 0。
-独立 DeepSeek Final Release QA 已完成并通过；V3.1.x maintenance continues；V3.2 未开始。
+独立 DeepSeek Final Release QA 已完成并通过；release commit、annotated tag、GitHub / Gitee
+push 与 remote verification 均已完成。V3.1.2 与 V3.2 均未开始。
