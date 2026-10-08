@@ -119,6 +119,21 @@ def test_test_profile_preserves_pytest_exit_code(monkeypatch):
     assert dev.run_test_profile("llm", ()) == 5
 
 
+def test_release_profile_does_not_claim_final_gate_for_candidate(monkeypatch, capsys):
+    monkeypatch.setattr(dev, "_pytest_command", lambda *args, **kwargs: ["pytest"])
+    monkeypatch.setattr(dev, "_run_process", lambda *args, **kwargs: _completed())
+    monkeypatch.setattr(dev, "validate_archive_v310", lambda **kwargs: 0)
+    monkeypatch.setattr(dev, "_load_release_state", lambda root: {"state": "RELEASE_CANDIDATE"})
+    monkeypatch.setattr(
+        dev,
+        "release_check",
+        lambda *args, **kwargs: pytest.fail("candidate profile must not claim release readiness"),
+    )
+
+    assert dev.run_test_profile("release", ()) == 0
+    assert "NOT_EXECUTED_AWAITING_FINAL_QA" in capsys.readouterr().out
+
+
 def test_model_check_rejects_missing_dependencies(monkeypatch):
     monkeypatch.setattr(dev, "_dependency_version", lambda name: None)
     with pytest.raises(dev.WorkflowError, match="optional E5 dependencies"):

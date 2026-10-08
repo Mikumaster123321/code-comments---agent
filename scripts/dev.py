@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified, read-only-by-default developer workflow commands for V3.1.2."""
+"""Unified, read-only-by-default developer workflow commands for V3.1.3."""
 
 from __future__ import annotations
 
@@ -23,9 +23,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-BASELINE_VERSION = "3.1.1"
-BASELINE_RELEASE_COMMIT = "683479da2fd3b72c17cba3f03101bc23e275f40b"
-BASELINE_TAG = "v3.1.1"
+BASELINE_VERSION = "3.1.2"
+BASELINE_RELEASE_COMMIT = "247bbfc1f849b929a00b32b09ada5e060ceef9d9"
+BASELINE_TAG = "v3.1.2"
 FORMAL_EXECUTION_REVISION = "2749969cd3a2d4d6e1e8d81160eebd5fb360879b"
 FORMAL_ARCHIVE_COMMIT = "c3ee6ec1b7aa28c2539d2fe849d1f25268807677"
 FORMAL_ARTIFACT_PATH = (
@@ -39,6 +39,31 @@ FORMAL_ARTIFACT_SHA256 = (
 )
 PROTECTED_PATH = "docs/thesis/"
 RELEASE_STATE_PATH = "docs/release/release_state.json"
+REQUIRED_RELEASE_REMOTES = ("github", "gitee")
+RELEASE_LIFECYCLE_STATES = {"PREPARING", "RELEASE_CANDIDATE", "RELEASED"}
+RELEASE_STATE_V1_FIELDS = {
+    "schema_version",
+    "version",
+    "state",
+    "expected_branch",
+    "release_commit",
+    "tag",
+    "baseline",
+    "document_sentinel",
+    "required_documents",
+}
+RELEASE_STATE_V2_FIELDS = {
+    "schema_version",
+    "version",
+    "state",
+    "expected_development_branch",
+    "expected_main_branch",
+    "release_commit",
+    "tag",
+    "baseline",
+    "required_documents",
+    "final_qa_evidence",
+}
 
 E5_REPOSITORY = "intfloat/multilingual-e5-base"
 E5_REVISION = "d128750597153bb5987e10b1c3493a34e5a4502a"
@@ -94,7 +119,10 @@ TEST_PROFILES: dict[str, tuple[str, ...]] = {
         "tests/test_project_intelligence_context.py",
     ),
     "full": (),
-    "release": (),
+    "release": (
+        "tests/test_release_workflow.py",
+        "tests/test_repository_architecture.py",
+    ),
 }
 
 
@@ -335,7 +363,11 @@ def run_test_profile(
         return result.returncode
     validate_archive_v310(root=root)
     metadata = _load_release_state(root)
-    return release_check(str(metadata["version"]), remote=False, root=root)
+    if metadata["state"] == "RELEASED":
+        return release_check(str(metadata["version"]), remote=False, root=root)
+    print("release_profile=PASS")
+    print("release_gate=NOT_EXECUTED_AWAITING_FINAL_QA")
+    return 0
 
 
 def _candidate_cache_roots(explicit: Path | None) -> tuple[Path, ...]:
@@ -773,32 +805,71 @@ def _load_release_state(root: Path) -> dict:
             type(error).__name__,
             "create or restore the reviewed machine-readable release state",
         )
+    schema_version = state.get("schema_version") if isinstance(state, dict) else None
     required = {
-        "schema_version",
-        "version",
-        "state",
-        "expected_branch",
-        "release_commit",
-        "tag",
-        "baseline",
-        "document_sentinel",
-        "required_documents",
-    }
+        "v1": RELEASE_STATE_V1_FIELDS,
+        "v2": RELEASE_STATE_V2_FIELDS,
+    }.get(schema_version)
     _require(
-        isinstance(state, dict) and set(state) == required,
+        required is not None and set(state) == required,
         "release state schema",
-        sorted(required),
+        "the exact v1 legacy or v2 two-stage release schema",
         sorted(state) if isinstance(state, dict) else type(state).__name__,
         "restore release_state.json with the documented minimal schema",
     )
     _require(
-        state["schema_version"] == "v1"
-        and state["state"] in {"PREPARING", "RELEASE_CANDIDATE", "RELEASED"},
+        state["state"] in RELEASE_LIFECYCLE_STATES,
         "release state value",
-        "schema v1 and PREPARING, RELEASE_CANDIDATE, or RELEASED",
+        "PREPARING, RELEASE_CANDIDATE, or RELEASED",
         f"schema={state['schema_version']!r}, state={state['state']!r}",
         "set an explicit reviewed release lifecycle state",
     )
+    required_documents = state["required_documents"]
+    _require(
+        isinstance(required_documents, list)
+        and bool(required_documents)
+        and all(isinstance(path, str) and path for path in required_documents),
+        "release document metadata",
+        "a non-empty path list",
+        required_documents,
+        "restore the reviewed release document inventory",
+    )
+    if schema_version == "v1":
+        _require(
+            isinstance(state["expected_branch"], str)
+            and bool(state["expected_branch"])
+            and isinstance(state["document_sentinel"], str)
+            and bool(state["document_sentinel"]),
+            "legacy release intent",
+            "a branch and document sentinel",
+            {
+                "expected_branch": state["expected_branch"],
+                "document_sentinel": state["document_sentinel"],
+            },
+            "restore the published v1 release intent",
+        )
+    else:
+        final_qa_evidence = state["final_qa_evidence"]
+        _require(
+            all(
+                isinstance(state[field], str) and bool(state[field])
+                for field in (
+                    "expected_development_branch",
+                    "expected_main_branch",
+                    "final_qa_evidence",
+                )
+            )
+            and final_qa_evidence.startswith("docs/qa/")
+            and final_qa_evidence in required_documents,
+            "two-stage release intent",
+            "development/main branches and a required docs/qa Final QA evidence path",
+            {
+                "expected_development_branch": state["expected_development_branch"],
+                "expected_main_branch": state["expected_main_branch"],
+                "final_qa_evidence": final_qa_evidence,
+            },
+            "restore the stable v2 release intent without recording a dynamic final HEAD",
+        )
     return state
 
 
@@ -877,6 +948,18 @@ def _verify_tag_state(version: str, state: dict, root: Path) -> None:
             target,
             "do not overwrite the tag; investigate the release history",
         )
+        head = _git_output(["rev-parse", "HEAD"], root=root)
+        ancestor = _git(
+            ["merge-base", "--is-ancestor", state["release_commit"], head],
+            root=root,
+        )
+        _require(
+            ancestor.returncode == 0,
+            "release commit ancestry",
+            f"{state['release_commit']} is an ancestor of runtime HEAD {head}",
+            f"git merge-base --is-ancestor exit code {ancestor.returncode}",
+            "do not rewrite the tag or history; restore a descendant release-record HEAD",
+        )
     else:
         _require(
             state["tag"] is None and state["release_commit"] is None,
@@ -942,6 +1025,76 @@ def _remote_tag_check(version: str, state: dict, root: Path) -> None:
             )
 
 
+def _remote_release_check(version: str, state: dict, root: Path, head: str) -> None:
+    remotes = tuple(line for line in _git_output(["remote"], root=root).splitlines() if line)
+    missing_remotes = tuple(remote for remote in REQUIRED_RELEASE_REMOTES if remote not in remotes)
+    _require(
+        not missing_remotes,
+        "release remote discovery",
+        REQUIRED_RELEASE_REMOTES,
+        remotes,
+        "configure the reviewed GitHub and Gitee remotes before remote verification",
+    )
+    tag_name = f"v{version}"
+    main_branch = state["expected_main_branch"]
+    development_branch = state["expected_development_branch"]
+    for remote in REQUIRED_RELEASE_REMOTES:
+        result = _git(
+            [
+                "ls-remote",
+                remote,
+                f"refs/heads/{main_branch}",
+                f"refs/heads/{development_branch}",
+                f"refs/tags/{tag_name}",
+                f"refs/tags/{tag_name}^{{}}",
+            ],
+            root=root,
+        )
+        _require(
+            result.returncode == 0,
+            f"remote release read: {remote}",
+            "git ls-remote exit code 0",
+            f"exit code {result.returncode}",
+            "restore read-only remote connectivity and rerun with --remote",
+        )
+        refs = {}
+        for line in result.stdout.splitlines():
+            fields = line.split()
+            if len(fields) == 2:
+                refs[fields[1]] = fields[0]
+        _require(
+            refs.get(f"refs/heads/{main_branch}") == head,
+            f"remote main branch target: {remote}",
+            head,
+            refs.get(f"refs/heads/{main_branch}", "missing"),
+            "do not push automatically; inspect and complete the authorized main publication",
+        )
+        _require(
+            refs.get(f"refs/heads/{development_branch}") == head,
+            f"remote development branch target: {remote}",
+            head,
+            refs.get(f"refs/heads/{development_branch}", "missing"),
+            "do not push automatically; inspect and complete the authorized development publication",
+        )
+        if state["state"] == "RELEASED":
+            _require(
+                refs.get(f"refs/tags/{tag_name}^{{}}") == state["release_commit"],
+                f"remote released tag target: {remote}",
+                state["release_commit"],
+                refs.get(f"refs/tags/{tag_name}^{{}}", "missing"),
+                "do not push or overwrite automatically; inspect remote release state",
+            )
+        else:
+            tag_refs = tuple(ref for ref in refs if ref.startswith(f"refs/tags/{tag_name}"))
+            _require(
+                not tag_refs,
+                f"remote pre-release tag state: {remote}",
+                f"no {tag_name} tag",
+                tag_refs,
+                "stop and inspect the unexpected remote tag",
+            )
+
+
 def release_check(
     version: str,
     *,
@@ -958,10 +1111,16 @@ def release_check(
     )
     branch = _git_output(["branch", "--show-current"], root=root)
     head = _git_output(["rev-parse", "HEAD"], root=root)
+    if state["schema_version"] == "v1":
+        expected_branch = state["expected_branch"]
+    elif state["state"] == "RELEASED":
+        expected_branch = state["expected_main_branch"]
+    else:
+        expected_branch = state["expected_development_branch"]
     _require(
-        branch == state["expected_branch"],
+        branch == expected_branch,
         "release branch",
-        state["expected_branch"],
+        expected_branch,
         branch or "detached HEAD",
         "switch to the reviewed release branch without rewriting history",
     )
@@ -974,18 +1133,16 @@ def release_check(
         code_version,
         "update only the project version in the reviewed implementation commit",
     )
-    sentinel = state["document_sentinel"]
     required_documents = state["required_documents"]
-    _require(
-        isinstance(sentinel, str)
-        and bool(sentinel)
-        and isinstance(required_documents, list)
-        and all(isinstance(path, str) and path for path in required_documents),
-        "release document metadata",
-        "one sentinel and a non-empty path list",
-        f"sentinel={sentinel!r}, documents={required_documents!r}",
-        "restore the minimal release metadata schema",
-    )
+    if state["schema_version"] == "v2":
+        final_qa_path = root / state["final_qa_evidence"]
+        _require(
+            final_qa_path.is_file(),
+            "Final QA evidence",
+            f"reviewed evidence at {state['final_qa_evidence']}",
+            "missing",
+            "run independent Final Release QA and commit its real evidence before release",
+        )
     for relative_path in required_documents:
         path = root / relative_path
         _require(
@@ -995,14 +1152,16 @@ def release_check(
             "missing",
             f"create and review the required V{version} release document",
         )
-        content = path.read_text(encoding="utf-8")
-        _require(
-            sentinel in content,
-            f"release document sentinel: {relative_path}",
-            sentinel,
-            "missing",
-            "add the stable reviewed release-state sentinel without rewriting frozen history",
-        )
+        if state["schema_version"] == "v1":
+            content = path.read_text(encoding="utf-8")
+            sentinel = state["document_sentinel"]
+            _require(
+                sentinel in content,
+                f"release document sentinel: {relative_path}",
+                sentinel,
+                "missing",
+                "add the stable reviewed release-state sentinel without rewriting frozen history",
+            )
     readme = (root / "README.md").read_text(encoding="utf-8")
     _require(
         f"### V{version}" in readme,
@@ -1031,7 +1190,10 @@ def release_check(
     _verify_tag_state(version, state, root)
     validate_archive_v310(root=root)
     if remote:
-        _remote_tag_check(version, state, root)
+        if state["schema_version"] == "v1":
+            _remote_tag_check(version, state, root)
+        else:
+            _remote_release_check(version, state, root, head)
     print("release_check=PASS")
     print(f"version={version}")
     print(f"state={state['state']}")

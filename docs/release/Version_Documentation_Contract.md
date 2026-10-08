@@ -113,16 +113,29 @@ Implementation complete
 
 ## 6. Release identity contract
 
-`release_commit` 可以不同于 `final_head`。允许在 release commit 与 annotated tag 形成后，
-以正常后继 commit 记录最终发布身份或进行明确的 post-release documentation closure，前提是：
+发布身份采用非自引用的两阶段合同。tracked release metadata 只记录稳定意图，包括 version、
+state、C1 `release_commit`、tag、expected development/main branch、required documents 与
+Final QA evidence path；不得把“包含该 metadata 的 commit SHA”作为 tracked `final_head`。
 
-- `release_commit` 是 `final_head` 的 Git ancestor；
+`final_head` 必须在 validator runtime 由当前 Git `HEAD` 动态取得，因此可以不同于
+`release_commit`。允许在 release commit 与 annotated tag 形成后，以正常后继 commit 记录
+最终发布身份或进行明确的 post-release documentation closure，前提是：
+
+- runtime-derived `final_head` 通过 `git merge-base --is-ancestor` 证明
+  `release_commit` 是其 Git ancestor；
 - annotated tag 始终指向已审查的 `release_commit`；
 - 后继 commit 不追溯改写 release commit 或冻结实验历史；
 - 文档准确区分 release commit、tag target 与后续 final/documentation HEAD。
 
 禁止要求 `final_head == release_commit` 作为通用发布合同。禁止 force-push、rebase、amend、
 删除、覆盖、移动或重新创建已经发布的 tag。
+
+`--remote` 验证同样是 runtime-derived 且只读：GitHub 与 Gitee 的 main branch 和当前版本
+development branch 必须都等于 runtime `final_head`，两个远端的 annotated tag peeled target
+必须等于 `release_commit`。动态 branch/tag SHA 不得回写到 tracked release metadata。
+
+Schema v1 的已发布 V3.1.2 记录必须继续可读取和验证。V3.1.3 起的 prospective v2 schema
+使用上述 branch intent 与 Final QA evidence 字段，不追溯改写 v1 或已发布历史。
 
 ## 7. Documentation consistency QA
 
@@ -137,6 +150,10 @@ tag 前至少检查：
 7. 文档不包含本机绝对路径、Credential、secret 或不应发布的数据。
 8. protected user paths 与冻结 Formal paths 未被意外读取、修改或暂存。
 9. executable code 变更触发相应完整测试；纯文档变更执行 link、release 与 archive checks。
+
+Final QA evidence 必须由真实 independent Final Release QA 生成并在 C1 前完成。配置 evidence
+path 或模板合同不等于 QA 已执行；文件缺失时 v2 release gate 必须 fail closed，且任何
+implementation 或 pre-release 文档不得伪造 `PASS`。
 
 ## 8. V3.1 post-release closure record
 
