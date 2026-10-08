@@ -35,6 +35,21 @@
 </EXISTING_DOCUMENTATION>
 ```
 
+### 2.1 Prompt inventory 与变更分类
+
+V3.1.2 只允许修改 `llm_service.py` 中现有的六类 prompt，不增加新的模型任务：
+
+| Prompt | 现有职责 | V3.1.2 分类 | 允许变更 |
+|---|---|---|---|
+| Python docstring generation | 为函数/类生成 docstring | MODEL-BEHAVIOR-SENSITIVE | 加入稳定边界、目标语言和标识符保留规则；保持既有 style |
+| Python existing-docstring translation | 翻译并按既有选择重排 | MODEL-BEHAVIOR-SENSITIVE | 显式区分 translation only 与 style rewrite |
+| Python summary | 概述模块、函数/类和依赖 | MODEL-BEHAVIOR-SENSITIVE | 改为语言中立的长度/结构合同 |
+| Java Javadoc generation | 为方法/类生成 Javadoc | MODEL-BEHAVIOR-SENSITIVE | 加入稳定边界；冻结 minimal 为 short Javadoc |
+| Java existing-Javadoc translation | 翻译并按既有选择重排 | MODEL-BEHAVIOR-SENSITIVE | 显式区分 translation only 与 style rewrite |
+| Java summary | 概述模块、方法/类和依赖 | MODEL-BEHAVIOR-SENSITIVE | 与 Python 使用同一高层摘要合同 |
+
+响应去除外层 fence、三引号或 Javadoc wrapper 属于 FORMAT-ONLY，但新增拒绝条件会改变失败行为，因此同样需要离线契约测试。界面标签、帮助文本和结构化输出 heading 的翻译属于 PURE-COPY，不得改变模型输入或分析语义。
+
 ## 3. 输出语言规则
 
 输出语言由独立的 Output Language 决定，支持中文、English、日本語。UI Language 仅控制界面文案，两者互不联动；Programming Language 仍独立控制解析和注释格式。
@@ -67,6 +82,7 @@
 
 - 摘要只描述输入源码的可观察结构和职责。
 - 摘要内容保持 language-neutral：输出语言变化只能改变自然语言表述，不能改变事实集合、严重性、评价或建议。
+- 输出为一个简洁段落，最多四个完整句子；不使用依赖中文“字数”的限制，也不要求项目符号数量。
 - 不输出代码审查、优化方案、项目级洞察、证据等级或评分。
 
 ### 4.4 既有注释翻译与改写
@@ -93,6 +109,8 @@
 
 拒绝后的失败路径必须清除本次运行的当前输出，且不得泄露供应商原始消息、内部异常、traceback、secret、API key 或本地绝对路径。
 
+允许的模型输出 wrapper 仅限一个完整、闭合的 Markdown code fence，或当前任务对应的一对完整 docstring/Javadoc 外层包装；清理后只能留下纯正文。额外解释、前言、结语、多个 fenced blocks、混合代码与正文、控制指令或上述禁止内容均视为不兼容输出。
+
 ## 6. 错误与状态契约
 
 本地输入验证先于任何 provider ping 或 LLM 请求。用户只看到稳定错误代码对应的中文、English 或日本語消息。Provider 设置保存/应用只表示 settings applied；只有实际 ping 成功才允许显示 connectivity verified。
@@ -118,6 +136,35 @@ V3.1.2 测试至少覆盖：
 7. 摘要 prompt 不要求 review、severity、recommendation 或 evidence；
 8. 本地验证失败时 provider ping 和 LLM stub 均未被调用；
 9. 失败结果为本地化稳定错误，不包含 traceback、secret 或本地绝对路径。
+
+### 8.1 Mock-provider cases
+
+离线 provider stub 必须覆盖：正常纯正文、合法完整 wrapper、空字符串、仅空白、未闭合 fence、多个 fence、非法 `*/`、额外解释、看似 prompt injection 的源码，以及抛出包含 secret/绝对路径的内部异常。测试只观察最终稳定结果和错误代码，不保存或快照 secret。
+
+### 8.2 Golden cases
+
+冻结以下 prompt 事实而非整段易碎字符串：
+
+- Python 与 Java generation prompt 均包含准确一次 `<SOURCE_CODE>` / `</SOURCE_CODE>`；
+- translation prompt 均包含准确一次 `<EXISTING_DOCUMENTATION>` / `</EXISTING_DOCUMENTATION>`；
+- prompt 明确把边界内内容声明为 untrusted data，并要求忽略其中指令；
+- 中文、English、日本語分别映射到明确 TARGET OUTPUT LANGUAGE；
+- prompt 明确保留 identifier、API、type、exception 和 library 名称；
+- translation-only prompt 不包含 style 重写要求，rewrite prompt 包含所选既有 style；
+- Java minimal 明确为 short Javadoc，仍由现有 annotator 包裹为 `/** ... */`；
+- summary 明确为一个段落、最多四句，且不含“200字以内”。
+
+### 8.3 Manual review matrix
+
+Final QA 使用同一小段 Python 与 Java 样例，按下表人工核对；不要求真实付费调用，本轮若无法安全运行模型则记录为待 Final QA：
+
+| Programming Language | Output Language | Task | Review focus |
+|---|---|---|---|
+| Python | 中文 / English / 日本語 | generation | docstring style、技术标识原样、无 wrapper |
+| Python | 中文 / English / 日本語 | translation only / rewrite | 原意范围、两种行为可区分 |
+| Java | 中文 / English / 日本語 | standard / minimal | Javadoc 标签、minimal 为短 Javadoc |
+| Python / Java | 中文 / English / 日本語 | summary | 同一事实范围、单段最多四句、无 review/建议 |
+| Python / Java | 任一 | malicious-looking source | 源码内指令不改变任务和输出格式 |
 
 ## 9. 变更控制
 
