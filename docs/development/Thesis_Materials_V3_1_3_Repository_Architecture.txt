@@ -1,0 +1,130 @@
+V3.1.3 REPOSITORY ARCHITECTURE THESIS MATERIALS
+
+STATUS
+
+Implementation complete. Awaiting independent Final Release QA. No V3.1.3 tag or
+push has been performed.
+
+CONTRIBUTION POSITIONING
+
+V3.1.3 is an engineering maintainability contribution. Its thesis value concerns
+Repository Architecture, Documentation Information Architecture, Release
+Traceability, Backward-compatible Modularization, and executable Architecture
+Compatibility Gates. It makes no claim of better retrieval, better model output,
+higher user satisfaction, statistical significance, or broader generalization.
+
+PROBLEM AND DESIGN BOUNDARY
+
+The repository already had stable runtime behavior and released Formal evidence, but
+three maintenance risks remained. Release identity needed to distinguish a reviewed
+release commit from a later record head. The 1,809-line root project context mixed
+current facts with long chronological history. Two support concerns were embedded in
+large root modules even though existing public imports had to remain stable.
+
+The approved solution contained exactly six items: two-stage release identity,
+current-state Source of Truth, project-context current and history separation, CSS and
+workspace extraction only, repository and documentation navigation, and executable
+compatibility gates. No general module migration, rename, deletion, dependency, or
+new packaging framework was allowed.
+
+TWO-STAGE RELEASE IDENTITY
+
+Release schema v2 stores stable intent: version, lifecycle, expected development and
+main branches, the future C1 release commit, annotated tag, required documents, and
+Final QA evidence path. It does not store the current final head because a commit
+cannot reliably contain its own SHA.
+
+The validator derives final head from the current Git checkout. For a released state,
+the C1 release commit must be an ancestor of runtime head, and the annotated tag must
+peel to C1. Remote verification reads GitHub and Gitee refs. Both main and development
+branches must equal runtime head, while both peeled tag targets must equal C1. Dynamic
+SHAs are never written back. The published V3.1.2 v1 record remains readable.
+
+Final QA is fail-closed. The required future evidence path is
+docs/qa/V3_1_3_Final_Release_QA.md. Implementation does not create that evidence or
+claim a PASS.
+
+DOCUMENTATION INFORMATION ARCHITECTURE
+
+Current machine state comes from Git objects and docs/release/release_state.json.
+Current human summaries are the root README, root PROJECT_CONTEXT.md, and the release
+index. Versioned scope, thesis, development report, QA, release notes, and experiment
+documents remain snapshots of their original phases.
+
+The complete previous 1,809-line project context is preserved at
+docs/development/PROJECT_CONTEXT_History_Through_V3_1_2.md. The shorter root context
+contains current version and state, active architecture and boundaries, release and
+Formal identity, navigation, verification state, and immediate roadmap. Documentation
+indexes expose these authority rules.
+
+BACKWARD-COMPATIBLE MODULARIZATION
+
+The internal file code_comments_agent/ui_styles.py now owns the unchanged custom CSS
+value, and ui.py re-exports it. The internal file
+code_comments_agent/workspace.py now owns workspace save, load, clear, path, whitelist,
+and format behavior, and processor.py re-exports the same functions and fields.
+
+The root entrypoint, Gradio construction, callbacks, processor pipeline, Provider
+flow, progress, batch ZIP, diff, analysis, formatters, Python and Java modules, Project
+Intelligence, and maintenance domain did not move. Workspace paths, whitelist
+security, JSON format, atomic replacement, messages, returns, and exceptions remain
+compatible. CSS content equality is verified independently of the UI host.
+
+EXECUTABLE EVIDENCE
+
+Pre-change full baseline: 951 passed.
+V3.1.3 architecture and release targeted tests: 24 passed.
+Offline LLM contracts: 6 passed.
+Production profile: 198 passed.
+Experiments profile: 240 passed.
+Full regression: 968 passed.
+
+Formal execution revision:
+2749969cd3a2d4d6e1e8d81160eebd5fb360879b
+
+Formal artifact identity:
+acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+
+Formal artifact file SHA-256:
+2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41
+
+The archive validator and deterministic Formal CSV checks pass without changing
+frozen evidence. A fresh CPython 3.10.22 environment with Gradio 6.27.0 builds
+create_ui as Blocks with 106 blocks, so the UI build smoke passes. The Anaconda Python
+3.13.5 pytest and Gradio import crash remains a host limitation and is not described
+as an application PASS.
+
+CLAIM BOUNDARY
+
+The supported claim is that V3.1.3 makes repository responsibilities, current-state
+authority, release identity, and compatibility boundaries more explicit and
+executable while preserving established paths and behavior. It does not show a
+retrieval improvement, model improvement, user satisfaction improvement, statistical
+result, or completed release. Independent Final QA, tag creation, main synchronization,
+push, and remote verification remain future release actions.
+
+MATERIAL SOURCES AND IDENTITY
+
+Baseline commit:
+93e4c0ab326e5eaf2fb6051c241fc5c76072afe9
+
+README:
+README.md
+
+Scope Freeze:
+docs/development/V3_1_3_Repository_Architecture_Scope.md
+
+Architecture Map:
+docs/architecture/Repository_Architecture_Map_V3_1_3.md
+
+Markdown Thesis Materials:
+docs/development/Thesis_Materials_V3_1_3_Repository_Architecture.md
+
+Development Report:
+docs/development/Development_Report_V3_1_3.md
+
+Release Notes:
+docs/release/Release_Notes_V3_1_3.md
+
+Release commit and tag:
+Not yet created.

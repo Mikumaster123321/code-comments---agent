@@ -1,10 +1,10 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.2 RELEASED -->
+<!-- release-state: V3.1.3 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
 
-**当前版本：V3.1.2（`3.1.2`）— Released**
+**当前版本：V3.1.3（`3.1.3`）— Implementation Complete / Awaiting Final QA**
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；已发布的 V3.1.0 增加 Project Intelligence / RAG，V3.1.1 完成 Workflow & Developer Experience Optimization。V3.1.2 聚焦 Language / UX / Output Quality 维护，不改变 retrieval ranking 或冻结 Formal 结果；V3.2 Multi-Agent Collaboration **尚未开始**。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.2 已发布并完成文档闭环。V3.1.3 聚焦 Repository / Directory / Documentation Architecture，在保持 root imports、runtime behavior、retrieval、Formal 与 LLM 行为不变的前提下增强发布追踪与仓库导航；V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -60,6 +60,17 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - 固定源码 data delimiter、技术标识保留、translation-only / style-rewrite 明确分流
 - Java minimal 冻结为 short Javadoc；空、不完整或不安全模型响应 fail closed
 - Gradio Code Copy 能力恢复；不新增 review、optimization 或 evidence 语义
+
+### V3.1.3：Repository / Directory / Documentation Architecture
+
+- 非自引用两阶段 release identity：tracked C1 intent + runtime-derived final HEAD
+- GitHub / Gitee main、development branch 与 annotated-tag peeled target 动态只读校验
+- root `PROJECT_CONTEXT.md` current/history 分离，1,809 行历史正文完整归档
+- `CUSTOM_CSS` 与 workspace persistence 两个严格受限的内部 support seams
+- root `ui` / `processor` imports 继续通过 direct re-export 兼容
+- repository architecture map、顶层 docs navigation 与 development/QA 局部索引
+- V3.1.2 release schema v1 继续可读；V3.1.3 v2 对 Final QA evidence fail closed
+- 状态为 **Implementation Complete / Awaiting Final QA**，尚未创建 tag 或 push
 
 ### V3.0.1：Optional Managed AI Access
 
@@ -199,17 +210,19 @@ python scripts/dev.py test full
 python scripts/dev.py model-check
 python scripts/dev.py experiment-validate archive-v3.1.0
 python scripts/dev.py experiment-validate --purpose formal
-python scripts/dev.py release-check --version 3.1.2
+python scripts/dev.py release-check --version 3.1.3
 ```
 
 `model-check` 默认 offline/read-only/no-download；只有显式 `--smoke` 才使用已有冻结
-cache 嵌入 1 个 query 和 1 个 document。远程 tag 验证也只有在 `release-check`
-显式添加 `--remote` 时才发生。
+cache 嵌入 1 个 query 和 1 个 document。远程 branch/tag 验证也只有在
+`release-check` 显式添加 `--remote` 时才发生。V3.1.3 Final QA evidence 尚未生成，
+因此最终 release gate 当前按合同 fail closed。
 
 ## Testing
 
-V3.1.0 发布基线为 **892 passed**；V3.1.1 完整回归为 **922 passed**。V3.1.2
-新增 29 项离线 language/UX/output contract 测试，当前完整回归为 **951 passed**。
+V3.1.0 发布基线为 **892 passed**；V3.1.1 完整回归为 **922 passed**；V3.1.2 为
+**951 passed**。V3.1.3 新增 repository architecture、release identity 与兼容性门禁；
+实现回归为 **968 passed**。
 
 ```bash
 python scripts/dev.py test llm
@@ -226,7 +239,8 @@ python -m pytest
 - **V3.1.0 Project Intelligence / RAG：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_0_Formal_Results.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_0_Formal_Results.txt) · [Development Report](docs/development/Development_Report_V3_1_0.md) · [Release Notes](docs/release/Release_Notes_V3_1_0.md)
 - **V3.1.1 Workflow & DX：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.txt) · [Development Report](docs/development/Development_Report_V3_1_1.md) · [Release Notes](docs/release/Release_Notes_V3_1_1.md)
 - **V3.1.2 Language / UX / Output Quality：** [Scope Freeze](docs/development/V3_1_2_Language_UX_Output_Quality_Scope.md) · [Prompt Contract](docs/development/V3_1_2_Prompt_Output_Contract.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.txt) · [Development Report](docs/development/Development_Report_V3_1_2.md) · [Release Notes](docs/release/Release_Notes_V3_1_2.md)
-- [V3.1 Documentation Index](docs/release/README.md) · [Permanent Version Documentation Contract](docs/release/Version_Documentation_Contract.md)
+- **V3.1.3 Repository Architecture：** [Scope Freeze](docs/development/V3_1_3_Repository_Architecture_Scope.md) · [Architecture Map](docs/architecture/Repository_Architecture_Map_V3_1_3.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_3_Repository_Architecture.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_3_Repository_Architecture.txt) · [Development Report](docs/development/Development_Report_V3_1_3.md) · [Release Notes](docs/release/Release_Notes_V3_1_3.md)
+- [Documentation Index](docs/README.md) · [V3.1 Release Index](docs/release/README.md) · [Permanent Version Documentation Contract](docs/release/Version_Documentation_Contract.md)
 
 ## Directory Structure
 
@@ -237,6 +251,7 @@ code-comments---agent/
 ├── processor.py
 ├── config.py
 ├── llm_service.py
+├── code_comments_agent/     # bounded CSS/workspace internal support seams
 ├── code_maintenance/       # V3 project maintenance core
 ├── project_intelligence/    # V3.1 retrieval, graph, hybrid, context
 ├── experiments/             # isolated benchmark/evidence implementation
@@ -256,6 +271,7 @@ code-comments---agent/
 ├── Java/                   # legacy-compatible Java processor modules
 ├── tests/
 └── docs/
+    ├── architecture/
     ├── development/
     ├── qa/
     └── release/
@@ -277,7 +293,8 @@ code-comments---agent/
 - **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
 - **V3.1.2 — Language / UX / Output Quality**：Released
-- **V3.1.x — Maintenance**：Continues
+- **V3.1.3 — Repository / Directory / Documentation Architecture**：Implementation Complete / Awaiting Final QA
+- **V3.1.4 — Maintenance**：Not Started
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
 - **V3.4 — VS Code Integration**：Planned
@@ -285,6 +302,23 @@ code-comments---agent/
 ## Version History
 
 从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+
+### V3.1.3
+
+**Repository / Directory / Documentation Architecture — Implementation Complete / Awaiting Final QA（`3.1.3`）**
+
+六项冻结工作 V313-REL-01 至 V313-TEST-06 已实现：非自引用两阶段 release identity、
+current-state Source of Truth、PROJECT_CONTEXT current/history 分离、CSS/workspace 两个
+严格受限 seam、repository/documentation navigation 与集中 compatibility gates。
+`from ui import CUSTOM_CSS` 及 processor workspace helpers 保持兼容；V3.1.2 v1 release
+record 继续可读。retrieval、Formal 与 LLM behavior impact 均为 `NONE`。
+
+Tests：architecture + release targeted `24 passed`；LLM contracts `6 passed`；production
+`198 passed`；experiments `240 passed`；full `968 passed`。Formal archive validator、
+deterministic CSV checks 与冻结 execution revision / identity / SHA 均保持通过和不变。
+CPython 3.10.22 + Gradio 6.27.0 `create_ui()` build smoke 为 `PASS`（`Blocks`，106
+blocks）。
+Final QA evidence 为 **NOT YET EXECUTED**；没有 V3.1.3 tag 或 push，因此不得标记为 Released。
 
 ### V3.1.2
 
@@ -371,6 +405,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
+| V3.1.3 | 2026-10-08 | 维护候选版本 | Repository / Directory / Documentation Architecture |
 | V3.1.2 | 2026-10-08 | 维护版本 | Language / UX / Output Quality |
 | V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
@@ -682,7 +717,9 @@ Tests: **129 passed**（开发环境与仓库外干净 venv 一致）。Release 
 
 ## Engineering Documentation
 
-- `docs/development/`：Phase Development Reports 与 Release Engineering Gates
-- `docs/qa/`：独立 QA Reports
-- `docs/release/`：Release Notes
-- `PROJECT_CONTEXT.md`：当前架构、边界、已知债务与版本规划
+- [`docs/README.md`](docs/README.md)：documentation top-level navigation
+- `docs/architecture/`：当前 repository architecture map
+- `docs/development/`：Scope、Development Reports、Thesis Materials 与历史 context
+- `docs/qa/`：独立 QA evidence；V3.1.3 Final QA 尚未执行
+- `docs/release/`：machine-readable release state、contract、Release Notes 与 release index
+- `PROJECT_CONTEXT.md`：精简的当前架构、边界、发布状态与 immediate roadmap

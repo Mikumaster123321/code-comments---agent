@@ -124,10 +124,14 @@ user-satisfaction, statistical-significance, or external-generalization claim.
 - Pre-change full baseline: `951 passed` using the recorded Anaconda host workaround.
 - Bare Anaconda Python 3.13.5 pytest/Gradio paths may terminate in the known
   IPython/`rlcompleter` host SIGSEGV; this is not an application PASS or failure.
-- V3.1.3 architecture/release/workspace targeted checks are implemented and offline.
-- Final profile counts, CPython 3.10 Gradio smoke, archive validation, deterministic
-  CSV checks, and Formal identity recheck are recorded in the V3.1.3 Development
-  Report after execution.
+- V3.1.3 architecture + release targeted: `24 passed`; LLM: `6 passed`;
+  production: `198 passed`; experiments: `240 passed`; full: `968 passed`.
+- Release profile: `24 passed`; the final gate explicitly remains unexecuted pending
+  real Final QA evidence.
+- CPython 3.10.22 + Gradio 6.27.0 `create_ui()` build smoke: `PASS` (`Blocks`, 106
+  blocks).
+- Archive validator and deterministic Formal CSV checks: `PASS`; frozen identity and
+  SHA unchanged.
 
 ## Authoritative Navigation
 

@@ -1,15 +1,23 @@
-# V3.1 Documentation Index
+# V3.1 Release Documentation Index
 
-<!-- release-state: V3.1.2 RELEASED -->
+<!-- release-state: V3.1.3 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
 V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
 （**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已正式发布
-（**RELEASED**，tag `v3.1.2`）；V3.2 **NOT STARTED**。
+（**RELEASED**，tag `v3.1.2`）。V3.1.3 Repository / Directory / Documentation
+Architecture 为 **IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；尚无 tag 或 push。
+V3.1.4 与 V3.2 均 **NOT STARTED**。
+
+当前 machine-readable state 由 Git objects 与 [`release_state.json`](release_state.json)
+共同确定。当前 human summaries 是 root README、root `PROJECT_CONTEXT.md` 与本页；版本化
+scope、thesis、report、QA、release notes 和 experiment documents 是历史快照。
 
 ## Start Here
 
 - [Repository README](../../README.md) — 项目定位、当前能力、架构、评估摘要与 Version History
+- [Top-level Documentation Index](../README.md) — 当前文档 authority 与 protected/frozen boundary
+- [Repository Architecture Map V3.1.3](../architecture/Repository_Architecture_Map_V3_1_3.md) — runtime、tooling、tests、documentation 与 generated-output 边界
 - [V3.1.0 Final Development Report](../development/Development_Report_V3_1_0.md) — Phase 0–6 工程与研究全程总结
 - [V3.1.0 Release Notes](Release_Notes_V3_1_0.md) — 正式版本亮点、兼容性、限制与迁移说明
 - V3.1.0 Thesis Materials：[MD](../development/Thesis_Materials_V3_1_0_Formal_Results.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_0_Formal_Results.txt) — 论文事实、结果解释与 claim boundary
@@ -22,6 +30,10 @@ V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已
 - [V3.1.2 Development Report](../development/Development_Report_V3_1_2.md) — 实现、兼容性、测试与 host limitation
 - V3.1.2 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.txt)
 - [V3.1.2 Release Notes](Release_Notes_V3_1_2.md) — 发布功能、边界与限制
+- [V3.1.3 Scope Freeze](../development/V3_1_3_Repository_Architecture_Scope.md) — 六项冻结范围与 hard non-goals
+- [V3.1.3 Development Report](../development/Development_Report_V3_1_3.md) — release identity、context migration、bounded extraction 与测试证据
+- V3.1.3 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_3_Repository_Architecture.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_3_Repository_Architecture.txt)
+- [V3.1.3 Pre-Release Notes](Release_Notes_V3_1_3.md) — candidate behavior、compatibility 与 release boundary
 - [Permanent Version Documentation Contract](Version_Documentation_Contract.md) — 每个 major/minor/patch 版本的双格式论文素材、文档、tag、双远端发布与验证硬门禁
 
 ## Architecture and Design
@@ -36,6 +48,9 @@ V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已
 - [Phase 5 — Hybrid / ContextBuilder](../development/Development_Report_V3_1_0_Phase_5.md)
 
 ## Protocol, Dataset, and Reference
+
+本节及后续 Formal 链接属于 **FROZEN FORMAL EVIDENCE / HISTORICAL
+DOCUMENTATION**，不是当前 V3.1.3 release-state authority。V3.1.3 不修改这些文件。
 
 - [Experiment Protocol](../experiments/Experiment_Protocol_V3_1_0.md)
 - Protocol Addenda: [A](../experiments/Experiment_Protocol_Addendum_A_V3_1_0.md) · [B](../experiments/Experiment_Protocol_Addendum_B_V3_1_0.md) · [C](../experiments/Experiment_Protocol_Addendum_C_V3_1_0.md) · [D](../experiments/Experiment_Protocol_Addendum_D_V3_1_0.md)
@@ -99,4 +114,11 @@ LLM 维护质量声明。
 - V3.1.2 branch / branch point：`v3.1.2-dev` / `2036cb6c82860b9bf8229ecac0f4d4add420855d`
 - V3.1.2 tag：`v3.1.2`
 - V3.1.2 push / remote verification：Pending（本轮仅本地 finalize）
+- V3.1.3 Repository / Directory / Documentation Architecture：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- V3.1.3 branch / branch point：`v3.1.3-dev` / `93e4c0ab326e5eaf2fb6051c241fc5c76072afe9`
+- V3.1.3 schema：`v2`，no tracked `final_head`; runtime-derived ancestry and remote refs
+- V3.1.3 tests：targeted 24；LLM 6；production 198；experiments 240；full 968
+- V3.1.3 Final QA evidence：NOT YET EXECUTED
+- V3.1.3 tag / push：NO / NO
+- V3.1.4：NOT STARTED
 - V3.2 Multi-Agent Collaboration：Not Started
