@@ -4,7 +4,7 @@
   "state": "RELEASED",
   "expected_development_branch": "v3.1.4-dev",
   "expected_main_branch": "main",
-  "release_commit": null,
+  "release_commit": "d55eddaf4ad5ebf677b6c272cf60785fab5d6162",
   "tag": "v3.1.4",
   "baseline": {
     "version": "3.1.3",
