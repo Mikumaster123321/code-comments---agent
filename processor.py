@@ -19,6 +19,8 @@ import html
 import threading
 import math
 import subprocess
+import stat
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Iterator, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
@@ -48,6 +50,7 @@ from config import MAX_WORKERS
 from config import get_active_llm_provider
 from i18n import LANG_CODE, needs_translation, t, user_error_message
 from llm_provider import LLMProvider
+from code_comments_agent.reliability import RUNTIME_LIMITS
 
 
 # 允许的源文件扩展名
@@ -71,6 +74,50 @@ NAMING_LABELS = {
     NAMING_SUFFIX: "Add _annotated suffix (default, safe)",
     NAMING_SUBDIR: "Move to annotated/ subdirectory",
 }
+
+
+class ResourceLimitError(ValueError):
+    """Stable rejection for unsafe or oversized runtime intake."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+class BatchFileOutcome(str, Enum):
+    SUCCEEDED = "SUCCEEDED"
+    SUCCEEDED_WITH_PARTIAL_SYMBOL_FAILURES = "SUCCEEDED_WITH_PARTIAL_SYMBOL_FAILURES"
+    FAILED = "FAILED"
+    CANCELLED_WITH_RESULTS = "CANCELLED_WITH_RESULTS"
+
+
+def _remove_temp_outputs(*paths: Optional[str]) -> None:
+    """Remove processor-created intermediates that no caller will consume."""
+
+    for path in paths:
+        if not path:
+            continue
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+
+
+def _classify_batch_result(
+    annotated: str,
+    log_text: str,
+    *,
+    cancelled: bool = False,
+) -> BatchFileOutcome:
+    if not annotated:
+        return BatchFileOutcome.FAILED
+    if cancelled:
+        return BatchFileOutcome.CANCELLED_WITH_RESULTS
+    if any(line.lstrip().startswith("✗") for line in log_text.splitlines()):
+        return BatchFileOutcome.SUCCEEDED_WITH_PARTIAL_SYMBOL_FAILURES
+    return BatchFileOutcome.SUCCEEDED
 
 
 # ==================================================================
@@ -123,7 +170,9 @@ def _public_error_code(error: BaseException, default: str = "PROVIDER_FAILURE") 
 
 
 def _shutdown_executor_safe(executor: ThreadPoolExecutor, futures_map: Optional[dict[Future, object]] = None) -> None:
-    """兼容 Python 3.8 的线程池安全关闭：
+    """Cancel queued work and wait for already-running calls to finish.
+
+    兼容 Python 3.8 的线程池安全关闭：
       - Python 3.9+ 可直接用 shutdown(cancel_futures=True)
       - Python 3.8 无 cancel_futures 参数，改为先手动 cancel 每个 future 再 shutdown
 
@@ -140,10 +189,10 @@ def _shutdown_executor_safe(executor: ThreadPoolExecutor, futures_map: Optional[
                 pass
     # 兼容所有 Python 版本的参数
     try:
-        executor.shutdown(wait=False, cancel_futures=True)
+        executor.shutdown(wait=True, cancel_futures=True)
     except TypeError:
         # Python 3.8：cancel_futures 参数不存在，走 fallback
-        executor.shutdown(wait=False)
+        executor.shutdown(wait=True)
 
 
 def _parse_items_with_symbols(
@@ -1192,6 +1241,8 @@ def validate_local_input(source_code: str, language: str = "Python") -> Optional
     """Return a stable local error code, or ``None`` when provider checks may run."""
     if not source_code or not source_code.strip():
         return "EMPTY_INPUT"
+    if len(source_code.encode("utf-8")) > RUNTIME_LIMITS.single_source_bytes:
+        return "INPUT_TOO_LARGE"
     if language not in {"Python", "Java"}:
         return "UNSUPPORTED_LANGUAGE"
     if language == "Python" and not _is_valid_python(source_code):
@@ -1235,16 +1286,24 @@ def _verify_java_annotated_code(annotated_code: str, log: list[str]) -> None:
         proc = subprocess.run(
             ["javac", "-Xlint:none", "-encoding", "UTF-8", tmp_java],
             capture_output=True,
-            timeout=15,
+            timeout=RUNTIME_LIMITS.javac_timeout_seconds,
         )
         if proc.returncode == 0:
             log.append("✓ javac 语法校验通过")
         else:
             err = proc.stderr.decode("utf-8", errors="replace").strip()
             first_err = err.splitlines()[0] if err else "未知错误"
+            first_err = first_err.replace(tmp_java, "<temporary-java-file>")
+            first_err = first_err.replace(tmp_dir, "<temporary-directory>")
+            first_err = re.sub(
+                r"(?:[A-Za-z]:)?[/\\][^:\n]+[/\\]_AnnotatedCheck\.java",
+                "<temporary-java-file>",
+                first_err,
+            )
             log.append(f"⚠️ javac 语法校验失败: {first_err}（建议检查源码）")
     except subprocess.TimeoutExpired:
-        log.append("⚠️ javac 语法校验超时（15s），已跳过")
+        timeout = RUNTIME_LIMITS.javac_timeout_seconds
+        log.append(f"⚠️ javac 语法校验超时（{timeout:g}s），已跳过")
     except Exception as e:
         log.append("⚠️ [JAVA_VALIDATION_UNAVAILABLE] javac 校验未完成")
     finally:
@@ -1668,7 +1727,7 @@ def _collect_source_files(root_dir: str, base_rel: str = "") -> list[tuple[str, 
 
 
 def _extract_zip_safe(zip_path: str, target_dir: str) -> str:
-    """安全解压 zip，防止 zip slip，返回真实的公共根目录或 target_dir
+    """Safely extract a bounded ZIP archive or raise a stable rejection.
 
     Args:
         zip_path: zip 文件路径
@@ -1679,32 +1738,39 @@ def _extract_zip_safe(zip_path: str, target_dir: str) -> str:
     """
     target_abs = os.path.abspath(target_dir)
     with zipfile.ZipFile(zip_path, "r") as zf:
-        for member in zf.infolist():
-            # zip slip 防御：解析后路径必须在 target_abs 之下
-            member_path = os.path.abspath(os.path.join(target_dir, member.filename))
+        members = zf.infolist()
+        if len(members) > RUNTIME_LIMITS.zip_member_count:
+            raise ResourceLimitError("ZIP_MEMBER_LIMIT_EXCEEDED")
+        total_uncompressed = sum(member.file_size for member in members)
+        if total_uncompressed > RUNTIME_LIMITS.zip_uncompressed_bytes:
+            raise ResourceLimitError("ZIP_UNCOMPRESSED_LIMIT_EXCEEDED")
+
+        for member in members:
+            normalized_name = member.filename.replace("\\", "/")
+            path_parts = Path(normalized_name).parts
+            if (
+                normalized_name.startswith("/")
+                or re.match(r"^[A-Za-z]:", normalized_name)
+                or ".." in path_parts
+            ):
+                raise ResourceLimitError("ZIP_PATH_UNSAFE")
+            unix_mode = member.external_attr >> 16
+            if stat.S_ISLNK(unix_mode):
+                raise ResourceLimitError("ZIP_SYMLINK_UNSUPPORTED")
+            if member.file_size:
+                ratio = member.file_size / max(member.compress_size, 1)
+                if ratio > RUNTIME_LIMITS.zip_compression_ratio:
+                    raise ResourceLimitError("ZIP_COMPRESSION_RATIO_EXCEEDED")
+
+            member_path = os.path.abspath(os.path.join(target_dir, *path_parts))
             if not member_path.startswith(target_abs + os.sep) and member_path != target_abs:
-                continue  # 跳过异常条目
-            # 跳过纯目录条目创建（避免空目录报错）
+                raise ResourceLimitError("ZIP_PATH_UNSAFE")
             if member.is_dir():
                 os.makedirs(member_path, exist_ok=True)
                 continue
             os.makedirs(os.path.dirname(member_path), exist_ok=True)
-            # 按 UTF-8 解码失败时回退到 cp437（常见 Windows zip 文件名编码问题）
-            try:
-                extracted = zf.extract(member, target_dir)
-            except UnicodeDecodeError:
-                # 尝试重新编码原始文件名
-                raw = member.filename.encode("cp437", errors="ignore")
-                decoded = raw.decode("gbk", errors="replace")
-                target_path = os.path.join(target_dir, decoded)
-                if not (os.path.abspath(target_path).startswith(target_abs + os.sep)):
-                    continue
-                os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                with zf.open(member) as src, open(target_path, "wb") as dst:
-                    shutil.copyfileobj(src, dst)
-                extracted = target_path
-            else:
-                _ = extracted  # 保留变量，避免 linter 警告
+            with zf.open(member) as src, open(member_path, "wb") as dst:
+                shutil.copyfileobj(src, dst)
     return target_dir
 
 
@@ -1759,19 +1825,23 @@ def _build_batch_zip(
         mode="wb", prefix="annotated_batch_", suffix=f"_{ts}.zip", delete=False
     )
     zip_out.close()
-    with zipfile.ZipFile(zip_out.name, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        # 1. 源码（保持相对路径，按 naming_strategy 重命名）
-        for current, _, filenames in os.walk(output_dir):
-            for fn in filenames:
-                abs_p = os.path.join(current, fn)
-                rel_p = os.path.relpath(abs_p, output_dir).replace(os.sep, "/")
-                archive_p = _apply_naming_strategy(rel_p, naming_strategy)
-                zf.write(abs_p, archive_p)
-        # 2. 处理日志
-        zf.writestr("processing.log", log_text.encode("utf-8"))
-        # 3. 聚合文档
-        if aggregate_md:
-            zf.writestr("API_DOCS_ALL.md", aggregate_md.encode("utf-8"))
+    try:
+        with zipfile.ZipFile(zip_out.name, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            # 1. 源码（保持相对路径，按 naming_strategy 重命名）
+            for current, _, filenames in os.walk(output_dir):
+                for fn in filenames:
+                    abs_p = os.path.join(current, fn)
+                    rel_p = os.path.relpath(abs_p, output_dir).replace(os.sep, "/")
+                    archive_p = _apply_naming_strategy(rel_p, naming_strategy)
+                    zf.write(abs_p, archive_p)
+            # 2. 处理日志
+            zf.writestr("processing.log", log_text.encode("utf-8"))
+            # 3. 聚合文档
+            if aggregate_md:
+                zf.writestr("API_DOCS_ALL.md", aggregate_md.encode("utf-8"))
+    except Exception:
+        _remove_temp_outputs(zip_out.name)
+        raise
     return zip_out.name
 
 
@@ -1814,6 +1884,8 @@ def process_batch_files(
         return "[错误] 未上传任何文件。", None
     # 统一成列表：用户可能传单个（非列表）或列表
     raw_list = uploaded_files if isinstance(uploaded_files, (list, tuple)) else [uploaded_files]
+    if len(raw_list) > RUNTIME_LIMITS.batch_file_count:
+        return "[BATCH_FILE_LIMIT_EXCEEDED] 上传文件数量超过批量上限。", None
     file_records: list[tuple[str, str]] = []  # (本地绝对路径, 归档用相对路径)
     # 对非 zip 单文件上传，用「原始源路径」记录 → 后续基于它们求公共父级，保留目录结构
     nonzip_sources: list[tuple[str, str]] = []  # (staged_path, original_src_abs_path)
@@ -1826,6 +1898,9 @@ def process_batch_files(
             src_path = _resolve_upload_path(item)
             if not src_path or not os.path.isfile(src_path):
                 log.append("[FILE_PATH_INVALID] 跳过一个无法解析的上传项")
+                continue
+            if os.path.getsize(src_path) > RUNTIME_LIMITS.upload_bytes:
+                log.append("[UPLOAD_SIZE_LIMIT_EXCEEDED] 跳过超出上传大小上限的文件")
                 continue
             name = os.path.basename(src_path)
             ext = os.path.splitext(name)[1].lower()
@@ -1841,6 +1916,8 @@ def process_batch_files(
                     file_records.extend(collected)
                 except zipfile.BadZipFile:
                     log.append(f"[错误] {name} 不是有效的 zip 文件")
+                except ResourceLimitError as error:
+                    log.append(f"[{error.code}] 拒绝不安全或超限的 ZIP")
                 except Exception:
                     log.append(f"[ARCHIVE_READ_FAILED] 无法解压 {name}")
             elif ext in ALLOWED_SRC_EXTS:
@@ -1892,6 +1969,10 @@ def process_batch_files(
                 rel_p = rel_raw.replace(os.sep, "/")
                 file_records.append((staged, rel_p))
 
+        if len(file_records) > RUNTIME_LIMITS.batch_file_count:
+            log.append("[BATCH_FILE_LIMIT_EXCEEDED] 可处理源文件数量超过批量上限")
+            return "\n".join(log), None
+
         if not file_records:
             log.append("[错误] 没有发现可处理的 .py/.java 源文件")
             return "\n".join(log), None
@@ -1923,8 +2004,10 @@ def process_batch_files(
                     fail += 1
                     continue
             language = "Java" if abs_path.lower().endswith(".java") else "Python"
+            md_path = None
+            src_output_path = None
             try:
-                annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
+                annotated, markdown_doc, per_log, md_path, src_output_path = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
                     llm_provider=task_provider,
@@ -1934,23 +2017,33 @@ def process_batch_files(
                 log.append("  ✗ [PROCESSING_FAILED]")
                 fail += 1
                 continue
-            # 输出保持相对路径结构
-            out_file = os.path.join(output_stage, rel_path.replace("/", os.sep))
-            os.makedirs(os.path.dirname(out_file), exist_ok=True)
             try:
+                outcome = _classify_batch_result(annotated, per_log)
+                if outcome is BatchFileOutcome.FAILED:
+                    log.append("  ✗ [ALL_SYMBOLS_FAILED]")
+                    fail += 1
+                    continue
+                # 输出保持相对路径结构
+                out_file = os.path.join(output_stage, rel_path.replace("/", os.sep))
+                os.makedirs(os.path.dirname(out_file), exist_ok=True)
                 with open(out_file, "w", encoding="utf-8") as f:
                     f.write(annotated)
             except Exception:
                 log.append("  ✗ [FILE_WRITE_FAILED]")
                 fail += 1
                 continue
+            finally:
+                _remove_temp_outputs(md_path, src_output_path)
             # 聚合 Markdown（按文件分节）
             if markdown_doc and markdown_doc.strip():
                 aggregate_docs.append(f"# {rel_path}\n\n{markdown_doc}\n")
             for ln in per_log.splitlines()[:6]:  # 每个文件最多展示 6 行日志
                 if ln.strip():
                     log.append(f"      | {ln}")
-            log.append(f"  ✓ 完成: {rel_path}")
+            if outcome is BatchFileOutcome.SUCCEEDED_WITH_PARTIAL_SYMBOL_FAILURES:
+                log.append(f"  ⚠️ 部分完成: {rel_path} [PARTIAL_SYMBOL_FAILURES]")
+            else:
+                log.append(f"  ✓ 完成: {rel_path}")
             success += 1
         log.append("-" * 60)
         log.append(f"=== 批量处理完成: 成功 {success}, 失败 {fail}, 总计 {total} ===")
@@ -2011,6 +2104,9 @@ def process_batch_with_progress(
         return
 
     raw_list = uploaded_files if isinstance(uploaded_files, (list, tuple)) else [uploaded_files]
+    if len(raw_list) > RUNTIME_LIMITS.batch_file_count:
+        yield "[BATCH_FILE_LIMIT_EXCEEDED] 上传文件数量超过批量上限。", None
+        return
     file_records: list[tuple[str, str]] = []
     nonzip_sources: list[tuple[str, str]] = []  # (staged_path, original_src_abs_path)
     tmp_root = tempfile.mkdtemp(prefix="batch_annot_")
@@ -2028,6 +2124,10 @@ def process_batch_with_progress(
             if not src_path or not os.path.isfile(src_path):
                 log.append("[FILE_PATH_INVALID] 跳过一个无法解析的上传项")
                 continue
+            if os.path.getsize(src_path) > RUNTIME_LIMITS.upload_bytes:
+                log.append("[UPLOAD_SIZE_LIMIT_EXCEEDED] 跳过超出上传大小上限的文件")
+                yield "\n".join(log), None
+                continue
             name = os.path.basename(src_path)
             ext = os.path.splitext(name)[1].lower()
             if ext in ALLOWED_ZIP_EXTS:
@@ -2042,6 +2142,8 @@ def process_batch_with_progress(
                     file_records.extend(collected)
                 except zipfile.BadZipFile:
                     log.append(f"[错误] {name} 不是有效的 zip 文件")
+                except ResourceLimitError as error:
+                    log.append(f"[{error.code}] 拒绝不安全或超限的 ZIP")
                 except Exception:
                     log.append(f"[ARCHIVE_READ_FAILED] 无法解压 {name}")
             elif ext in ALLOWED_SRC_EXTS:
@@ -2087,6 +2189,11 @@ def process_batch_with_progress(
                     rel_raw = os.path.basename(src_abs)
                 rel_p = rel_raw.replace(os.sep, "/")
                 file_records.append((staged, rel_p))
+
+        if len(file_records) > RUNTIME_LIMITS.batch_file_count:
+            log.append("[BATCH_FILE_LIMIT_EXCEEDED] 可处理源文件数量超过批量上限")
+            yield "\n".join(log), None
+            return
 
         if not file_records:
             log.append("[错误] 没有发现可处理的 .py/.java 源文件")
@@ -2135,8 +2242,10 @@ def process_batch_with_progress(
                 yield "\n".join(log), None
                 continue
             language = "Java" if abs_path.lower().endswith(".java") else "Python"
+            md_path = None
+            src_output_path = None
             try:
-                annotated, markdown_doc, per_log, _md_p, _src_p = process_code(
+                annotated, markdown_doc, per_log, md_path, src_output_path = process_code(
                     code, incremental=incremental, language=language, comment_lang=comment_lang,
                     python_style=python_style, java_style=java_style, relative_path=rel_path,
                     llm_provider=task_provider,
@@ -2147,8 +2256,18 @@ def process_batch_with_progress(
                 fail += 1
                 yield "\n".join(log), None
                 continue
-            out_file = os.path.join(output_stage, rel_path.replace("/", os.sep))
             try:
+                outcome = _classify_batch_result(
+                    annotated,
+                    per_log,
+                    cancelled=cancel_token.is_canceled(),
+                )
+                if outcome is BatchFileOutcome.FAILED:
+                    log.append("  ✗ [ALL_SYMBOLS_FAILED]")
+                    fail += 1
+                    yield "\n".join(log), None
+                    continue
+                out_file = os.path.join(output_stage, rel_path.replace("/", os.sep))
                 os.makedirs(os.path.dirname(out_file), exist_ok=True)
                 with open(out_file, "w", encoding="utf-8") as f:
                     f.write(annotated)
@@ -2157,12 +2276,21 @@ def process_batch_with_progress(
                 fail += 1
                 yield "\n".join(log), None
                 continue
+            finally:
+                _remove_temp_outputs(md_path, src_output_path)
             if markdown_doc and markdown_doc.strip():
                 aggregate_docs.append(f"# {rel_path}\n\n{markdown_doc}\n")
             for ln in per_log.splitlines()[:6]:
                 if ln.strip():
                     log.append(f"      | {ln}")
-            log.append(f"  ✓ 完成: {rel_path}")
+            if outcome in {
+                BatchFileOutcome.SUCCEEDED_WITH_PARTIAL_SYMBOL_FAILURES,
+                BatchFileOutcome.CANCELLED_WITH_RESULTS,
+            }:
+                label = "CANCELLED_WITH_RESULTS" if cancel_token.is_canceled() else "PARTIAL_SYMBOL_FAILURES"
+                log.append(f"  ⚠️ 部分完成: {rel_path} [{label}]")
+            else:
+                log.append(f"  ✓ 完成: {rel_path}")
             success += 1
             yield "\n".join(log), None
 

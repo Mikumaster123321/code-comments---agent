@@ -21,6 +21,11 @@ LANG_NAME = {
 # V3.1.2: stable user-facing failures.  Messages intentionally never interpolate
 # provider payloads, exception text, secrets, or filesystem paths.
 USER_ERROR_MESSAGES = {
+    "INPUT_TOO_LARGE": {
+        "中文": "源代码超过本地处理上限。请拆分文件后重试；未发送 Provider 请求。",
+        "English": "The source exceeds the local processing limit. Split it and retry; no provider request was sent.",
+        "日本語": "ソースがローカル処理上限を超えています。分割して再試行してください。Provider 要求は送信されていません。",
+    },
     "EMPTY_INPUT": {
         "中文": "请输入代码后再试；此问题无需重试网络连接。",
         "English": "Enter code and try again; no network retry is needed.",
@@ -114,9 +119,9 @@ TRANSLATIONS = {
         "日本語": "詳細：プロバイダーとモデル設定",
     },
     "provider_setup_help": {
-        "中文": "API Key：托管配置可选，BYOK/Custom 通常必填；留空时使用环境变量回退。Base URL 仅 Azure/Custom 需要，Azure 还需匹配部署名。应用设置不会验证连通性。",
-        "English": "API key: optional for managed configuration, usually required for BYOK/Custom; blank uses the environment fallback. Base URL is for Azure/Custom, and Azure also requires a matching deployment name. Applying settings does not verify connectivity.",
-        "日本語": "API Key：管理設定では任意、BYOK/Custom では通常必須です。空欄時は環境変数にフォールバックします。Base URL は Azure/Custom 用で、Azure では一致するデプロイ名も必要です。設定適用だけでは接続を検証しません。",
+        "中文": "API Key 按当前 Provider 隔离；留空只读取该 Provider 专属环境变量（OPENAI_API_KEY 仅供 OpenAI/Custom）。Base URL 仅 Azure/Custom 需要。应用设置不会验证连通性。",
+        "English": "API keys are isolated by current provider; blank reads only that provider's environment variable (OPENAI_API_KEY is OpenAI/Custom only). Base URL is for Azure/Custom. Applying settings does not verify connectivity.",
+        "日本語": "API Key は現在の Provider ごとに分離され、空欄時はその Provider 専用環境変数のみを読みます（OPENAI_API_KEY は OpenAI/Custom 専用）。Base URL は Azure/Custom 用です。設定適用だけでは接続を検証しません。",
     },
     "provider_settings_applied": {
         "中文": "✅ 设置已应用",
@@ -152,6 +157,11 @@ TRANSLATIONS = {
         "中文": "**状态：Failure** — CURRENT RUN FAILED；已清理本轮输出。",
         "English": "**Status: Failure** — CURRENT RUN FAILED; outputs from this run were cleared.",
         "日本語": "**状態：Failure** — CURRENT RUN FAILED。今回の出力を消去しました。",
+    },
+    "status_cancelled": {
+        "中文": "**状态：Cancelled** — 已停止提交新工作；进行中的 Provider 请求可能已完成并产生费用。",
+        "English": "**Status: Cancelled** — No new work was submitted; an in-flight provider request may have completed and incurred cost.",
+        "日本語": "**状態：Cancelled** — 新しい処理は停止しました。実行中の Provider 要求は完了し、費用が発生した可能性があります。",
     },
     "empty_output": {
         "中文": "尚无输出。运行生成任务后将在此显示结果。",

@@ -173,6 +173,7 @@ class ProviderRegistry:
         config: ModelConfig,
         credential: RuntimeCredential,
         client_factory: Callable[..., Any],
+        client_options: Mapping[str, Any] | None = None,
     ) -> TaskScopedLLMProvider:
         metadata = self.get(config.provider_id)
         if not metadata.customizable_base_url and config.base_url != metadata.default_base_url:
@@ -180,5 +181,6 @@ class ProviderRegistry:
         client = client_factory(
             api_key=credential.get_secret_value(),
             base_url=config.base_url,
+            **dict(client_options or {}),
         )
         return TaskScopedLLMProvider(config=config, client=client)

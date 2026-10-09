@@ -24,8 +24,8 @@ _WS_VERSION = 1
 
 # 白名单：只允许这些字段持久化，绝不写 API Key
 WS_ALLOWED_FIELDS = frozenset({
-    "source_code", "language", "ui_lang",
-    "python_style", "java_style", "naming_strategy",
+    "source_code", "language", "ui_lang", "output_lang",
+    "python_style", "java_style", "rewrite_existing", "naming_strategy",
 })
 
 
@@ -40,6 +40,7 @@ def _default_workspace_path() -> str:
 
 def save_workspace(data: dict, path: Optional[str] = None) -> tuple[bool, str]:
     path = path or _default_workspace_path()
+    tmp_out = path + ".tmp"
     try:
         filtered = {k: v for k, v in (data or {}).items()
                     if k in WS_ALLOWED_FIELDS and v is not None}
@@ -48,12 +49,15 @@ def save_workspace(data: dict, path: Optional[str] = None) -> tuple[bool, str]:
             "_saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
             "data": filtered,
         }
-        tmp_out = path + ".tmp"
         with open(tmp_out, "w", encoding="utf-8") as f:
             _json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp_out, path)  # 原子替换
         return True, f"✅ 会话已保存（{len(filtered)} 项 → {os.path.basename(path)}）"
     except Exception:
+        try:
+            os.remove(tmp_out)
+        except OSError:
+            pass
         return False, "❌ [WORKSPACE_SAVE_FAILED] 工作区保存失败，请重试。"
 
 
@@ -66,6 +70,9 @@ def load_workspace(path: Optional[str] = None) -> tuple[bool, str, dict]:
             payload = _json.load(f)
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
             return False, "❌ 会话文件格式异常", {}
+        version = payload.get("_version")
+        if version != _WS_VERSION:
+            return False, "❌ [WORKSPACE_VERSION_UNSUPPORTED] 会话版本不受支持，请重新保存。", {}
         data = payload["data"]
         filtered = {k: v for k, v in data.items() if k in WS_ALLOWED_FIELDS}
         saved_at = payload.get("_saved_at", "?")

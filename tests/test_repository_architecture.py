@@ -47,13 +47,20 @@ def test_internal_support_package_stays_strictly_bounded():
         for path in (ROOT / "code_comments_agent").glob("*.py")
         if path.is_file()
     }
-    assert package_files == {"__init__.py", "ui_styles.py", "workspace.py"}
+    assert package_files == {
+        "__init__.py",
+        "reliability.py",
+        "ui_styles.py",
+        "workspace.py",
+    }
 
 
 def test_documentation_navigation_paths_exist():
     required = (
         "docs/README.md",
         "docs/architecture/Repository_Architecture_Map_V3_1_3.md",
+        "docs/architecture/V3_1_4_Pre_V3_2_Compatibility_Contract.md",
+        "docs/architecture/V3_1_4_Runtime_Reliability_Contract.md",
         "docs/development/README.md",
         "docs/qa/README.md",
         "docs/release/README.md",
@@ -66,10 +73,10 @@ def test_v2_release_state_has_no_self_referential_final_head():
     state = json.loads((ROOT / dev.RELEASE_STATE_PATH).read_text(encoding="utf-8"))
 
     assert state["schema_version"] == "v2"
-    assert state["version"] == "3.1.3"
-    assert state["expected_development_branch"] == "v3.1.3-dev"
+    assert state["version"] == "3.1.4"
+    assert state["expected_development_branch"] == "v3.1.4-dev"
     assert state["expected_main_branch"] == "main"
-    assert state["final_qa_evidence"] == "docs/qa/V3_1_3_Final_Release_QA.md"
+    assert state["final_qa_evidence"] == "docs/qa/V3_1_4_Final_Release_QA.md"
     assert "final_head" not in state
     assert dev._load_release_state(ROOT) == state
 

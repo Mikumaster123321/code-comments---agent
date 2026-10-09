@@ -633,7 +633,7 @@ def create_ui():
                 except Exception:
                     final_outline = ""
                 ann, md, log_txt, md_p, src_p = last_final_frame
-                final_status = t("status_idle", ui_language) if token.is_canceled() else t("status_success", ui_language)
+                final_status = t("status_cancelled", ui_language) if token.is_canceled() else t("status_success", ui_language)
                 yield ann, md, log_txt, md_p, src_p, None, diff, final_outline, final_outline, pf_md_final, est_md_final, final_status, gr.update(interactive=False)
             else:
                 empty = t("empty_output", ui_language)

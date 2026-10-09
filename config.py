@@ -33,6 +33,7 @@ from llm_provider import (
     RuntimeCredential,
     TaskScopedLLMProvider,
 )
+from code_comments_agent.reliability import RUNTIME_LIMITS, SDK_MAX_RETRIES
 
 load_dotenv()
 
@@ -192,6 +193,10 @@ def _build_active_provider(
         model_config,
         RuntimeCredential(effective_api_key),
         openai.OpenAI,
+        {
+            "max_retries": SDK_MAX_RETRIES,
+            "timeout": RUNTIME_LIMITS.generation_timeout_seconds,
+        },
     )
 
 
@@ -245,7 +250,8 @@ if PROVIDERS[_active_provider]["customizable_base_url"]:
 _env_custom_model = os.getenv("CUSTOM_MODEL_NAME")
 if _env_custom_model and _active_provider == "custom":
     _custom_model_name = _env_custom_model
-_rebuild_client()
+# Client construction is intentionally lazy. Importing config must not initialize a
+# transport or make startup depend on Provider configuration.
 
 
 # ==========================================================================
@@ -462,13 +468,23 @@ def get_active_llm_provider() -> TaskScopedLLMProvider:
 def create_llm_provider(
     model_config: ModelConfig,
     credential: RuntimeCredential,
-    client_factory=openai.OpenAI,
+    client_factory=None,
 ) -> TaskScopedLLMProvider:
     """Build an independent task-scoped provider without changing legacy state."""
+    factory = client_factory or openai.OpenAI
+    client_options = (
+        {
+            "max_retries": SDK_MAX_RETRIES,
+            "timeout": RUNTIME_LIMITS.generation_timeout_seconds,
+        }
+        if client_factory is None
+        else None
+    )
     return PROVIDER_REGISTRY.create_provider(
         model_config,
         credential,
-        client_factory,
+        factory,
+        client_options,
     )
 
 
@@ -524,8 +540,10 @@ def __getattr__(name):
 # 其它参数与之前保持一致，与 Provider 无关
 TEMPERATURE = 0.2
 MAX_TOKENS = 1024
-MAX_RETRIES = 3
-RETRY_DELAY = 1.0
+# Compatibility globals. V3.1.4 deliberately performs one application attempt and
+# disables SDK retries, so total transport attempts are exactly one.
+MAX_RETRIES = 1
+RETRY_DELAY = 0.0
 MAX_WORKERS = 5
 AVG_TOKENS_PER_ITEM = 350
 INPUT_RATIO = 0.43

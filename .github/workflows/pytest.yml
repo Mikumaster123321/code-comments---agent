@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt
-      - run: python scripts/dev.py test full
+      - name: Install core dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Import and lazy-startup smoke
+        run: python -c "import config, processor, project_intelligence; assert config._active_client is None"
+      - name: Build Gradio UI without a Provider request
+        run: python -c "from ui import create_ui; demo = create_ui(); assert demo is not None"
+      - name: Run full offline regression
+        run: python scripts/dev.py test full

@@ -15,9 +15,10 @@ from llm_provider import ModelConfig, ProviderRegistry, RuntimeCredential
 
 
 class StubClient:
-    def __init__(self, api_key, base_url):
+    def __init__(self, api_key, base_url, **options):
         self.api_key = api_key
         self.base_url = base_url
+        self.options = options
         self.calls = []
         self.chat = SimpleNamespace(
             completions=SimpleNamespace(create=self._create)
@@ -34,8 +35,8 @@ class StubClientFactory:
     def __init__(self):
         self.clients = []
 
-    def __call__(self, api_key, base_url):
-        client = StubClient(api_key, base_url)
+    def __call__(self, api_key, base_url, **options):
+        client = StubClient(api_key, base_url, **options)
         self.clients.append(client)
         return client
 
@@ -44,7 +45,7 @@ class FailingClientFactory:
     def __init__(self, secret):
         self.secret = secret
 
-    def __call__(self, api_key, base_url):
+    def __call__(self, api_key, base_url, **options):
         raise RuntimeError(f"client creation failed for {self.secret}")
 
 
@@ -571,10 +572,10 @@ def test_concurrent_readers_never_observe_partial_legacy_commit(
     restore_legacy_provider_state,
 ):
     class SelectiveFactory(StubClientFactory):
-        def __call__(self, api_key, base_url):
+        def __call__(self, api_key, base_url, **options):
             if api_key == "test-secret-B-UNIQUE":
                 raise RuntimeError("failed test-secret-B-UNIQUE")
-            return super().__call__(api_key, base_url)
+            return super().__call__(api_key, base_url, **options)
 
     factory = SelectiveFactory()
     monkeypatch.setattr(config.openai, "OpenAI", factory)
@@ -681,7 +682,7 @@ def test_llm_service_explicit_provider_never_reads_legacy_active_state(monkeypat
     assert cost == (700, 301, 398, 0.0)
 
 
-def test_retry_reuses_same_explicit_task_provider(monkeypatch):
+def test_ambiguous_connection_failure_is_not_automatically_retried(monkeypatch):
     class RetryableError(Exception):
         pass
 
@@ -693,24 +694,20 @@ def test_retry_reuses_same_explicit_task_provider(monkeypatch):
 
         def create_completion(self, **kwargs):
             self.calls += 1
-            if self.calls == 1:
-                raise RetryableError("transient")
-            message = SimpleNamespace(content="recovered")
-            return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+            raise RetryableError("request may already have been sent")
 
     provider = RetryProvider()
     monkeypatch.setattr(llm_service.openai, "APIConnectionError", RetryableError)
-    monkeypatch.setattr(llm_service, "RETRY_DELAY", 0)
     monkeypatch.setattr(
         llm_service._cfg,
         "get_active_llm_provider",
         lambda: pytest.fail("retry read legacy global state"),
     )
 
-    result = llm_service._call_llm_with_retry("prompt", 0.0, 1, provider)
+    with pytest.raises(llm_service.LLMRequestError):
+        llm_service._call_llm_with_retry("prompt", 0.0, 1, provider)
 
-    assert result == "recovered"
-    assert provider.calls == 2
+    assert provider.calls == 1
 
 
 def test_llm_error_message_does_not_include_credential(monkeypatch):

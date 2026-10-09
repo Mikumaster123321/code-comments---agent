@@ -5,16 +5,26 @@ v2.4.0 大更新：client/MODEL/PRICE_* 不再是 config 常量导入，而是�
 保证 UI 切换 Provider/Model 后下一次请求立即生效。
 """
 import re
-import time
+import logging
 from typing import Optional
 import openai
 # v2.4.0 不再 import 常量 client, MODEL, PRICE_*；改为运行时 getter
 import config as _cfg
 # 无 Provider 无关的常量仍可直接 import
-from config import TEMPERATURE, MAX_TOKENS, MAX_RETRIES, RETRY_DELAY
+from config import TEMPERATURE, MAX_TOKENS
 from config import AVG_TOKENS_PER_ITEM, INPUT_RATIO, OUTPUT_RATIO
 from i18n import LANG_NAME, LANG_CODE
 from llm_provider import LLMProvider
+from code_comments_agent.reliability import (
+    APPLICATION_GENERATION_ATTEMPTS,
+    OperationTimer,
+    RUNTIME_LIMITS,
+    log_diagnostic,
+    new_operation_id,
+)
+
+
+_LOGGER = logging.getLogger(__name__)
 
 # ================== 注释风格定义 ==================
 
@@ -233,7 +243,7 @@ def _call_llm_with_retry(
     max_tokens: int,
     provider: Optional[LLMProvider] = None,
 ) -> str:
-    """带重试机制的 LLM 调用
+    """Execute one generation attempt under the V3.1.4 cost-safety contract.
 
     Args:
         prompt: 提示词
@@ -244,32 +254,66 @@ def _call_llm_with_retry(
         str: LLM 生成的文本
 
     Raises:
-        Exception: 重试次数用尽后抛出最后一次异常
+        LLMRequestError: the single request attempt failed
     """
     task_provider = provider or _cfg.get_active_llm_provider()
-    last_error = None
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = task_provider.create_completion(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            return response.choices[0].message.content.strip()
-        except (openai.APIError, openai.APIConnectionError,
-                openai.APITimeoutError, openai.RateLimitError) as e:
-            last_error = e
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(RETRY_DELAY * (attempt + 1))
-        except Exception as e:
-            raise LLMRequestError(
-                f"LLM request failed for provider={task_provider.config.provider_id}, "
-                f"model={task_provider.config.model}: {type(e).__name__}"
-            ) from None
-    raise LLMRequestError(
-        f"LLM request failed for provider={task_provider.config.provider_id}, "
-        f"model={task_provider.config.model}: {type(last_error).__name__}"
-    ) from None
+    operation_id = new_operation_id()
+    timer = OperationTimer()
+    attempt = APPLICATION_GENERATION_ATTEMPTS
+    try:
+        response = task_provider.create_completion(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        log_diagnostic(
+            _LOGGER,
+            "llm_request_succeeded",
+            operation_id=operation_id,
+            stage="generation",
+            provider_id=task_provider.config.provider_id,
+            model_id=task_provider.config.model,
+            attempt=attempt,
+            duration_ms=timer.elapsed_ms(),
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as error:
+        category = _request_error_category(error)
+        log_diagnostic(
+            _LOGGER,
+            "llm_request_failed",
+            operation_id=operation_id,
+            stage="generation",
+            provider_id=task_provider.config.provider_id,
+            model_id=task_provider.config.model,
+            attempt=attempt,
+            duration_ms=timer.elapsed_ms(),
+            error_category=category,
+        )
+        raise LLMRequestError(
+            f"LLM request failed for provider={task_provider.config.provider_id}, "
+            f"model={task_provider.config.model}: {type(error).__name__}"
+        ) from None
+
+
+def _request_error_category(error: BaseException) -> str:
+    """Map Provider exceptions to stable, non-sensitive diagnostic categories."""
+
+    if isinstance(error, openai.AuthenticationError):
+        return "authentication"
+    if isinstance(error, openai.PermissionDeniedError):
+        return "permission"
+    if isinstance(error, (openai.BadRequestError, openai.NotFoundError)):
+        return "invalid_request"
+    if isinstance(error, openai.RateLimitError):
+        return "rate_limit"
+    if isinstance(error, openai.APITimeoutError):
+        return "ambiguous_timeout"
+    if isinstance(error, openai.APIConnectionError):
+        return "connection"
+    if isinstance(error, openai.APIStatusError):
+        return "provider_status"
+    return "unexpected"
 
 
 def _clean_docstring(docstring: str) -> str:
@@ -519,7 +563,7 @@ def translate_javadoc(
 # ================== API Key 预检 + Token 成本估算 ==================
 
 def ping_api_key(
-    timeout: float = 6.0,
+    timeout: float = RUNTIME_LIMITS.preflight_timeout_seconds,
     provider: Optional[LLMProvider] = None,
 ) -> tuple[bool, str]:
     """1-token 心跳测试：检查 API Key 是否有效、模型是否可用（v2.4.0 动态获取 client/model）。
@@ -533,6 +577,17 @@ def ping_api_key(
     """
     task_provider = provider or _cfg.get_active_llm_provider()
     cur_model = task_provider.config.model
+    operation_id = new_operation_id()
+    timer = OperationTimer()
+
+    def _record_failure(error: BaseException) -> None:
+        log_diagnostic(
+            _LOGGER, "preflight_failed", operation_id=operation_id,
+            stage="preflight", provider_id=task_provider.config.provider_id,
+            model_id=cur_model, attempt=1, duration_ms=timer.elapsed_ms(),
+            error_category=_request_error_category(error),
+        )
+
     try:
         resp = task_provider.create_completion(
             messages=[{"role": "user", "content": "ping"}],
@@ -541,20 +596,31 @@ def ping_api_key(
             timeout=timeout,
         )
         if resp and hasattr(resp, "choices") and resp.choices:
+            log_diagnostic(
+                _LOGGER, "preflight_succeeded", operation_id=operation_id,
+                stage="preflight", provider_id=task_provider.config.provider_id,
+                model_id=cur_model, attempt=1, duration_ms=timer.elapsed_ms(),
+            )
             return True, f"OK (model={cur_model})"
         return True, f"OK (model={cur_model}, empty choices)"
-    except openai.AuthenticationError:
+    except openai.AuthenticationError as error:
+        _record_failure(error)
         return False, "AuthenticationError: API Key 无效或已过期，请检查对应 Provider 的 API Key 环境变量"
-    except openai.PermissionDeniedError:
+    except openai.PermissionDeniedError as error:
+        _record_failure(error)
         return False, "PermissionDeniedError: API Key 无权限访问该模型或该接口"
-    except openai.RateLimitError:
+    except openai.RateLimitError as error:
+        _record_failure(error)
         return False, "RateLimitError: 请求频率超限或账户余额不足，请稍后重试/检查账户余额"
-    except openai.NotFoundError:
+    except openai.NotFoundError as error:
+        _record_failure(error)
         return False, f"NotFoundError: 模型 {cur_model} 不存在或 base_url 配置错误"
-    except openai.APITimeoutError:
+    except openai.APITimeoutError as error:
+        _record_failure(error)
         return False, f"APITimeoutError: 请求超时（{timeout}s），请检查网络或稍后重试"
     except Exception as e:
         name = type(e).__name__
+        _record_failure(e)
         return False, name
 
 

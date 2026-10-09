@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified, read-only-by-default developer workflow commands for V3.1.3."""
+"""Unified, read-only-by-default developer workflow commands for V3.1.4."""
 
 from __future__ import annotations
 
@@ -23,9 +23,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-BASELINE_VERSION = "3.1.2"
-BASELINE_RELEASE_COMMIT = "247bbfc1f849b929a00b32b09ada5e060ceef9d9"
-BASELINE_TAG = "v3.1.2"
+BASELINE_VERSION = "3.1.3"
+BASELINE_RELEASE_COMMIT = "7710abd2adf46f89c28b67898cce7eff2d92dc96"
+BASELINE_TAG = "v3.1.3"
 FORMAL_EXECUTION_REVISION = "2749969cd3a2d4d6e1e8d81160eebd5fb360879b"
 FORMAL_ARCHIVE_COMMIT = "c3ee6ec1b7aa28c2539d2fe849d1f25268807677"
 FORMAL_ARTIFACT_PATH = (
@@ -83,6 +83,7 @@ E5_REQUIRED_FILES = (
 )
 
 CORE_DEPENDENCIES = ("openai", "gradio", "python-dotenv", "pytest")
+OPTIONAL_BEHAVIOR_DEPENDENCIES = ("pycodestyle",)
 REPORTED_ENVIRONMENT_VARIABLES = (
     "HF_HOME",
     "HF_HUB_CACHE",
@@ -232,6 +233,14 @@ def doctor(*, root: Path = REPOSITORY_ROOT) -> int:
     print(f"python_version={platform.python_version()}")
     print(f"python_implementation={platform.python_implementation()}")
     print(f"platform={platform.platform()}")
+    print("runtime_support:")
+    print("  CPython 3.10=SUPPORTED / RECOMMENDED")
+    print("  CPython 3.11=BEST-EFFORT / UNVERIFIED")
+    print("  CPython 3.12=BEST-EFFORT CORE (historical E5 evidence is not UI certification)")
+    print("  standard CPython 3.13=BEST-EFFORT / UNVERIFIED UI")
+    print("  Anaconda 3.13.5=UNSUPPORTED FOR UI / BARE PYTEST on the known host")
+    print("  Ubuntu + CPython 3.10=SUPPORTED CI EVIDENCE")
+    print("  Windows=BEST-EFFORT unless separately tested")
 
     missing_core: list[str] = []
     print("core_runtime:")
@@ -240,6 +249,11 @@ def doctor(*, root: Path = REPOSITORY_ROOT) -> int:
         print(f"  {dependency}={version if version is not None else 'MISSING'}")
         if version is None:
             missing_core.append(dependency)
+
+    print("optional_behavior_runtime:")
+    for dependency in OPTIONAL_BEHAVIOR_DEPENDENCIES:
+        version = _dependency_version(dependency)
+        print(f"  {dependency}={version if version is not None else 'UNAVAILABLE (basic lint fallback active)'}")
 
     print("optional_e5_runtime:")
     for dependency, expected in E5_DEPENDENCIES.items():
