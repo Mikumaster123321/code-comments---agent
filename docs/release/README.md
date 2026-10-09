@@ -1,14 +1,15 @@
 # V3.1 Release Documentation Index
 
-<!-- release-state: V3.1.4 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.4 RELEASED -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
 V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
 （**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已正式发布
 （**RELEASED**，tag `v3.1.2`）。V3.1.3 Repository / Directory / Documentation
 Architecture 已正式发布（**RELEASED**，annotated tag `v3.1.3` 指向 release commit C1；
-已推送 GitHub 与 Gitee 并通过远端校验）。V3.1.4 Reliability Stabilization 已
-**IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；V3.2 **NOT STARTED**。
+已推送 GitHub 与 Gitee 并通过远端校验）。V3.1.4 Reliability / Maintainability /
+Pre-V3.2 Stabilization 已正式发布（**RELEASED**，annotated tag `v3.1.4` 指向 release
+commit C1；已推送 GitHub 与 Gitee 并通过远端校验）；V3.2 **NOT STARTED**。
 
 当前 machine-readable state 由 Git objects 与 [`release_state.json`](release_state.json)
 共同确定。当前 human summaries 是 root README、root `PROJECT_CONTEXT.md` 与本页；版本化
@@ -129,9 +130,11 @@ LLM 维护质量声明。
 - V3.1.3 release commit C1：由 annotated tag `v3.1.3` 指向；精确 SHA 记录于 `release_state.json`
 - V3.1.3 tag：`v3.1.3`（annotated，peeled target = C1）
 - V3.1.3 push / remote verification：Completed（GitHub / Gitee branch and tag）
-- V3.1.4 Reliability / Maintainability / Pre-V3.2 Stabilization：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- V3.1.4 Reliability / Maintainability / Pre-V3.2 Stabilization：RELEASED
 - V3.1.4 branch / branch point：`v3.1.4-dev` / `7f6ac6ffe20991d47f094d271213f1d57d3c5efd`
 - V3.1.4 tests：P0 `33`；reliability `28`；targeted `98`；LLM `6`；production `198`；experiments `240`；release `24`；full `1010`
-- V3.1.4 Final QA evidence：NOT YET EXECUTED；expected `docs/qa/V3_1_4_Final_Release_QA.md`
-- V3.1.4 tag / push：NO / NO
+- V3.1.4 Final QA evidence：`docs/qa/V3_1_4_Final_Release_QA.md`（`PASS`）
+- V3.1.4 release commit C1：由 annotated tag `v3.1.4` 指向；精确 SHA 记录于 `release_state.json`
+- V3.1.4 tag：`v3.1.4`（annotated，peeled target = C1）
+- V3.1.4 push / remote verification：Completed（GitHub / Gitee branch and tag）
 - V3.2 Multi-Agent Collaboration：Not Started

@@ -1,6 +1,6 @@
 # V3.1.4 Runtime and Reliability Contract
 
-Status: `IMPLEMENTED / AWAITING FINAL QA`
+Status: `RELEASED`
 
 ## Runtime support
 

@@ -1,6 +1,6 @@
 # V3.1.4 Development Report
 
-Status: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+Status: `RELEASED`（independent Final Release QA PASS）
 
 ## 1. Authority and audit
 
@@ -140,9 +140,11 @@ in the debugging plugin. The developer command hub's previously documented local
 `-p no:debugging` workaround produced the results above without changing test
 semantics.
 
-No CPython 3.10 interpreter is installed on the implementation host. CPython 3.10
-Gradio `create_ui()` smoke is `NOT EXECUTED / REQUIRED IN CI AND FINAL QA`; no
-historical result is reused as a current PASS.
+The implementation host provides Anaconda Python 3.13.5 and has no CPython 3.10
+interpreter on the pytest path. Independent Final Release QA executed the required
+CPython 3.10 Gradio `create_ui()` smoke on CPython 3.10.20 with Gradio 6.27.0; the UI
+built as a `Blocks` object with 106 blocks, so the release-blocker UI smoke is PASS.
+No historical result is reused as a current PASS.
 
 ## 10. Formal immutability
 
@@ -158,10 +160,12 @@ changed.
 
 ## 11. Release and known limitations
 
-Release schema v2 and C1/tag/C2 design remain unchanged. Machine state is
-`RELEASE_CANDIDATE`; the expected Final QA path is
-`docs/qa/V3_1_4_Final_Release_QA.md`, which is intentionally absent until DeepSeek
-Final QA executes. No tag or push occurred.
+Release schema v2 and C1/tag/C2 design remain unchanged. Independent Final Release QA
+executed and recorded its verdict at `docs/qa/V3_1_4_Final_Release_QA.md`
+(`FINAL RELEASE QA: PASS`). The release sequence (release commit C1, annotated tag
+`v3.1.4`, main synchronization, dual-remote publication to GitHub and Gitee, and remote
+verification) was executed; the machine state and exact C1 SHA are recorded in
+`docs/release/release_state.json`.
 
 Known limitations: cooperative rather than forceful HTTP cancellation; final download
 lifetime delegated to OS temporary storage; no multi-tenant session isolation; later

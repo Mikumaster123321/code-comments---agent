@@ -1,10 +1,11 @@
 # V3.1.4 Release Notes
 
-Status: **RELEASE CANDIDATE / AWAITING FINAL QA**
+Status: **RELEASED** (annotated tag `v3.1.4`; GitHub / Gitee push and remote verification completed)
 
 V3.1.4 is the final reliability and maintainability stabilization version before the
-planned V3.2 Multi-Agent Collaboration phase. It is not released, has no tag, and has
-not been pushed by this implementation task.
+planned V3.2 Multi-Agent Collaboration phase. It has passed independent Final Release QA
+(`docs/qa/V3_1_4_Final_Release_QA.md`, `FINAL RELEASE QA: PASS`), is tagged, and is
+published to both remotes.
 
 ## Highlights
 
@@ -53,9 +54,11 @@ Anaconda Python 3.13.5 is unsupported for UI/bare pytest on the known host becau
 the reproducible debugging/IPython `rlcompleter` SIGSEGV.
 
 Tested implementation-host versions: Anaconda Python 3.13.5, Gradio 6.27.0, OpenAI SDK
-1.109.1, pytest 8.3.4. The required CPython 3.10 `create_ui()` smoke could not run
-locally because no 3.10 interpreter is installed; CI and independent Final QA must
-record the actual Python patch, Gradio version, and build result.
+1.109.1, pytest 8.3.4. The independent Final Release QA additionally ran the required
+CPython 3.10 `create_ui()` smoke on CPython 3.10.20 + Gradio 6.27.0: the UI built
+successfully (`Blocks`, 106 blocks), confirming that a supported CPython 3.10
+interpreter is available on the host; CI pins the CPython 3.10 import / `create_ui()`
+smoke.
 
 ## Verification
 
@@ -70,10 +73,10 @@ Formal execution revision, artifact identity, and artifact SHA-256 remain:
 - `acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3`;
 - `2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41`.
 
-## Remaining release gate
+## Release gate closure
 
-Independent DeepSeek Final QA is **NOT YET EXECUTED**. The expected evidence path is
-`docs/qa/V3_1_4_Final_Release_QA.md`; this implementation does not create a placeholder
-PASS. After actual Final QA, the separately authorized release flow may create C1,
-annotated tag `v3.1.4`, C2 identity closure, and remote verification. Until then the
-state remains `RELEASE_CANDIDATE / AWAITING FINAL QA`.
+Independent Final Release QA has been **EXECUTED** and returned **PASS**; its real
+evidence is committed at `docs/qa/V3_1_4_Final_Release_QA.md`. The authorized release
+flow created C1 (`release(v3.1.4): finalize v3.1.4`), the annotated tag `v3.1.4`
+pointing to C1, the C2 identity closure, and completed remote verification on both
+GitHub and Gitee. The state is therefore `RELEASED`.

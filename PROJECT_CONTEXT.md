@@ -1,11 +1,11 @@
 # Project Context
 
-<!-- release-state: V3.1.4 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.4 RELEASED -->
 
 ## Current State
 
 - Current version: `3.1.4`
-- Lifecycle: `RELEASE_CANDIDATE / AWAITING FINAL QA`
+- Lifecycle: `RELEASED + DOCUMENTATION CLOSED`
 - Development branch: `v3.1.4-dev`
 - Authoritative main baseline / branch point:
   `7f6ac6ffe20991d47f094d271213f1d57d3c5efd`
@@ -15,10 +15,10 @@
 - V3.1.0 / V3.1.1 / V3.1.2 / V3.1.3:
   `RELEASED + DOCUMENTATION CLOSED`
 - V3.2: `NOT STARTED`
-- Tag created for V3.1.4: `NO`
-- Push performed for V3.1.4: `NO`
-- Final QA evidence: `NOT YET EXECUTED`; expected path
-  `docs/qa/V3_1_4_Final_Release_QA.md`
+- Tag created for V3.1.4: `YES` (`v3.1.4`)
+- Push performed for V3.1.4: `YES`
+- Final QA evidence: `docs/qa/V3_1_4_Final_Release_QA.md`
+  (`FINAL RELEASE QA: PASS`)
 
 V3.1.4 is the final reliability, maintainability, failure-handling, resource-lifecycle,
 and compatibility stabilization version before V3.2. Its seven frozen work items are

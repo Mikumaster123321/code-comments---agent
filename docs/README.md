@@ -1,6 +1,6 @@
 # Documentation Navigation
 
-Current state: V3.1.4 `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`.
+Current state: V3.1.4 `RELEASED` (independent Final QA PASS).
 
 ## Current authorities
 
@@ -25,5 +25,5 @@ notes, and QA files are time-point evidence.
   protocols, datasets, artifacts, CSVs, results, or interpretation.
 - `docs/thesis/` — **USER-PROTECTED PATH / DO NOT TOUCH**.
 
-V3.1.4 Final QA is not yet executed. The expected future evidence path is
-`qa/V3_1_4_Final_Release_QA.md`; no placeholder PASS exists.
+V3.1.4 independent Final QA has been executed by the independent QA role and is
+recorded at `qa/V3_1_4_Final_Release_QA.md` with verdict `FINAL RELEASE QA: PASS`.

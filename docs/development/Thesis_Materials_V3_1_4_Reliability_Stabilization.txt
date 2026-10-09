@@ -3,10 +3,10 @@ RELIABILITY / MAINTAINABILITY / PRE-V3.2 STABILIZATION
 
 Status
 
-Implementation is complete and awaits independent Final QA. V3.1.4 is the final
-engineering-maintenance version before the planned V3.2 Multi-Agent Collaboration
-phase. It is not a new retrieval experiment and does not claim a new model-quality
-result.
+V3.1.4 is released. It is the final engineering-maintenance version before the planned
+V3.2 Multi-Agent Collaboration phase. It is not a new retrieval experiment and does not
+claim a new model-quality result. Independent Final Release QA passed and recorded its
+verdict at docs/qa/V3_1_4_Final_Release_QA.md.
 
 Problem and motivation
 
@@ -89,11 +89,11 @@ Full offline regression: 1010 passed, above the 968 baseline.
 V3.1.0 archive validator: PASS.
 Four deterministic Formal CSV checks: PASS.
 
-The implementation host provides Anaconda Python 3.13.5 and no CPython 3.10
-interpreter. The required CPython 3.10 Gradio create_ui smoke was not executed in this
-implementation phase. CI and independent Final QA must provide the current-version
-patch, Gradio version, and block-build evidence. Historical evidence is not reused as
-a fabricated current PASS.
+The implementation host provides Anaconda Python 3.13.5. Independent Final Release QA
+ran the required CPython 3.10 Gradio create_ui smoke on CPython 3.10.20 with Gradio
+6.27.0; the UI built successfully as a Blocks object with 106 blocks. CI additionally
+pins the CPython 3.10 import and create_ui smoke. No historical evidence is reused as a
+fabricated current PASS.
 
 Formal immutability
 
@@ -117,3 +117,36 @@ Stabilization, and Pre-Multi-Agent Engineering Readiness. This evidence does not
 a production SLA, improved uptime, statistically increased reliability, lower latency,
 better retrieval or model quality, multi-tenant security, or completed Multi-Agent
 functionality.
+
+MATERIAL SOURCES AND IDENTITY
+
+Baseline commit:
+7710abd2adf46f89c28b67898cce7eff2d92dc96
+
+README:
+README.md
+
+Scope Freeze:
+docs/development/V3_1_4_Reliability_Stabilization_Scope.md
+
+Runtime Reliability Contract:
+docs/architecture/V3_1_4_Runtime_Reliability_Contract.md
+
+Pre-V3.2 Compatibility Contract:
+docs/architecture/V3_1_4_Pre_V3_2_Compatibility_Contract.md
+
+Markdown Thesis Materials:
+docs/development/Thesis_Materials_V3_1_4_Reliability_Stabilization.md
+
+Development Report:
+docs/development/Development_Report_V3_1_4.md
+
+Release Notes:
+docs/release/Release_Notes_V3_1_4.md
+
+Final Release QA Evidence:
+docs/qa/V3_1_4_Final_Release_QA.md
+
+Release commit and tag:
+Release commit C1, tagged by annotated v3.1.4; the exact C1 SHA is recorded in
+docs/release/release_state.json

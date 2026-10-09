@@ -1,6 +1,6 @@
 # Development Documentation Index
 
-Current development state: V3.1.4 `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`.
+Current development state: V3.1.4 `RELEASED` (independent Final QA PASS).
 
 ## V3.1.4 current package
 

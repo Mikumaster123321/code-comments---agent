@@ -1,10 +1,10 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.4 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.4 RELEASED -->
 
-**当前版本：V3.1.4（`3.1.4`）— Implementation Complete / Awaiting Final QA**
+**当前版本：V3.1.4（`3.1.4`）— Released**
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.3 已发布并完成文档闭环。V3.1.4 是进入 V3.2 前的 reliability / maintainability 稳定化版本，已完成 Provider 凭证隔离、运行时/请求合同、取消、资源生命周期、诊断、workspace 与兼容性实现，正在等待独立 Final QA；V3.2 Multi-Agent Collaboration **尚未开始**。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.3 已发布并完成文档闭环。V3.1.4 是进入 V3.2 前的 reliability / maintainability 稳定化版本，已完成 Provider 凭证隔离、运行时/请求合同、取消、资源生命周期、诊断、workspace 与兼容性实现，并已通过独立 Final QA 正式发布；V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -73,7 +73,7 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - stdlib structured local diagnostics 采用字段 allow-list，排除 Credential、Prompt、源码与用户可见绝对路径
 - workspace v1 补齐 `output_lang` / `rewrite_existing`，unknown future version fail closed
 - Pre-V3.2 compatibility contract 冻结 Stable、Legacy-Compat 与 Frozen-Formal surface
-- 状态为 **Implementation Complete / Awaiting Final QA**；本轮未创建 tag、未 push
+- 状态为 **Released**，annotated tag `v3.1.4` 指向 release commit C1；Final QA 已完成并通过
 
 ### V3.1.3：Repository / Directory / Documentation Architecture
 
@@ -320,7 +320,7 @@ code-comments---agent/
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
 - **V3.1.2 — Language / UX / Output Quality**：Released
 - **V3.1.3 — Repository / Directory / Documentation Architecture**：Released
-- **V3.1.4 — Reliability / Maintainability / Pre-V3.2 Stabilization**：Implementation Complete / Awaiting Final QA
+- **V3.1.4 — Reliability / Maintainability / Pre-V3.2 Stabilization**：Released
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
 - **V3.4 — VS Code Integration**：Planned
@@ -331,7 +331,7 @@ code-comments---agent/
 
 ### V3.1.4
 
-**Reliability / Maintainability / Pre-V3.2 Stabilization — Implementation Complete / Awaiting Final QA（`3.1.4`）**
+**Reliability / Maintainability / Pre-V3.2 Stabilization — Released（`3.1.4`）**
 
 七项冻结工作 V314-CRED-01 至 V314-API-07 已实现。P0 Provider credential crossover
 通过 provider-scoped precedence、vendor-specific env 与 atomic candidate commit 关闭；
@@ -342,10 +342,10 @@ diagnostics、workspace version 与 Pre-V3.2 compatibility contract 均已有离
 Tests：V3.1.4 reliability `28 passed`；credential foundation `33 passed`；相关 targeted
 `98 passed`；LLM `6 passed`；production `198 passed`；experiments `240 passed`；release
 `24 passed`；full `1010 passed`。Archive validator 与 4 份 deterministic Formal CSV
-checks PASS，Formal execution revision / artifact identity / SHA-256 unchanged。当前主机没有
-CPython 3.10，因此 implementation 阶段未伪造 UI smoke；CI 已固定 CPython 3.10 import/
-`create_ui()` smoke，独立 Final QA 必须记录实际 patch/Gradio/build evidence。Final QA：
-**NOT YET EXECUTED**；tag：**NO**；push：**NO**。
+checks PASS，Formal execution revision / artifact identity / SHA-256 unchanged。独立 Final
+QA 在 CPython 3.10.20 + Gradio 6.27.0 下实测 `create_ui()` 构建成功（`Blocks`，106 blocks）
+并给出 `FINAL RELEASE QA: PASS`；CI 固定 CPython 3.10 import/`create_ui()` smoke。Final QA：
+**PASS**（`docs/qa/V3_1_4_Final_Release_QA.md`）；tag：**`v3.1.4`**；push：**GitHub / Gitee（branch + tag，远端校验通过）**。
 
 ### V3.1.3
 
@@ -451,7 +451,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
 | V3.1.3 | 2026-10-08 | 维护版本 | Repository / Directory / Documentation Architecture |
-| V3.1.4 | 2026-10-09 | 维护版本 | Reliability / Maintainability / Pre-V3.2 Stabilization（Awaiting Final QA） |
+| V3.1.4 | 2026-10-09 | 维护版本 | Reliability / Maintainability / Pre-V3.2 Stabilization |
 | V3.1.2 | 2026-10-08 | 维护版本 | Language / UX / Output Quality |
 | V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |

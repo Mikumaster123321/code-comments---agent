@@ -8,7 +8,7 @@ a new model-quality result. It strengthens the runtime conditions under which th
 existing software-maintenance capabilities can be reproduced, diagnosed, cancelled,
 and evolved without accidental compatibility breakage.
 
-Implementation status: **COMPLETE / AWAITING INDEPENDENT FINAL QA**.
+Release status: **RELEASED** (independent Final Release QA PASS).
 
 ## Engineering problem
 
