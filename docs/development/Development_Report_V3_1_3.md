@@ -1,6 +1,6 @@
 # V3.1.3 Development Report
 
-Status: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+Status: `RELEASED`
 
 ## 1. Audit findings and frozen scope
 
@@ -31,8 +31,9 @@ its branch/sentinel semantics remain readable.
 
 The V3.1.3 Final QA evidence path is
 `docs/qa/V3_1_3_Final_Release_QA.md`. Its absence blocks the final release gate by
-design. The release test profile exercises offline contract tests but explicitly
-reports that the final gate was not executed while state is `RELEASE_CANDIDATE`.
+design; the release test profile exercises offline contract tests. Independent Final
+Release QA executed, produced real evidence at that path, and recorded
+`FINAL RELEASE QA: PASS`, so the final gate is satisfied.
 
 ## 3. Current-state Source of Truth
 
@@ -81,7 +82,7 @@ documents. The release index points to the complete V3.1.3 package.
 | LLM profile | `6 passed` |
 | Production profile | `198 passed` |
 | Experiments profile | `240 passed` |
-| Release profile | `24 passed`; final gate explicitly awaiting QA |
+| Release profile | `24 passed`; final gate passed with real Final QA evidence |
 | Full regression | `968 passed` |
 | CPython 3.10.22 + Gradio 6.27.0 create_ui smoke | `PASS` (`Blocks`, 106 blocks) |
 | V3.1.0 archive validator | `PASS` |
@@ -104,9 +105,10 @@ metric, result, or interpretation was changed.
 
 ## 9. Limitations and release boundary
 
-- Independent Final Release QA has not run; its evidence file is absent.
-- No V3.1.3 release commit C1, annotated tag, main sync, push, or live remote
-  verification has occurred.
+- Independent Final Release QA executed; its real evidence at
+  `docs/qa/V3_1_3_Final_Release_QA.md` records `FINAL RELEASE QA: PASS`.
+- The V3.1.3 release commit C1, annotated tag `v3.1.3`, main sync, dual-remote push,
+  and live remote verification completed.
 - The Anaconda Python 3.13.5 pytest/Gradio import SIGSEGV remains a host limitation;
   CPython 3.10 is the supported UI-smoke environment.
 - The extraction intentionally leaves large root modules in place. General package

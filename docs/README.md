@@ -1,6 +1,6 @@
 # Documentation Navigation
 
-Current release state: V3.1.3 `IMPLEMENTATION / PRE-RELEASE`.
+Current release state: V3.1.3 `RELEASED` (annotated tag `v3.1.3`).
 
 ## Current authorities
 

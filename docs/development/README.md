@@ -1,6 +1,6 @@
 # Development Documentation Index
 
-Current development state: V3.1.3 `IMPLEMENTATION / PRE-RELEASE`.
+Current development state: V3.1.3 `RELEASED` (annotated tag `v3.1.3`).
 
 ## V3.1.3 current package
 

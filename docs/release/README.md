@@ -1,12 +1,13 @@
 # V3.1 Release Documentation Index
 
-<!-- release-state: V3.1.3 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.3 RELEASED -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
 V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
 （**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已正式发布
 （**RELEASED**，tag `v3.1.2`）。V3.1.3 Repository / Directory / Documentation
-Architecture 为 **IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；尚无 tag 或 push。
+Architecture 已正式发布（**RELEASED**，annotated tag `v3.1.3` 指向 release commit C1；
+已推送 GitHub 与 Gitee 并通过远端校验）。
 V3.1.4 与 V3.2 均 **NOT STARTED**。
 
 当前 machine-readable state 由 Git objects 与 [`release_state.json`](release_state.json)
@@ -33,7 +34,7 @@ scope、thesis、report、QA、release notes 和 experiment documents 是历史�
 - [V3.1.3 Scope Freeze](../development/V3_1_3_Repository_Architecture_Scope.md) — 六项冻结范围与 hard non-goals
 - [V3.1.3 Development Report](../development/Development_Report_V3_1_3.md) — release identity、context migration、bounded extraction 与测试证据
 - V3.1.3 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_3_Repository_Architecture.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_3_Repository_Architecture.txt)
-- [V3.1.3 Pre-Release Notes](Release_Notes_V3_1_3.md) — candidate behavior、compatibility 与 release boundary
+- [V3.1.3 Release Notes](Release_Notes_V3_1_3.md) — released behavior、compatibility 与 release boundary
 - [Permanent Version Documentation Contract](Version_Documentation_Contract.md) — 每个 major/minor/patch 版本的双格式论文素材、文档、tag、双远端发布与验证硬门禁
 
 ## Architecture and Design
@@ -114,11 +115,13 @@ LLM 维护质量声明。
 - V3.1.2 branch / branch point：`v3.1.2-dev` / `2036cb6c82860b9bf8229ecac0f4d4add420855d`
 - V3.1.2 tag：`v3.1.2`
 - V3.1.2 push / remote verification：Pending（本轮仅本地 finalize）
-- V3.1.3 Repository / Directory / Documentation Architecture：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- V3.1.3 Repository / Directory / Documentation Architecture：RELEASED
 - V3.1.3 branch / branch point：`v3.1.3-dev` / `93e4c0ab326e5eaf2fb6051c241fc5c76072afe9`
 - V3.1.3 schema：`v2`，no tracked `final_head`; runtime-derived ancestry and remote refs
 - V3.1.3 tests：targeted 24；LLM 6；production 198；experiments 240；full 968
-- V3.1.3 Final QA evidence：NOT YET EXECUTED
-- V3.1.3 tag / push：NO / NO
+- V3.1.3 Final QA evidence：`docs/qa/V3_1_3_Final_Release_QA.md`（`PASS`）
+- V3.1.3 release commit C1：由 annotated tag `v3.1.3` 指向；精确 SHA 记录于 `release_state.json`
+- V3.1.3 tag：`v3.1.3`（annotated，peeled target = C1）
+- V3.1.3 push / remote verification：Completed（GitHub / Gitee branch and tag）
 - V3.1.4：NOT STARTED
 - V3.2 Multi-Agent Collaboration：Not Started

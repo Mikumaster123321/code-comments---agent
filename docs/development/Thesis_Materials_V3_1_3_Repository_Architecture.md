@@ -1,6 +1,6 @@
 # Thesis Materials — V3.1.3 Repository Architecture
 
-Status: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+Status: `RELEASED`
 
 ## 1. Contribution positioning
 
@@ -40,8 +40,10 @@ Remote mode reads GitHub and Gitee refs and requires both main and development b
 to equal runtime HEAD and both peeled tag targets to equal C1. The derived SHAs are
 never written back. The released V3.1.2 v1 record remains readable.
 
-Final QA is fail-closed: `docs/qa/V3_1_3_Final_Release_QA.md` is a required future
-evidence path, but implementation does not create it or fabricate PASS.
+Final QA is fail-closed: `docs/qa/V3_1_3_Final_Release_QA.md` was a required
+evidence path that implementation did not create or pre-fill with PASS. The
+independent Final Release QA subsequently created it with a real
+`FINAL RELEASE QA: PASS` verdict, which authorized the V3.1.3 release sequence.
 
 ## 4. Documentation information architecture
 
@@ -100,9 +102,10 @@ release identity, and compatibility boundaries more explicit and executable whil
 preserving established import paths and behavior.
 
 Unsupported claims include retrieval improvement, model-output improvement,
-statistical significance, user-satisfaction improvement, external-project
-generalization, or a completed V3.1.3 release. Independent Final QA, tag creation,
-main synchronization, push, and remote verification have not occurred.
+statistical significance, user-satisfaction improvement, or external-project
+generalization. Independent Final Release QA has passed, and the V3.1.3 release
+sequence (release commit C1, annotated tag `v3.1.3`, main synchronization, dual-remote
+publication, and remote verification) has been executed.
 
 ## 8. Source identity
 
@@ -111,4 +114,5 @@ main synchronization, push, and remote verification have not occurred.
 - Architecture map: `docs/architecture/Repository_Architecture_Map_V3_1_3.md`
 - Development report: `docs/development/Development_Report_V3_1_3.md`
 - Release notes: `docs/release/Release_Notes_V3_1_3.md`
-- Release commit/tag: `NOT YET CREATED`
+- Release commit/tag: release commit C1, tagged by annotated `v3.1.3`; the exact C1
+  SHA is recorded in `docs/release/release_state.json`

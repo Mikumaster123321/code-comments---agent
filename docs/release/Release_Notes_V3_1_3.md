@@ -1,10 +1,12 @@
 # V3.1.3 Release Notes — Repository Architecture
 
-Status: `RELEASE CANDIDATE / AWAITING FINAL QA`
+Status: `RELEASED`
 
-V3.1.3 is implementation-complete but not released. Independent Final Release QA,
-the reviewed release commit, annotated tag, main synchronization, GitHub/Gitee push,
-and live remote verification have not occurred.
+V3.1.3 is released. Independent Final Release QA executed and its real evidence at
+`docs/qa/V3_1_3_Final_Release_QA.md` records `FINAL RELEASE QA: PASS`. The annotated
+tag `v3.1.3` points to the reviewed release commit C1 (its exact SHA is recorded in
+`release_state.json`). Main synchronization and GitHub/Gitee push with live remote
+verification have completed.
 
 ## Highlights
 
@@ -37,7 +39,7 @@ or deletion migration.
 - LLM contracts: `6 passed`
 - Production: `198 passed`
 - Experiments: `240 passed`
-- Release profile: `24 passed`; final gate awaits real QA evidence
+- Release profile: `24 passed`; final gate passed with real Final QA evidence
 - Full regression: `968 passed`
 - CPython 3.10.22 / Gradio 6.27.0 `create_ui()` build smoke: `PASS` (`Blocks`, 106 blocks)
 - V3.1.0 archive validator and deterministic Formal CSV checks: `PASS`
@@ -60,8 +62,8 @@ untouched.
 
 ## Release gate
 
-The configured future Final QA evidence path is
-`docs/qa/V3_1_3_Final_Release_QA.md`. It is intentionally absent until independent QA
-executes. No release status may advance to `RELEASED` before the permanent version
-documentation contract, Final QA, C1/tag, dual-remote publication, and runtime remote
-verification are satisfied.
+The Final QA evidence path is `docs/qa/V3_1_3_Final_Release_QA.md`. Independent Final
+Release QA executed and its real evidence records `FINAL RELEASE QA: PASS`, satisfying
+the permanent version documentation contract. The release advanced to `RELEASED` with
+the reviewed release commit C1, the annotated tag `v3.1.3`, main synchronization,
+dual-remote publication, and runtime remote verification completed.

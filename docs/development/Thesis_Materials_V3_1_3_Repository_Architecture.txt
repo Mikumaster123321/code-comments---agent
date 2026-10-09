@@ -2,8 +2,9 @@ V3.1.3 REPOSITORY ARCHITECTURE THESIS MATERIALS
 
 STATUS
 
-Implementation complete. Awaiting independent Final Release QA. No V3.1.3 tag or
-push has been performed.
+Released. Independent Final Release QA passed. The annotated tag v3.1.3 points to
+release commit C1, and main synchronization, dual-remote publication, and remote
+verification are complete.
 
 CONTRIBUTION POSITIONING
 
@@ -40,9 +41,10 @@ peel to C1. Remote verification reads GitHub and Gitee refs. Both main and devel
 branches must equal runtime head, while both peeled tag targets must equal C1. Dynamic
 SHAs are never written back. The published V3.1.2 v1 record remains readable.
 
-Final QA is fail-closed. The required future evidence path is
-docs/qa/V3_1_3_Final_Release_QA.md. Implementation does not create that evidence or
-claim a PASS.
+Final QA is fail-closed. The required evidence path is
+docs/qa/V3_1_3_Final_Release_QA.md. Implementation did not create that evidence or
+claim a PASS; the independent Final Release QA later created it with a real PASS
+verdict, which authorized the V3.1.3 release sequence.
 
 DOCUMENTATION INFORMATION ARCHITECTURE
 
@@ -100,8 +102,9 @@ The supported claim is that V3.1.3 makes repository responsibilities, current-st
 authority, release identity, and compatibility boundaries more explicit and
 executable while preserving established paths and behavior. It does not show a
 retrieval improvement, model improvement, user satisfaction improvement, statistical
-result, or completed release. Independent Final QA, tag creation, main synchronization,
-push, and remote verification remain future release actions.
+result, or external-project generalization. Independent Final Release QA has passed,
+and the V3.1.3 release sequence (release commit C1, annotated tag v3.1.3, main
+synchronization, dual-remote publication, and remote verification) has been executed.
 
 MATERIAL SOURCES AND IDENTITY
 
@@ -127,4 +130,5 @@ Release Notes:
 docs/release/Release_Notes_V3_1_3.md
 
 Release commit and tag:
-Not yet created.
+Release commit C1, tagged by annotated v3.1.3; the exact C1 SHA is recorded in
+docs/release/release_state.json

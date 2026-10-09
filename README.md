@@ -1,8 +1,8 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.3 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.3 RELEASED -->
 
-**当前版本：V3.1.3（`3.1.3`）— Implementation Complete / Awaiting Final QA**
+**当前版本：V3.1.3（`3.1.3`）— Released**
 
 Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.2 已发布并完成文档闭环。V3.1.3 聚焦 Repository / Directory / Documentation Architecture，在保持 root imports、runtime behavior、retrieval、Formal 与 LLM 行为不变的前提下增强发布追踪与仓库导航；V3.2 Multi-Agent Collaboration **尚未开始**。
 
@@ -70,7 +70,7 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - root `ui` / `processor` imports 继续通过 direct re-export 兼容
 - repository architecture map、顶层 docs navigation 与 development/QA 局部索引
 - V3.1.2 release schema v1 继续可读；V3.1.3 v2 对 Final QA evidence fail closed
-- 状态为 **Implementation Complete / Awaiting Final QA**，尚未创建 tag 或 push
+- 状态为 **Released**，annotated tag `v3.1.3` 指向 release commit C1；Final QA 已完成并通过
 
 ### V3.0.1：Optional Managed AI Access
 
@@ -215,8 +215,8 @@ python scripts/dev.py release-check --version 3.1.3
 
 `model-check` 默认 offline/read-only/no-download；只有显式 `--smoke` 才使用已有冻结
 cache 嵌入 1 个 query 和 1 个 document。远程 branch/tag 验证也只有在
-`release-check` 显式添加 `--remote` 时才发生。V3.1.3 Final QA evidence 尚未生成，
-因此最终 release gate 当前按合同 fail closed。
+`release-check` 显式添加 `--remote` 时才发生。V3.1.3 Final QA evidence 已生成并通过
+（`PASS`），因此最终 release gate 已满足；远程 branch/tag 验证仍只在显式 `--remote` 时执行。
 
 ## Testing
 
@@ -293,7 +293,7 @@ code-comments---agent/
 - **V3.1.0 — Project Intelligence / RAG**：Released（commit `8813e4c2fb0dc07f38c2013d520441bf399dcbc4`，tag `v3.1.0`）
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
 - **V3.1.2 — Language / UX / Output Quality**：Released
-- **V3.1.3 — Repository / Directory / Documentation Architecture**：Implementation Complete / Awaiting Final QA
+- **V3.1.3 — Repository / Directory / Documentation Architecture**：Released
 - **V3.1.4 — Maintenance**：Not Started
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
@@ -305,7 +305,7 @@ code-comments---agent/
 
 ### V3.1.3
 
-**Repository / Directory / Documentation Architecture — Implementation Complete / Awaiting Final QA（`3.1.3`）**
+**Repository / Directory / Documentation Architecture — Released（`3.1.3`）**
 
 六项冻结工作 V313-REL-01 至 V313-TEST-06 已实现：非自引用两阶段 release identity、
 current-state Source of Truth、PROJECT_CONTEXT current/history 分离、CSS/workspace 两个
@@ -318,7 +318,8 @@ Tests：architecture + release targeted `24 passed`；LLM contracts `6 passed`�
 deterministic CSV checks 与冻结 execution revision / identity / SHA 均保持通过和不变。
 CPython 3.10.22 + Gradio 6.27.0 `create_ui()` build smoke 为 `PASS`（`Blocks`，106
 blocks）。
-Final QA evidence 为 **NOT YET EXECUTED**；没有 V3.1.3 tag 或 push，因此不得标记为 Released。
+Final QA evidence 为 **PASS**；V3.1.3 annotated tag `v3.1.3` 指向 release commit C1，main 已
+同步并按 release contract 完成 GitHub / Gitee 分支与 tag 发布验证。
 
 ### V3.1.2
 
@@ -405,7 +406,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
-| V3.1.3 | 2026-10-08 | 维护候选版本 | Repository / Directory / Documentation Architecture |
+| V3.1.3 | 2026-10-08 | 维护版本 | Repository / Directory / Documentation Architecture |
 | V3.1.2 | 2026-10-08 | 维护版本 | Language / UX / Output Quality |
 | V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
@@ -720,6 +721,6 @@ Tests: **129 passed**（开发环境与仓库外干净 venv 一致）。Release 
 - [`docs/README.md`](docs/README.md)：documentation top-level navigation
 - `docs/architecture/`：当前 repository architecture map
 - `docs/development/`：Scope、Development Reports、Thesis Materials 与历史 context
-- `docs/qa/`：独立 QA evidence；V3.1.3 Final QA 尚未执行
+- `docs/qa/`：独立 QA evidence；V3.1.3 Final QA 已完成并通过
 - `docs/release/`：machine-readable release state、contract、Release Notes 与 release index
 - `PROJECT_CONTEXT.md`：精简的当前架构、边界、发布状态与 immediate roadmap

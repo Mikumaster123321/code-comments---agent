@@ -1,11 +1,11 @@
 # Project Context
 
-<!-- release-state: V3.1.3 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
+<!-- release-state: V3.1.3 RELEASED -->
 
 ## Current State
 
 - Current version: `3.1.3`
-- Lifecycle: `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`
+- Lifecycle: `RELEASED`
 - Development branch: `v3.1.3-dev`
 - Authoritative main baseline / branch point:
   `93e4c0ab326e5eaf2fb6051c241fc5c76072afe9`
@@ -13,9 +13,9 @@
 - V3.1.0 / V3.1.1 / V3.1.2: `RELEASED + DOCUMENTATION CLOSED`
 - V3.1.4: `NOT STARTED`
 - V3.2: `NOT STARTED`
-- Tag created for V3.1.3: `NO`
-- Push performed for V3.1.3: `NO`
-- Final QA evidence: `NOT YET EXECUTED`
+- Tag created for V3.1.3: `YES` (annotated `v3.1.3` → C1)
+- Push performed for V3.1.3: `YES` (GitHub / Gitee main, development, annotated tag)
+- Final QA evidence: `docs/qa/V3_1_3_Final_Release_QA.md` (`PASS`)
 
 V3.1.3 is a repository, directory, documentation-information-architecture, release
 traceability, and backward-compatible modularization maintenance release. It changes
@@ -100,8 +100,8 @@ V3.1.3 uses release schema `v2`:
   release-record commit is valid;
 - `--remote` dynamically verifies GitHub and Gitee main/development branches against
   runtime HEAD and both peeled tag targets against C1;
-- `docs/qa/V3_1_3_Final_Release_QA.md` is required before release but is not created or
-  claimed by implementation;
+- `docs/qa/V3_1_3_Final_Release_QA.md` is the required independent Final Release QA
+  evidence and records the completed review (`PASS`);
 - the V3.1.2 v1 record remains readable by the validator.
 
 The permanent requirements are in
@@ -126,8 +126,7 @@ user-satisfaction, statistical-significance, or external-generalization claim.
   IPython/`rlcompleter` host SIGSEGV; this is not an application PASS or failure.
 - V3.1.3 architecture + release targeted: `24 passed`; LLM: `6 passed`;
   production: `198 passed`; experiments: `240 passed`; full: `968 passed`.
-- Release profile: `24 passed`; the final gate explicitly remains unexecuted pending
-  real Final QA evidence.
+- Release profile: `24 passed`; the final gate passed with real Final QA evidence.
 - CPython 3.10.22 + Gradio 6.27.0 `create_ui()` build smoke: `PASS` (`Blocks`, 106
   blocks).
 - Archive validator and deterministic Formal CSV checks: `PASS`; frozen identity and
@@ -145,10 +144,8 @@ user-satisfaction, statistical-significance, or external-generalization claim.
 
 ## Immediate Roadmap
 
-1. Complete and record all required offline, full-regression, archive, CSV, Formal
-   immutability, and CPython 3.10 UI-smoke evidence.
-2. Commit the implementation and V3.1.3 documentation package locally.
-3. Hand off to DeepSeek V4.1 Flash for independent Final Release QA and the separately
-   authorized release sequence.
-4. Do not create a V3.1.3 tag or push in this implementation task.
-5. Keep V3.1.4 and V3.2 `NOT STARTED` until separately scoped and authorized.
+1. V3.1.3 is released: Final QA passed, C1 and the annotated tag `v3.1.3` are recorded,
+   main is synchronized, and the dual-remote publication is verified.
+2. Keep the runtime, Formal, and compatibility boundaries unchanged; do not reinterpret
+   or mutate frozen evidence.
+3. Keep V3.1.4 and V3.2 `NOT STARTED` until separately scoped and authorized.
