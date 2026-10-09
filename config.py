@@ -45,7 +45,7 @@ PROVIDERS: dict[str, dict] = {
         "label_zh": "DeepSeek",
         "label_en": "DeepSeek",
         "label_ja": "DeepSeek",
-        "api_key_env": ["DEEPSEEK_API_KEY", "OPENAI_API_KEY"],
+        "api_key_env": ["DEEPSEEK_API_KEY"],
         "base_url": "https://api.deepseek.com",
         "models": {
             "deepseek-chat": "DeepSeek-V3 Chat (推荐)",
@@ -76,7 +76,7 @@ PROVIDERS: dict[str, dict] = {
         "label_zh": "Azure OpenAI",
         "label_en": "Azure OpenAI Service",
         "label_ja": "Azure OpenAI",
-        "api_key_env": ["AZURE_OPENAI_API_KEY", "OPENAI_API_KEY"],
+        "api_key_env": ["AZURE_OPENAI_API_KEY"],
         # Azure 的 base_url 需要用户在 Portal 填 resource 名，这里仅占位，可自定义
         "base_url": "https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT",
         "models": {
@@ -92,7 +92,7 @@ PROVIDERS: dict[str, dict] = {
         "label_zh": "阿里百炼（Qwen）",
         "label_en": "Alibaba Bailian (Qwen)",
         "label_ja": "阿里百錬（Qwen）",
-        "api_key_env": ["DASHSCOPE_API_KEY", "ALIBABA_API_KEY", "OPENAI_API_KEY"],
+        "api_key_env": ["DASHSCOPE_API_KEY", "ALIBABA_API_KEY"],
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "models": {
             "qwen-plus": "Qwen-Plus（推荐）",
@@ -107,7 +107,7 @@ PROVIDERS: dict[str, dict] = {
         "label_zh": "月之暗面（Kimi）",
         "label_en": "Moonshot AI (Kimi)",
         "label_ja": "月の暗面（Kimi）",
-        "api_key_env": ["MOONSHOT_API_KEY", "KIMI_API_KEY", "OPENAI_API_KEY"],
+        "api_key_env": ["MOONSHOT_API_KEY", "KIMI_API_KEY"],
         "base_url": "https://api.moonshot.cn/v1",
         "models": {
             "moonshot-v1-8k": "Moonshot-v1-8k",
@@ -294,7 +294,8 @@ def switch_provider(
     Args:
         provider_key: 必须是 PROVIDERS 的 key 之一
         model_key: 模型名；None → 保持原 model（跨 Provider 切换时取第一个默认）
-        api_key: None → 保持现有运行时 key；空串 '' → 重置为环境变量读取
+        api_key: None → 同 Provider 保持运行时 key，跨 Provider 时读取新
+            Provider 的环境变量；空串 '' → 重置为当前 Provider 环境变量读取
         base_url: None → 使用 PROVIDERS 定义的默认；'' 无效；仅对 customizable=True 的 Provider 生效
         custom_model_name: 仅 custom Provider 下用，模型名的自由文本
 
@@ -307,9 +308,10 @@ def switch_provider(
         except ValueError as e:
             return False, f"❌ {e}"
 
+        provider_changed = provider_key != _active_provider
         candidate_model = _active_model
-        candidate_api_key = _active_api_key
-        candidate_base_url = _active_base_url
+        candidate_api_key = None if provider_changed else _active_api_key
+        candidate_base_url = None if provider_changed else _active_base_url
         candidate_custom_model = _custom_model_name
 
         # 切换 Provider 且未传模型时：新 Provider 的第一个默认

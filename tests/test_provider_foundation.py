@@ -269,6 +269,174 @@ def test_legacy_switch_only_changes_future_task_context(
     assert old_result == "test-secret-A|https://api.deepseek.com|deepseek-chat"
 
 
+@pytest.mark.parametrize(
+    ("source_provider", "source_model", "target_provider", "target_model"),
+    (
+        ("deepseek", "deepseek-chat", "custom", "custom-model"),
+        ("openai", "gpt-4o-mini", "deepseek", "deepseek-chat"),
+    ),
+)
+def test_cross_provider_switch_with_empty_ui_key_never_reuses_previous_credential(
+    monkeypatch,
+    restore_legacy_provider_state,
+    source_provider,
+    source_model,
+    target_provider,
+    target_model,
+):
+    for env_name in (
+        "DEEPSEEK_API_KEY",
+        "OPENAI_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "ALIBABA_API_KEY",
+        "MOONSHOT_API_KEY",
+        "KIMI_API_KEY",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(
+        source_provider,
+        source_model,
+        api_key="source-provider-secret-UNIQUE",
+    )[0]
+    assert config.switch_provider(
+        target_provider,
+        target_model,
+        api_key=None,
+        base_url=(
+            "https://custom-target.example/v1"
+            if target_provider == "custom"
+            else None
+        ),
+    )[0]
+
+    target_client = config.get_active_client()
+    assert target_client.api_key == "EMPTY_API_KEY"
+    assert target_client.api_key != "source-provider-secret-UNIQUE"
+    assert config._active_api_key is None
+
+
+def test_custom_to_openai_uses_current_provider_environment_credential(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-environment-secret")
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(
+        "custom",
+        "custom-model",
+        api_key="custom-explicit-secret",
+        base_url="https://custom.example/v1",
+    )[0]
+    assert config.switch_provider(
+        "openai",
+        "gpt-4o-mini",
+        api_key=None,
+    )[0]
+
+    assert config.get_active_client().api_key == "openai-environment-secret"
+    assert config.get_active_client().base_url == "https://api.openai.com/v1"
+
+
+@pytest.mark.parametrize(
+    ("provider_id", "specific_env", "model"),
+    (
+        ("deepseek", "DEEPSEEK_API_KEY", "deepseek-chat"),
+        ("azure", "AZURE_OPENAI_API_KEY", "gpt-4o-mini"),
+        ("dashscope", "DASHSCOPE_API_KEY", "qwen-plus"),
+        ("moonshot", "MOONSHOT_API_KEY", "moonshot-v1-8k"),
+    ),
+)
+def test_vendor_provider_uses_only_its_provider_specific_environment_credential(
+    monkeypatch,
+    restore_legacy_provider_state,
+    provider_id,
+    specific_env,
+    model,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "generic-openai-secret")
+    monkeypatch.setenv(specific_env, f"{provider_id}-specific-secret")
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(provider_id, model, api_key="")[0]
+
+    assert config.get_active_client().api_key == f"{provider_id}-specific-secret"
+
+
+@pytest.mark.parametrize(
+    ("provider_id", "model", "base_url"),
+    (
+        ("deepseek", "deepseek-chat", None),
+        ("azure", "gpt-4o-mini", "https://azure.example/openai/deployments/test"),
+        ("dashscope", "qwen-plus", None),
+        ("moonshot", "moonshot-v1-8k", None),
+    ),
+)
+def test_generic_openai_environment_key_is_not_shared_with_other_vendors(
+    monkeypatch,
+    restore_legacy_provider_state,
+    provider_id,
+    model,
+    base_url,
+):
+    for env_name in config.PROVIDERS[provider_id]["api_key_env"]:
+        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "generic-openai-secret")
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(
+        provider_id,
+        model,
+        api_key="",
+        base_url=base_url,
+    )[0]
+
+    assert config.get_active_client().api_key == "EMPTY_API_KEY"
+
+
+@pytest.mark.parametrize("provider_id", ("openai", "custom"))
+def test_openai_compatible_contract_may_use_generic_openai_environment_key(
+    monkeypatch,
+    restore_legacy_provider_state,
+    provider_id,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "generic-openai-secret")
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(
+        provider_id,
+        api_key="",
+        base_url="https://custom.example/v1" if provider_id == "custom" else None,
+    )[0]
+
+    assert config.get_active_client().api_key == "generic-openai-secret"
+
+
+def test_explicit_current_provider_credential_overrides_environment(
+    monkeypatch,
+    restore_legacy_provider_state,
+):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-environment-secret")
+    factory = StubClientFactory()
+    monkeypatch.setattr(config.openai, "OpenAI", factory)
+
+    assert config.switch_provider(
+        "deepseek",
+        "deepseek-chat",
+        api_key="deepseek-explicit-secret",
+    )[0]
+
+    assert config.get_active_client().api_key == "deepseek-explicit-secret"
+
+
 def test_switch_provider_failure_does_not_mutate_active_state(
     monkeypatch,
     restore_legacy_provider_state,
