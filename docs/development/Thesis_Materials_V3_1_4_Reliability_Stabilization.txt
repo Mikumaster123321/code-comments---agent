@@ -1,0 +1,119 @@
+V3.1.4 THESIS MATERIALS
+RELIABILITY / MAINTAINABILITY / PRE-V3.2 STABILIZATION
+
+Status
+
+Implementation is complete and awaits independent Final QA. V3.1.4 is the final
+engineering-maintenance version before the planned V3.2 Multi-Agent Collaboration
+phase. It is not a new retrieval experiment and does not claim a new model-quality
+result.
+
+Problem and motivation
+
+The audit found one P0 defect. A Provider switch with an empty UI key could combine the
+new Provider endpoint with the previous Provider's runtime key. Some vendor entries
+also used OPENAI_API_KEY as an implicit generic fallback. Other risks included
+import-time client construction, multiplied SDK and application retries, ambiguous
+request cost after timeout, cancellation wording that exceeded actual SDK capability,
+incomplete ZIP resource guards, incorrect all-failed batch success, abandoned
+temporary downloads, missing workspace fields, and local temporary paths in javac
+messages.
+
+Implemented contribution 1: credential isolation
+
+Credential precedence now belongs to the Provider being constructed. A non-empty UI
+credential for that Provider is first, its provider-specific environment variable is
+second, and otherwise the Provider is unconfigured. Cross-Provider switches never
+reuse the previous runtime key. OPENAI_API_KEY is limited to OpenAI and Custom
+OpenAI-compatible configurations. Provider construction is atomic; a construction
+failure preserves the previous coherent active state.
+
+Implemented contribution 2: runtime and request robustness
+
+Provider clients are constructed lazily. Importing config, processor, or Project
+Intelligence does not create a transport or issue a request. CPython 3.10 is the
+supported and recommended runtime. CPython 3.11, 3.12, standard 3.13, Windows, and the
+known Anaconda 3.13.5 host have explicit best-effort or unsupported boundaries.
+
+The OpenAI-compatible SDK retry count is zero. Normal generation has exactly one
+application attempt and one transport attempt, using an explicit 90-second client
+timeout. Preflight is a single one-token request with a six-second timeout. The system
+does not transparently repeat authentication, permission, invalid request/model,
+not-found, rate-limit, timeout, connection, response-loss, or other ambiguous
+generation failures. This prevents an unobservable duplicate request when the first
+request may already have reached the Provider and incurred cost.
+
+Implemented contribution 3: truthful cancellation
+
+Cancellation is cooperative. The system cancels queued futures, stops starting new
+stages, permits already-running Provider calls to finish, and then reports Cancelled.
+Completed partial results can remain downloadable. The software does not promise
+immediate HTTP interruption or guaranteed token and cost savings.
+
+Implemented contribution 4: resource and temporary-file lifecycle
+
+Central defaults limit a single source to 2 MiB, an upload to 25 MiB, a batch to 200
+files, a ZIP to 1,000 members and 100 MiB uncompressed data, and a member compression
+ratio to 100:1. Traversal, absolute paths, symlinks, excessive counts, excessive
+uncompressed size, and excessive compression ratio are rejected with stable reasons.
+All-symbol failure is no longer counted as success or emitted as a normal zero-byte
+annotated source. Batch intermediates and failed partial ZIPs are deleted. Final UI
+downloads remain valid and use the operating system temporary-file lifecycle.
+
+Implemented contribution 5: diagnostics, workspace, and compatibility
+
+Local structured diagnostics allow only an opaque operation ID, stage, Provider/model,
+attempt, duration, and stable error category. They exclude API keys, other credentials,
+full prompts, source code, raw Provider responses, private reasoning, and user-visible
+absolute paths. Workspace schema version 1 now preserves output_lang and
+rewrite_existing. Unknown future workspace versions fail closed, and failed atomic
+saves remove the .tmp file.
+
+The Pre-V3.2 compatibility contract identifies Stable, Legacy-Compatible, Internal,
+Experimental/Operational, and Frozen-Formal surfaces. Provider IDs, ModelConfig,
+RuntimeCredential, TaskScopedLLMProvider, Processor and batch tuple shapes, CancelToken,
+workspace helpers, ui.CUSTOM_CSS, code_maintenance domain/adapters, RetrievalService,
+RetrievalQuery, ContextPackage, and project representation remain compatible. No Agent,
+Planner, Critic, Router, Memory, Tool, or Orchestrator API was created.
+
+Verification
+
+P0 Provider foundation: 33 passed.
+V3.1.4 reliability: 28 passed.
+Related targeted regression: 98 passed.
+LLM contracts: 6 passed.
+Production: 198 passed.
+Experiments: 240 passed.
+Release and architecture: 24 passed.
+Full offline regression: 1010 passed, above the 968 baseline.
+V3.1.0 archive validator: PASS.
+Four deterministic Formal CSV checks: PASS.
+
+The implementation host provides Anaconda Python 3.13.5 and no CPython 3.10
+interpreter. The required CPython 3.10 Gradio create_ui smoke was not executed in this
+implementation phase. CI and independent Final QA must provide the current-version
+patch, Gradio version, and block-build evidence. Historical evidence is not reused as
+a fabricated current PASS.
+
+Formal immutability
+
+Formal execution revision:
+2749969cd3a2d4d6e1e8d81160eebd5fb360879b
+
+Formal artifact-set identity:
+acd8f464793cd7d5b15e3ffbd4d13207a0ce8edac7235d306f6d8711529559a3
+
+Formal artifact-set SHA-256:
+2ac32989ad17407ac03948758d7ce9b6dd9615a7bfbb31beaf812cc30915ed41
+
+These values remained unchanged. V3.1.4 does not change BM25, E5, Graph, Hybrid/RRF,
+ContextBuilder, ranking, dataset, protocol, artifact, metric, or Formal result.
+
+Claim boundary
+
+The supported thesis contribution is Engineering Reliability, Runtime Robustness,
+Failure Handling, Credential Isolation, Resource Lifecycle, Compatibility
+Stabilization, and Pre-Multi-Agent Engineering Readiness. This evidence does not prove
+a production SLA, improved uptime, statistically increased reliability, lower latency,
+better retrieval or model quality, multi-tenant security, or completed Multi-Agent
+functionality.

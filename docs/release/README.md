@@ -1,14 +1,14 @@
 # V3.1 Release Documentation Index
 
-<!-- release-state: V3.1.3 RELEASED -->
+<!-- release-state: V3.1.4 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
 
 本页是 V3.1 Project Intelligence / RAG 与维护版本的发布、工程、研究和论文材料导航。
 V3.1.0 已正式发布；V3.1.1 Workflow & Developer Experience Optimization 已正式发布
 （**FULLY RELEASED**，tag `v3.1.1`）。V3.1.2 Language / UX / Output Quality 已正式发布
 （**RELEASED**，tag `v3.1.2`）。V3.1.3 Repository / Directory / Documentation
 Architecture 已正式发布（**RELEASED**，annotated tag `v3.1.3` 指向 release commit C1；
-已推送 GitHub 与 Gitee 并通过远端校验）。
-V3.1.4 与 V3.2 均 **NOT STARTED**。
+已推送 GitHub 与 Gitee 并通过远端校验）。V3.1.4 Reliability Stabilization 已
+**IMPLEMENTATION COMPLETE / AWAITING FINAL QA**；V3.2 **NOT STARTED**。
 
 当前 machine-readable state 由 Git objects 与 [`release_state.json`](release_state.json)
 共同确定。当前 human summaries 是 root README、root `PROJECT_CONTEXT.md` 与本页；版本化
@@ -35,6 +35,12 @@ scope、thesis、report、QA、release notes 和 experiment documents 是历史�
 - [V3.1.3 Development Report](../development/Development_Report_V3_1_3.md) — release identity、context migration、bounded extraction 与测试证据
 - V3.1.3 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_3_Repository_Architecture.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_3_Repository_Architecture.txt)
 - [V3.1.3 Release Notes](Release_Notes_V3_1_3.md) — released behavior、compatibility 与 release boundary
+- [V3.1.4 Scope Freeze](../development/V3_1_4_Reliability_Stabilization_Scope.md) — 七项冻结范围、P0 与 non-goals
+- [V3.1.4 Runtime/Reliability Contract](../architecture/V3_1_4_Runtime_Reliability_Contract.md) — runtime matrix、attempt/timeout、cancel、resource 与 diagnostics
+- [V3.1.4 Pre-V3.2 Compatibility Contract](../architecture/V3_1_4_Pre_V3_2_Compatibility_Contract.md) — Stable、Legacy-Compat 与 Frozen-Formal surfaces
+- [V3.1.4 Development Report](../development/Development_Report_V3_1_4.md) — implementation 与 offline verification
+- V3.1.4 Thesis Engineering Materials：[MD](../development/Thesis_Materials_V3_1_4_Reliability_Stabilization.md) · [UTF-8 TXT](../development/Thesis_Materials_V3_1_4_Reliability_Stabilization.txt)
+- [V3.1.4 Release Notes](Release_Notes_V3_1_4.md) — release candidate behavior、compatibility 与 remaining gate
 - [Permanent Version Documentation Contract](Version_Documentation_Contract.md) — 每个 major/minor/patch 版本的双格式论文素材、文档、tag、双远端发布与验证硬门禁
 
 ## Architecture and Design
@@ -51,7 +57,7 @@ scope、thesis、report、QA、release notes 和 experiment documents 是历史�
 ## Protocol, Dataset, and Reference
 
 本节及后续 Formal 链接属于 **FROZEN FORMAL EVIDENCE / HISTORICAL
-DOCUMENTATION**，不是当前 V3.1.3 release-state authority。V3.1.3 不修改这些文件。
+DOCUMENTATION**，不是当前 V3.1.4 release-state authority。V3.1.4 不修改这些文件。
 
 - [Experiment Protocol](../experiments/Experiment_Protocol_V3_1_0.md)
 - Protocol Addenda: [A](../experiments/Experiment_Protocol_Addendum_A_V3_1_0.md) · [B](../experiments/Experiment_Protocol_Addendum_B_V3_1_0.md) · [C](../experiments/Experiment_Protocol_Addendum_C_V3_1_0.md) · [D](../experiments/Experiment_Protocol_Addendum_D_V3_1_0.md)
@@ -123,5 +129,9 @@ LLM 维护质量声明。
 - V3.1.3 release commit C1：由 annotated tag `v3.1.3` 指向；精确 SHA 记录于 `release_state.json`
 - V3.1.3 tag：`v3.1.3`（annotated，peeled target = C1）
 - V3.1.3 push / remote verification：Completed（GitHub / Gitee branch and tag）
-- V3.1.4：NOT STARTED
+- V3.1.4 Reliability / Maintainability / Pre-V3.2 Stabilization：IMPLEMENTATION COMPLETE / AWAITING FINAL QA
+- V3.1.4 branch / branch point：`v3.1.4-dev` / `7f6ac6ffe20991d47f094d271213f1d57d3c5efd`
+- V3.1.4 tests：P0 `33`；reliability `28`；targeted `98`；LLM `6`；production `198`；experiments `240`；release `24`；full `1010`
+- V3.1.4 Final QA evidence：NOT YET EXECUTED；expected `docs/qa/V3_1_4_Final_Release_QA.md`
+- V3.1.4 tag / push：NO / NO
 - V3.2 Multi-Agent Collaboration：Not Started

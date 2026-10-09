@@ -1,10 +1,10 @@
 # Code Comments Agent
 
-<!-- release-state: V3.1.3 RELEASED -->
+<!-- release-state: V3.1.4 IMPLEMENTATION COMPLETE / AWAITING FINAL QA -->
 
-**当前版本：V3.1.3（`3.1.3`）— Released**
+**当前版本：V3.1.4（`3.1.4`）— Implementation Complete / Awaiting Final QA**
 
-Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.2 已发布并完成文档闭环。V3.1.3 聚焦 Repository / Directory / Documentation Architecture，在保持 root imports、runtime behavior、retrieval、Formal 与 LLM 行为不变的前提下增强发布追踪与仓库导航；V3.2 Multi-Agent Collaboration **尚未开始**。
+Code Comments Agent 是一个**基于大语言模型的软件代码智能维护系统**。它提供代码注释、文档、分析和项目级维护能力；V3.1.0–V3.1.3 已发布并完成文档闭环。V3.1.4 是进入 V3.2 前的 reliability / maintainability 稳定化版本，已完成 Provider 凭证隔离、运行时/请求合同、取消、资源生命周期、诊断、workspace 与兼容性实现，正在等待独立 Final QA；V3.2 Multi-Agent Collaboration **尚未开始**。
 
 ## Available Features
 
@@ -61,6 +61,20 @@ Code Comments Agent 是一个**基于大语言模型的软件代码智能维护�
 - Java minimal 冻结为 short Javadoc；空、不完整或不安全模型响应 fail closed
 - Gradio Code Copy 能力恢复；不新增 review、optimization 或 evidence 语义
 
+### V3.1.4：Reliability / Maintainability / Pre-V3.2 Stabilization
+
+- Provider credential 按当前 Provider 隔离；跨 Provider 空 Key 不再继承旧运行时 Key
+- `OPENAI_API_KEY` 仅属于 OpenAI 与 Custom/OpenAI-compatible 合同，其他厂商使用专属变量
+- Provider client 惰性构造，SDK retry 为 0；普通 generation 明确为一次 application/transport attempt
+- generation、preflight 与 `javac` 使用显式分类 timeout；ambiguous-cost failure 不透明重试
+- cooperative cancellation：取消 pending work，等待在途阻塞调用结束，最终状态为 `Cancelled`
+- 集中 intake/ZIP guard、symlink/count/size/ratio 拒绝、准确 batch partial/all-failed outcome
+- batch intermediates、partial ZIP、workspace `.tmp` 与校验临时文件具备明确 cleanup owner
+- stdlib structured local diagnostics 采用字段 allow-list，排除 Credential、Prompt、源码与用户可见绝对路径
+- workspace v1 补齐 `output_lang` / `rewrite_existing`，unknown future version fail closed
+- Pre-V3.2 compatibility contract 冻结 Stable、Legacy-Compat 与 Frozen-Formal surface
+- 状态为 **Implementation Complete / Awaiting Final QA**；本轮未创建 tag、未 push
+
 ### V3.1.3：Repository / Directory / Documentation Architecture
 
 - 非自引用两阶段 release identity：tracked C1 intent + runtime-derived final HEAD
@@ -95,6 +109,8 @@ BYOK 安全边界：
 - `RuntimeCredential` 只用于运行时 Provider 构造，不支持普通序列化。
 - Workspace 持久化白名单不保存 Credential。
 - Task 开始时固定 Provider / Client；之后切换全局 Provider 只影响未来 Task。
+- Credential precedence 是当前 Provider 的显式 UI Key → 当前 Provider 专属环境变量 → 未配置；跨 Provider 不继承旧 Key。
+- `OPENAI_API_KEY` 只用于 OpenAI 与 Custom/OpenAI-compatible，不隐式提供给 DeepSeek、Azure、DashScope 或 Moonshot。
 - `.env` 是已被 Git 忽略的本地配置；Gradio 中输入的 API Key 只覆盖当前运行时设置。
 
 ## Managed AI Access
@@ -132,10 +148,17 @@ Project Source -> Scanner / Snapshot -> Corpus / Symbol
 
 `experiments/` 可以依赖 `project_intelligence/` 与 `code_maintenance/`；`project_intelligence/` 可以依赖 `code_maintenance/`；生产模块不反向依赖 `experiments/`。`code_maintenance/` 仍不依赖 Provider、Credential、Credits 或 Managed Access。Managed Access 可以使用 Credits 与既有 Provider 基础设施；BYOK 路径与 Credits 相互独立。
 
-## Installation
+## Installation / Runtime Support
 
-- Minimum Python: **3.10**
-- Recommended Python: **3.10**
+| Runtime / platform | V3.1.4 status |
+|---|---|
+| CPython 3.10 | **Supported / Recommended** |
+| CPython 3.11 | Best-effort / unverified |
+| CPython 3.12 | Best-effort core；历史 E5 evidence 不代表完整 UI certification |
+| standard CPython 3.13 | Best-effort / unverified UI |
+| Anaconda Python 3.13.5 | 已知主机上 UI / bare pytest **Unsupported**（SIGSEGV） |
+| Ubuntu + CPython 3.10 | Supported CI evidence |
+| Windows | Best-effort unless separately tested |
 
 ```bash
 git clone https://gitee.com/GuowangKako/code-comments---agent.git
@@ -210,19 +233,21 @@ python scripts/dev.py test full
 python scripts/dev.py model-check
 python scripts/dev.py experiment-validate archive-v3.1.0
 python scripts/dev.py experiment-validate --purpose formal
-python scripts/dev.py release-check --version 3.1.3
+python scripts/dev.py release-check --version 3.1.4
 ```
 
 `model-check` 默认 offline/read-only/no-download；只有显式 `--smoke` 才使用已有冻结
 cache 嵌入 1 个 query 和 1 个 document。远程 branch/tag 验证也只有在
-`release-check` 显式添加 `--remote` 时才发生。V3.1.3 Final QA evidence 已生成并通过
-（`PASS`），因此最终 release gate 已满足；远程 branch/tag 验证仍只在显式 `--remote` 时执行。
+`release-check` 显式添加 `--remote` 时才发生。V3.1.4 Final QA 尚未执行，因此当前
+release gate 会 fail closed；预期证据路径为 `docs/qa/V3_1_4_Final_Release_QA.md`，不得用占位
+PASS 绕过。远程 branch/tag 验证仍只在显式 `--remote` 时执行。
 
 ## Testing
 
 V3.1.0 发布基线为 **892 passed**；V3.1.1 完整回归为 **922 passed**；V3.1.2 为
-**951 passed**。V3.1.3 新增 repository architecture、release identity 与兼容性门禁；
-实现回归为 **968 passed**。
+**951 passed**；V3.1.3 为 **968 passed**。V3.1.4 implementation regression 为
+**1010 passed**；LLM `6 passed`、production `198 passed`、experiments `240 passed`、
+release `24 passed`。全部测试离线，不调用真实 Provider。
 
 ```bash
 python scripts/dev.py test llm
@@ -240,6 +265,7 @@ python -m pytest
 - **V3.1.1 Workflow & DX：** [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_1_Workflow_DX.txt) · [Development Report](docs/development/Development_Report_V3_1_1.md) · [Release Notes](docs/release/Release_Notes_V3_1_1.md)
 - **V3.1.2 Language / UX / Output Quality：** [Scope Freeze](docs/development/V3_1_2_Language_UX_Output_Quality_Scope.md) · [Prompt Contract](docs/development/V3_1_2_Prompt_Output_Contract.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_2_Language_UX_Output_Quality.txt) · [Development Report](docs/development/Development_Report_V3_1_2.md) · [Release Notes](docs/release/Release_Notes_V3_1_2.md)
 - **V3.1.3 Repository Architecture：** [Scope Freeze](docs/development/V3_1_3_Repository_Architecture_Scope.md) · [Architecture Map](docs/architecture/Repository_Architecture_Map_V3_1_3.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_3_Repository_Architecture.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_3_Repository_Architecture.txt) · [Development Report](docs/development/Development_Report_V3_1_3.md) · [Release Notes](docs/release/Release_Notes_V3_1_3.md)
+- **V3.1.4 Reliability Stabilization：** [Scope Freeze](docs/development/V3_1_4_Reliability_Stabilization_Scope.md) · [Runtime/Reliability Contract](docs/architecture/V3_1_4_Runtime_Reliability_Contract.md) · [Pre-V3.2 Compatibility Contract](docs/architecture/V3_1_4_Pre_V3_2_Compatibility_Contract.md) · [Thesis Materials MD](docs/development/Thesis_Materials_V3_1_4_Reliability_Stabilization.md) · [Thesis Materials TXT](docs/development/Thesis_Materials_V3_1_4_Reliability_Stabilization.txt) · [Development Report](docs/development/Development_Report_V3_1_4.md) · [Release Notes](docs/release/Release_Notes_V3_1_4.md)
 - [Documentation Index](docs/README.md) · [V3.1 Release Index](docs/release/README.md) · [Permanent Version Documentation Contract](docs/release/Version_Documentation_Contract.md)
 
 ## Directory Structure
@@ -294,7 +320,7 @@ code-comments---agent/
 - **V3.1.1 — Workflow & Developer Experience Optimization**：Released
 - **V3.1.2 — Language / UX / Output Quality**：Released
 - **V3.1.3 — Repository / Directory / Documentation Architecture**：Released
-- **V3.1.4 — Maintenance**：Not Started
+- **V3.1.4 — Reliability / Maintainability / Pre-V3.2 Stabilization**：Implementation Complete / Awaiting Final QA
 - **V3.2 — Controlled Multi-Agent Collaboration**：Not Started
 - **V3.3 — Data-driven Multi-Model Router**：Planned
 - **V3.4 — VS Code Integration**：Planned
@@ -302,6 +328,24 @@ code-comments---agent/
 ## Version History
 
 从 V3 开始，README 为每个正式版本及当前候选版本保留 Version、Status、Phase Summary、Major Updates 和 Test Baseline。详细工程过程位于 `docs/development/`、`docs/qa/` 和 `docs/release/`。
+
+### V3.1.4
+
+**Reliability / Maintainability / Pre-V3.2 Stabilization — Implementation Complete / Awaiting Final QA（`3.1.4`）**
+
+七项冻结工作 V314-CRED-01 至 V314-API-07 已实现。P0 Provider credential crossover
+通过 provider-scoped precedence、vendor-specific env 与 atomic candidate commit 关闭；
+runtime/startup 改为 lazy client；generation 合同为一次 application attempt × 一次 transport
+attempt，ambiguous-cost failure 不自动重试。Cancellation、resource/ZIP/batch/temp、structured
+diagnostics、workspace version 与 Pre-V3.2 compatibility contract 均已有离线测试。
+
+Tests：V3.1.4 reliability `28 passed`；credential foundation `33 passed`；相关 targeted
+`98 passed`；LLM `6 passed`；production `198 passed`；experiments `240 passed`；release
+`24 passed`；full `1010 passed`。Archive validator 与 4 份 deterministic Formal CSV
+checks PASS，Formal execution revision / artifact identity / SHA-256 unchanged。当前主机没有
+CPython 3.10，因此 implementation 阶段未伪造 UI smoke；CI 已固定 CPython 3.10 import/
+`create_ui()` smoke，独立 Final QA 必须记录实际 patch/Gradio/build evidence。Final QA：
+**NOT YET EXECUTED**；tag：**NO**；push：**NO**。
 
 ### V3.1.3
 
@@ -407,6 +451,7 @@ V2 沿用当时定义的版本号规则：大版本 `vX.Y.0` 只记录新增底�
 | 版本 | 发布日期 | 类型 | 主题 |
 | --- | --- | --- | --- |
 | V3.1.3 | 2026-10-08 | 维护版本 | Repository / Directory / Documentation Architecture |
+| V3.1.4 | 2026-10-09 | 维护版本 | Reliability / Maintainability / Pre-V3.2 Stabilization（Awaiting Final QA） |
 | V3.1.2 | 2026-10-08 | 维护版本 | Language / UX / Output Quality |
 | V3.1.1 | 2026-09-30 | 维护版本 | Workflow & Developer Experience Optimization |
 | V3.1.0 | 2026-09-30 | 大版本 | Project Intelligence / RAG |
@@ -598,7 +643,7 @@ Tests: **129 passed**（开发环境与仓库外干净 venv 一致）。Release 
 
 - 单文件生成：生成按钮改用生成器函数配合 `gr.Progress()`，每一步更新进度百分比（0.05 至 1.00）与阶段描述（解析代码结构、翻译已有注释、调用 LLM 生成注释、插入注释到源码、构建 API 文档、完成）。
 - 批量处理：批量按钮改用生成器函数，每个文件处理完成后更新「x/N 处理 xxx.py」描述，0% 至 5% 展开 ZIP，5% 至 95% 按文件数线性推进，95% 后打包 ZIP。
-- 取消按钮：单文件与批量生成按钮右侧新增红色停止样式按钮。单文件取消通过线程安全取消标志位立即置位，核心循环每步检测，检测到后立即取消排队中与运行中的 LLM future 并关闭执行器，节省 API token；批量取消在处理完当前文件后不再推进后续文件，已成功处理的文件照常打包返回。
+- 取消按钮：单文件与批量生成按钮右侧提供停止操作。取消请求会停止提交新工作并取消尚未运行的 future；已经进入 Provider SDK 的阻塞调用会自然结束，随后状态进入 `Cancelled`。因此不能承诺立即终止远端生成或立即节省 token/费用；批量取消不再推进后续文件，已成功处理的文件仍可打包返回。
 - 取消不丢结果：取消流程不提前返回，继续执行到「构建 Markdown 与写临时文件」阶段，文档路径、源码路径、ZIP 路径均为有效路径，用户仍可下载取消前已完成的部分。
 - processor 层新增：`processor.CancelToken`（线程安全取消标志位）、`_process_python_with_progress` / `_process_java_with_progress` 双语生成器版（每步 yield 5 元组中间态）、`process_code_with_progress(...)` 入口生成器（统一边界处理与路由）、`process_batch_with_progress(...)` 批量生成器。**原有同步函数 `process_code` / `process_batch_files` 签名与行为完全未变**，测试套件与旧调用方零侵入。
 - Python 3.8 兼容：新增 `_shutdown_executor_safe(executor, futures_map)`，以 `try/except` 捕获 `TypeError`（`cancel_futures` 参数仅 Python 3.9+ 支持），降级为先手动取消每个 future 再关闭执行器，保证 Windows 自带 Python 3.8 下正常运行。

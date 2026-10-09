@@ -5,7 +5,7 @@ V3.0.0 RC1 保留 legacy-compatible Processor，并提供项目级维护核心�
   main.py           — 入口文件（本文件）
   ui.py             — Gradio 界面构建
   processor.py      — 主处理逻辑（多语言调度、并发生成 + 串行插入）
-  llm_service.py    — LLM 调用（docstring/Javadoc 生成、代码摘要，含重试）
+  llm_service.py    — LLM 调用（docstring/Javadoc、摘要、显式 timeout、单次请求）
   config.py         — legacy Provider 配置与任务级 Provider 捕获
   llm_provider.py   — BYOK 模型配置、运行时凭据与 Provider Registry
   Py/               — Python 专用模块

@@ -1,19 +1,17 @@
 # QA Documentation Index
 
-Current release state: V3.1.3 `RELEASED` (annotated tag `v3.1.3`).
+Current state: V3.1.4 `IMPLEMENTATION COMPLETE / AWAITING FINAL QA`.
 
-Existing versioned QA reports are historical evidence for their named phases. They do
-not by themselves determine current release state.
+Existing QA reports are historical evidence for their named versions. V3.1.3 Final QA
+remains at `V3_1_3_Final_Release_QA.md` and is not evidence for V3.1.4.
 
-The V3.1.3 independent Final Release QA evidence path is:
+The expected V3.1.4 independent evidence path is:
 
-`docs/qa/V3_1_3_Final_Release_QA.md`
+`docs/qa/V3_1_4_Final_Release_QA.md`
 
-That file was created when the independent Final Release QA actually executed, and it
-records a real `FINAL RELEASE QA: PASS` verdict. Implementation work did not create it
-or pre-write its verdict. The PASS verdict authorized the V3.1.3 release sequence
-(release commit C1, annotated tag, main synchronization, dual-remote publication, and
-remote verification).
+That file is intentionally absent. It may be created only when DeepSeek Final QA
+actually runs and records its real verdict, including the required CPython 3.10 /
+Gradio `create_ui()` smoke. Implementation work does not pre-write a PASS.
 
 See the [release index](../release/README.md) and
-[top-level documentation index](../README.md) for current-state navigation.
+[top-level documentation index](../README.md).
